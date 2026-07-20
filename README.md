@@ -1,22 +1,27 @@
-# mechanics-toolbox — Phase 1
+# mechanics-toolbox
 
-Stable MATLAB architecture for mechanical-test data processing.
+MATLAB toolbox for reproducible processing and constitutive analysis of mechanical-test data.
 
-## Install into an existing clone
+## Current scope
 
-Copy the contents of this package into the repository root, preserving folders. Existing root-level MATLAB files may remain temporarily as legacy references, but new code must use the package API under `src/+mechanics`.
+- preserve raw force-displacement data;
+- preprocess experimental curves;
+- compute uniaxial stress and strain;
+- estimate tangent modulus;
+- plot processed stress-strain curves;
+- evaluate incompressible uniaxial hyperelastic models.
 
-## MATLAB validation
+Numerical parameter fitting is intentionally not included yet.
+
+## Setup
+
+Run from the repository root:
 
 ```matlab
 startup
-results = runtests("tests", "IncludeSubfolders", true);
-disp(table(results))
-assert(all([results.Passed]), "One or more tests failed.")
-run_synthetic_tension_analysis
 ```
 
-## Main API
+## Mechanical processing
 
 ```matlab
 config = mechanics.config.tensionConfig();
@@ -25,3 +30,41 @@ curve = mechanics.analysis.computeUniaxialMeasures(curve, geometry, config.mecha
 result = mechanics.analysis.computeTangentModulus(curve, config.analysis);
 mechanics.plotting.plotStressStrain(curve);
 ```
+
+## Hyperelastic models
+
+```matlab
+context.inputMeasure = "engineering-strain";
+context.outputStressMeasure = "nominal";
+
+stress = mechanics.models.evaluateModel( ...
+    "neo-hookean", strain, mu, context);
+```
+
+Registered models:
+
+- `neo-hookean`;
+- `mooney-rivlin`;
+- `yeoh`.
+
+See `docs/hyperelastic_models.md` for equations and conventions.
+
+## Validation
+
+```matlab
+startup
+results = runtests("tests", "IncludeSubfolders", true);
+disp(table(results))
+assert(all([results.Passed]), "One or more tests failed.")
+```
+
+Examples:
+
+```matlab
+run_synthetic_tension_analysis
+run_hyperelastic_models
+```
+
+## Architecture rule
+
+Input/output, preprocessing, mechanics, constitutive models, plotting, statistics, and future fitting routines remain separate. Model functions only evaluate constitutive equations and do not read files, modify experimental data, plot, or invoke optimizers.
