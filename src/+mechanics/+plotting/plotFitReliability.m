@@ -12,7 +12,7 @@ figureHandle = figure("Color", "w");
 bar(categorical(summary.Component), values);
 ylim([0, 1.2]);
 yticks([0, 1]);
-ytlabels({"Pass", "Flag"});
+yticklabels({'Pass', 'Flag'});
 ylabel("Diagnostic status");
 title(sprintf("%s fit reliability: %s", ...
     strrep(char(assessment.modelName), "-", " "), ...
