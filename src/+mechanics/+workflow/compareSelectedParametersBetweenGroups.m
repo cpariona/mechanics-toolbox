@@ -143,6 +143,24 @@ function pValue = localPermutationPValue(x, y, count)
 observed = abs(mean(x) - mean(y));
 combined = [x(:); y(:)];
 firstCount = numel(x);
+totalCombinationCount = nchoosek(numel(combined), firstCount);
+
+if isfinite(totalCombinationCount) && totalCombinationCount <= count
+    assignments = nchoosek(1:numel(combined), firstCount);
+    exceedance = 0;
+    allIndices = 1:numel(combined);
+    for index = 1:size(assignments,1)
+        firstMask = false(numel(combined),1);
+        firstMask(assignments(index,:)) = true;
+        first = combined(firstMask);
+        second = combined(allIndices(~firstMask));
+        exceedance = exceedance + ...
+            (abs(mean(first)-mean(second)) >= observed);
+    end
+    pValue = exceedance / totalCombinationCount;
+    return;
+end
+
 exceedance = 0;
 for index = 1:count
     order = randperm(numel(combined));
