@@ -8,13 +8,14 @@ end
 
 function testCompleteWorkflow(testCase)
 [strain, stress, context] = localData();
+fitConfig = mechanics.config.fittingConfig();
 config = mechanics.config.fitDiagnosticsWorkflowConfig();
 config.bootstrapConfig.sampleCount = 25;
 config.bootstrapConfig.randomSeed = 17;
 config.identifiabilityConfig.minimumSuccessfulSamples = 10;
 
 analysis = mechanics.workflow.runFitDiagnostics( ...
-    "neo-hookean", strain, stress, context, struct(), config);
+    "neo-hookean", strain, stress, context, fitConfig, config);
 
 verifyTrue(testCase, isfield(analysis.fitResult, "parameters"));
 verifyTrue(testCase, isfield(analysis.uncertainty, "successfulFraction"));
@@ -28,6 +29,7 @@ end
 
 function testDisabledDiagnosticsProduceIncompleteAssessment(testCase)
 [strain, stress, context] = localData();
+fitConfig = mechanics.config.fittingConfig();
 config = mechanics.config.fitDiagnosticsWorkflowConfig();
 config.runBootstrap = false;
 config.runIdentifiability = false;
@@ -36,7 +38,7 @@ config.runResidualDiagnostics = false;
 config.reliabilityConfig.requireAllDiagnostics = true;
 
 analysis = mechanics.workflow.runFitDiagnostics( ...
-    "neo-hookean", strain, stress, context, struct(), config);
+    "neo-hookean", strain, stress, context, fitConfig, config);
 
 verifyEqual(testCase, analysis.reliability.status, "incomplete");
 verifyEqual(testCase, analysis.reliability.missingComponentCount, 4);
@@ -44,12 +46,13 @@ end
 
 function testExportCreatesFiles(testCase)
 [strain, stress, context] = localData();
+fitConfig = mechanics.config.fittingConfig();
 config = mechanics.config.fitDiagnosticsWorkflowConfig();
 config.runBootstrap = false;
 config.runIdentifiability = false;
 config.runWindowStability = false;
 analysis = mechanics.workflow.runFitDiagnostics( ...
-    "neo-hookean", strain, stress, context, struct(), config);
+    "neo-hookean", strain, stress, context, fitConfig, config);
 
 folder = string(tempname);
 cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
