@@ -1,5 +1,5 @@
 function analysis = analyzeExtractedDataset(dataset, config)
-%ANALYZEEXTRACTEDDATASET Quality-check, process, and optionally fit specimens.
+%ANALYZEEXTRACTEDDATASET Segment, quality-check, process, and fit specimens.
 arguments
     dataset (1,1) struct
     config (1,1) struct = mechanics.config.datasetAnalysisConfig()
@@ -7,22 +7,29 @@ end
 
 dataset = mechanics.extraction.validateExtractedDataset(dataset);
 sourceSpecimens = dataset.specimens(:);
-recordCount = numel(sourceSpecimens);
-records = repmat(localEmptyRecord(), recordCount, 1);
+records = repmat(localEmptyRecord(), numel(sourceSpecimens), 1);
 
-for index = 1:recordCount
+for index = 1:numel(sourceSpecimens)
     specimen = sourceSpecimens(index);
-
     records(index).index = index;
     records(index).specimenId = string(specimen.id);
-
     if isfield(specimen, "sheetName")
         records(index).sheetName = string(specimen.sheetName);
     end
 
     try
+        segmentation = mechanics.segmentation.segmentTensileCurve( ...
+            specimen.raw, config.segmentation);
+        records(index).segmentation = rmfield(segmentation, "analysisRaw");
+
+        analysisSpecimen = specimen;
+        analysisSpecimen.originalRaw = specimen.raw;
+        analysisSpecimen.analysisRaw = segmentation.analysisRaw;
+        analysisSpecimen.raw = segmentation.analysisRaw;
+        analysisSpecimen.segmentation = records(index).segmentation;
+
         quality = mechanics.quality.assessSpecimenQuality( ...
-            specimen, config.quality);
+            analysisSpecimen, config.quality);
         records(index).quality = quality;
 
         if config.quality.rejectFailedQuality && ~quality.passed
@@ -36,7 +43,12 @@ for index = 1:recordCount
         end
 
         processedSpecimen = localProcessSpecimen( ...
-            specimen, config.processingConfig);
+            analysisSpecimen, config.processingConfig);
+
+        processedSpecimen.raw = specimen.raw;
+        processedSpecimen.originalRaw = specimen.raw;
+        processedSpecimen.analysisRaw = segmentation.analysisRaw;
+        processedSpecimen.segmentation = records(index).segmentation;
 
         if config.fitting.enabled
             processedSpecimen.modelSelection = ...
@@ -50,8 +62,7 @@ for index = 1:recordCount
         end
 
         if config.export.enabled
-            specimenFolder = fullfile( ...
-                config.export.outputFolder, ...
+            specimenFolder = fullfile(config.export.outputFolder, ...
                 localSafeName(processedSpecimen.id));
             processedSpecimen.outputFiles = ...
                 mechanics.io.exportSpecimenResults( ...
@@ -65,7 +76,6 @@ for index = 1:recordCount
         records(index).status = "failed";
         records(index).errorIdentifier = string(ME.identifier);
         records(index).errorMessage = string(ME.message);
-
         if ~config.continueOnError
             rethrow(ME);
         end
@@ -81,7 +91,6 @@ end
 
 function specimen = localProcessSpecimen(specimen, processingConfig)
 geometry = specimen.geometry;
-
 if ~isfield(geometry, "initialLength") || ...
         ~isscalar(geometry.initialLength) || ...
         ~isfinite(geometry.initialLength) || ...
@@ -90,7 +99,6 @@ if ~isfield(geometry, "initialLength") || ...
         "Specimen %s does not define a positive initialLength.", ...
         char(string(specimen.id)));
 end
-
 if ~isfield(geometry, "initialArea") || ...
         ~isscalar(geometry.initialArea) || ...
         ~isfinite(geometry.initialArea) || ...
@@ -99,7 +107,6 @@ if ~isfield(geometry, "initialArea") || ...
         "Specimen %s does not define a positive initialArea.", ...
         char(string(specimen.id)));
 end
-
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, geometry, processingConfig);
 end
@@ -113,6 +120,7 @@ record.index = NaN;
 record.specimenId = "";
 record.sheetName = "";
 record.status = "pending";
+record.segmentation = struct();
 record.quality = struct();
 record.specimen = struct();
 record.errorIdentifier = "";

@@ -2,6 +2,7 @@ function config = datasetAnalysisConfig()
 %DATASETANALYSISCONFIG Default configuration for extracted-dataset analysis.
 config.processingConfig = mechanics.config.tensionConfig();
 config.continueOnError = true;
+config.segmentation = mechanics.config.curveSegmentationConfig();
 
 config.quality.minimumObservations = 20;
 config.quality.requireMonotonicDisplacement = false;
