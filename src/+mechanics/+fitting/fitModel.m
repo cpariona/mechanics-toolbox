@@ -8,6 +8,11 @@ arguments
     config (1,1) struct = mechanics.config.fittingConfig()
 end
 
+if numel(deformation) ~= numel(measuredStress)
+    error("mechanics:fitting:SizeMismatch", ...
+        "Deformation and stress must contain the same number of values.");
+end
+
 model = mechanics.models.modelRegistry(modelName);
 config = mechanics.fitting.resolveFitConfig(config, model, numel(measuredStress));
 [x, y, weights] = mechanics.fitting.prepareFitData(deformation, measuredStress, config);
