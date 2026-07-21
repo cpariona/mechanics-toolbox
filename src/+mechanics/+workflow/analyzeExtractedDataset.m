@@ -1,0 +1,120 @@
+function analysis = analyzeExtractedDataset(dataset, config)
+%ANALYZEEXTRACTEDDATASET Quality-check, process, and optionally fit specimens.
+arguments
+    dataset (1,1) struct
+    config (1,1) struct = mechanics.config.datasetAnalysisConfig()
+end
+
+dataset = mechanics.extraction.validateExtractedDataset(dataset);
+sourceSpecimens = dataset.specimens(:);
+recordCount = numel(sourceSpecimens);
+records = repmat(localEmptyRecord(), recordCount, 1);
+
+for index = 1:recordCount
+    specimen = sourceSpecimens(index);
+
+    records(index).index = index;
+    records(index).specimenId = string(specimen.id);
+
+    if isfield(specimen, "sheetName")
+        records(index).sheetName = string(specimen.sheetName);
+    end
+
+    try
+        quality = mechanics.quality.assessSpecimenQuality( ...
+            specimen, config.quality);
+        records(index).quality = quality;
+
+        if config.quality.rejectFailedQuality && ~quality.passed
+            records(index).status = "quality-failed";
+            records(index).errorIdentifier = ...
+                "mechanics:quality:QualityCriteriaFailed";
+            records(index).errorMessage = sprintf( ...
+                "Failed quality checks: %s.", ...
+                char(strjoin(quality.failedChecks, ", ")));
+            continue;
+        end
+
+        processedSpecimen = localProcessSpecimen( ...
+            specimen, config.processingConfig);
+
+        if config.fitting.enabled
+            processedSpecimen.modelSelection = ...
+                mechanics.fitting.fitAcrossWindows( ...
+                    config.fitting.modelNames, ...
+                    processedSpecimen.processed.strain, ...
+                    processedSpecimen.processed.stress, ...
+                    config.fitting.context, ...
+                    config.fitting.fitConfig, ...
+                    config.fitting.selectionConfig);
+        end
+
+        if config.export.enabled
+            specimenFolder = fullfile( ...
+                config.export.outputFolder, ...
+                localSafeName(processedSpecimen.id));
+            processedSpecimen.outputFiles = ...
+                mechanics.io.exportSpecimenResults( ...
+                    processedSpecimen, specimenFolder);
+        end
+
+        records(index).status = "processed";
+        records(index).specimen = processedSpecimen;
+
+    catch ME
+        records(index).status = "failed";
+        records(index).errorIdentifier = string(ME.identifier);
+        records(index).errorMessage = string(ME.message);
+
+        if ~config.continueOnError
+            rethrow(ME);
+        end
+    end
+end
+
+analysis.sourceDataset = dataset;
+analysis.records = records;
+analysis.summary = mechanics.workflow.summarizeDatasetAnalysis(records);
+analysis.config = config;
+analysis.createdAt = datetime("now");
+end
+
+function specimen = localProcessSpecimen(specimen, processingConfig)
+geometry = specimen.geometry;
+
+if ~isfield(geometry, "initialLength") || ...
+        ~isscalar(geometry.initialLength) || ...
+        ~isfinite(geometry.initialLength) || ...
+        geometry.initialLength <= 0
+    error("mechanics:workflow:MissingInitialLength", ...
+        "Specimen %s does not define a positive initialLength.", ...
+        char(string(specimen.id)));
+end
+
+if ~isfield(geometry, "initialArea") || ...
+        ~isscalar(geometry.initialArea) || ...
+        ~isfinite(geometry.initialArea) || ...
+        geometry.initialArea <= 0
+    error("mechanics:workflow:MissingInitialArea", ...
+        "Specimen %s does not define a positive initialArea.", ...
+        char(string(specimen.id)));
+end
+
+specimen = mechanics.workflow.processUniaxialSpecimen( ...
+    specimen, geometry, processingConfig);
+end
+
+function value = localSafeName(value)
+value = regexprep(string(value), "[^A-Za-z0-9_-]", "_");
+end
+
+function record = localEmptyRecord()
+record.index = NaN;
+record.specimenId = "";
+record.sheetName = "";
+record.status = "pending";
+record.quality = struct();
+record.specimen = struct();
+record.errorIdentifier = "";
+record.errorMessage = "";
+end
