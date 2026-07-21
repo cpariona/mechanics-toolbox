@@ -44,6 +44,40 @@ verifyTrue(testCase, metrics.fractureDetected);
 verifyFalse(testCase, metrics.completeFracture);
 end
 
+function testFractureMetricsDoNotRequireSegmentation(testCase)
+specimen = localSpecimen( ...
+    [0; 1; 2; 3; 1; 0], ...
+    [0; 1; 2; 3; 4; 5]);
+specimen = rmfield(specimen, "segmentation");
+metrics = mechanics.analysis.computeFractureMetrics( ...
+    specimen, mechanics.config.fractureAnalysisConfig());
+verifyTrue(testCase, metrics.fractureDetected);
+end
+
+function testIndependentDetectionThreshold(testCase)
+specimen = localSpecimen( ...
+    [0; 1; 2; 3; 2.4; 2.2], ...
+    [0; 1; 2; 3; 4; 5]);
+config = mechanics.config.fractureAnalysisConfig();
+config.fractureDetectionDropFraction = 0.30;
+metrics = mechanics.analysis.computeFractureMetrics(specimen, config);
+verifyFalse(testCase, metrics.fractureDetected);
+config.fractureDetectionDropFraction = 0.20;
+metrics = mechanics.analysis.computeFractureMetrics(specimen, config);
+verifyTrue(testCase, metrics.fractureDetected);
+end
+
+function testDisabledWorkflowDoesNotModifySpecimens(testCase)
+analysis.records = localRecord("one");
+config = mechanics.config.fractureAnalysisConfig();
+config.enabled = false;
+analysis = mechanics.workflow.addFractureMetrics(analysis, config);
+verifyFalse(testCase, ...
+    isfield(analysis.records(1).specimen, "fracture"));
+verifyTrue(testCase, isempty(analysis.fractureSummary));
+verifyFalse(testCase, analysis.fractureConfig.enabled);
+end
+
 function testWorkflowAddsFractureSummary(testCase)
 analysis.records = [ ...
     localRecord("one"), ...
@@ -68,7 +102,7 @@ analysis = mechanics.workflow.addFractureMetrics( ...
     mechanics.config.fractureAnalysisConfig());
 
 folder = string(tempname);
-cleanup = onCleanup(@() localRemoveFolder(folder));
+cleanup = onCleanup(@() localRemoveFolder(folder)); %#ok<NASGU>
 
 files = mechanics.io.exportFractureAnalysis( ...
     analysis, folder);
