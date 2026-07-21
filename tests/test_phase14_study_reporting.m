@@ -88,6 +88,7 @@ study.analysis.summary = table( ...
     'ErrorIdentifier','ErrorMessage'});
 study.population = struct();
 study.populationStatus = "disabled";
+study.provenance.sourceFile = study.sourceFile;
 study.provenance.sourceFileBytes = 0;
 study.provenance.matlabRelease = string(version("-release"));
 study.provenance.platform = string(computer);
