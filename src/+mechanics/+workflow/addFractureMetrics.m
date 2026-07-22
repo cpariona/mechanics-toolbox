@@ -5,6 +5,12 @@ arguments
     config (1,1) struct = mechanics.config.fractureAnalysisConfig()
 end
 
+analysis.fractureConfig = config;
+if ~config.enabled
+    analysis.fractureSummary = table();
+    return;
+end
+
 for index = 1:numel(analysis.records)
     record = analysis.records(index);
 
@@ -21,7 +27,6 @@ for index = 1:numel(analysis.records)
     analysis.records(index).specimen = specimen;
 end
 
-analysis.fractureConfig = config;
 analysis.fractureSummary = ...
     mechanics.workflow.summarizeFractureMetrics( ...
         analysis.records);
