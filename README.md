@@ -3,7 +3,7 @@
 MATLAB toolbox for reproducible processing, constitutive fitting, statistical
 analysis, and fracture characterization of uniaxial mechanical-test data.
 
-## Current scope
+## Maintained scope
 
 - workbook and delimited-file import;
 - vendor-specific Zwick D412 extraction;
@@ -12,26 +12,47 @@ analysis, and fracture characterization of uniaxial mechanical-test data.
 - tangent-modulus estimation;
 - Neo-Hookean, Mooney-Rivlin, and Yeoh models;
 - bounded nonlinear parameter fitting;
-- deformation-window model selection;
+- fit uncertainty, identifiability, residual, and stability diagnostics;
+- reliability-aware model comparison and selection;
 - dataset quality assessment;
 - pre-fracture curve segmentation;
-- replicate population statistics and bootstrap intervals;
-- two-group comparisons;
 - tensile fracture metrics;
-- end-to-end study execution and export.
+- replicate population statistics and bootstrap intervals;
+- group comparison and selected-parameter inference;
+- end-to-end study execution, figures, and reporting.
 
-## Setup and validation
+## Repository layout
+
+```text
+src/+mechanics/   Maintained package implementation
+examples/         Runnable user workflows
+ tests/            Automated regression tests
+ docs/             Technical and workflow documentation
+startup.m         Adds maintained folders to the MATLAB path
+run_all_tests.m   Runs the complete repository test suite
+```
+
+Root-level legacy processing functions are not maintained. Public code should
+use the package API under `src/+mechanics`.
+
+## Setup
 
 ```matlab
 startup
+```
+
+## Validation
+
+```matlab
 results = run_all_tests();
 ```
+
+See `docs/testing.md` for focused test execution and release validation.
 
 ## Complete tensile study
 
 ```matlab
 config = mechanics.config.tensileStudyConfig();
-
 config.extraction.defaultInitialLength = 25;
 config.datasetAnalysis.fitting.enabled = true;
 config.export.enabled = true;
@@ -51,6 +72,13 @@ study.provenance
 study.config
 study.outputFiles
 ```
+
+## Constitutive study workflow
+
+The maintained workflow supports specimen-level diagnostics, model comparison,
+batch selection, selected-parameter summaries, group inference, and integrated
+reporting. These operations are exposed through `mechanics.workflow` and
+`mechanics.io`.
 
 ## Constitutive models
 

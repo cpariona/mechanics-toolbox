@@ -1,0 +1,10 @@
+# Local experimental data
+/data/raw/*
+!/data/raw/.gitkeep
+
+# Generated analysis outputs
+/results/
+
+# MATLAB transient files
+*.asv
+*.m~
