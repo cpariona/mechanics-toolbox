@@ -1,6 +1,6 @@
 # Documentation
 
-The documentation is organized by task rather than implementation history.
+The documentation is organized by task.
 
 ## Workflows
 
@@ -15,10 +15,11 @@ The documentation is organized by task rather than implementation history.
 
 - [`reference/fit-diagnostics.md`](reference/fit-diagnostics.md): uncertainty, identifiability, window stability, residual diagnostics, and reliability.
 - [`reference/fracture-analysis.md`](reference/fracture-analysis.md): pre-fracture segmentation, fracture classification, and energy conventions.
+- [`reference/population-and-group-analysis.md`](reference/population-and-group-analysis.md): replicate statistics and experimental group comparisons.
 
 ## Development
 
 - [`development/repository-structure.md`](development/repository-structure.md): maintained source layout and contribution boundaries.
 - [`development/testing.md`](development/testing.md): focused tests and complete release validation.
 
-Historical implementation phases are not part of the maintained documentation. Git history and merged pull requests remain the source for development chronology.
+Development chronology is retained in Git history and merged pull requests.
