@@ -26,14 +26,14 @@ analysis, and fracture characterization of uniaxial mechanical-test data.
 ```text
 src/+mechanics/   Maintained package implementation
 examples/         Runnable user workflows
- tests/            Automated regression tests
- docs/             Technical and workflow documentation
+tests/            Automated regression tests
+docs/             User, reference, and development documentation
 startup.m         Adds maintained folders to the MATLAB path
 run_all_tests.m   Runs the complete repository test suite
 ```
 
-Root-level legacy processing functions are not maintained. Public code should
-use the package API under `src/+mechanics`.
+Root-level processing functions are not maintained. Public code should use the
+package API under `src/+mechanics`.
 
 ## Setup
 
@@ -47,7 +47,8 @@ startup
 results = run_all_tests();
 ```
 
-See `docs/testing.md` for focused test execution and release validation.
+See [`docs/development/testing.md`](docs/development/testing.md) for focused test
+execution and release validation.
 
 ## Complete tensile study
 
@@ -87,6 +88,11 @@ Registered models:
 - `neo-hookean`;
 - `mooney-rivlin`;
 - `yeoh`.
+
+## Documentation
+
+Start at [`docs/README.md`](docs/README.md). Documentation is organized into
+workflows, data handling, technical reference, and repository development.
 
 ## Architecture
 
