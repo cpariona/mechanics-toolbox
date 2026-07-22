@@ -13,6 +13,7 @@ The documentation is organized by task.
 
 ## Reference
 
+- [`reference/constitutive-models.md`](reference/constitutive-models.md): deformation measures, stress measures, model equations, and parameter definitions.
 - [`reference/fit-diagnostics.md`](reference/fit-diagnostics.md): uncertainty, identifiability, window stability, residual diagnostics, and reliability.
 - [`reference/fracture-analysis.md`](reference/fracture-analysis.md): pre-fracture segmentation, fracture classification, and energy conventions.
 - [`reference/population-and-group-analysis.md`](reference/population-and-group-analysis.md): replicate statistics and experimental group comparisons.
