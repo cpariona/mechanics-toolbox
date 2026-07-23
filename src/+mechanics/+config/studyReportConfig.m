@@ -10,5 +10,6 @@ config.includePopulationCurve = true;
 config.includePeakMetrics = true;
 config.includeFractureMetrics = true; % compatibility alias
 config.includeTangentModulus = true;
+config.includeZeroReferenceDiagnostics = true;
 config.closeFiguresAfterExport = true;
 end
