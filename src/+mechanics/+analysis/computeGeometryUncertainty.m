@@ -94,12 +94,18 @@ end
 
 function value = localStandardUncertainty(config, fieldName)
 value = 0;
-if ~isfield(config, fieldName) || isempty(config.(fieldName)) || ...
-        isnan(config.(fieldName))
+if ~isfield(config, fieldName) || isempty(config.(fieldName))
     return;
 end
 candidate = config.(fieldName);
-if ~isscalar(candidate) || ~isfinite(candidate) || candidate < 0
+if ~isscalar(candidate)
+    error("mechanics:analysis:InvalidGeometryUncertainty", ...
+        "%s must be NaN or a nonnegative finite scalar.", fieldName);
+end
+if isnan(candidate)
+    return;
+end
+if ~isfinite(candidate) || candidate < 0
     error("mechanics:analysis:InvalidGeometryUncertainty", ...
         "%s must be NaN or a nonnegative finite scalar.", fieldName);
 end
@@ -108,7 +114,7 @@ end
 
 function step = localFiniteDifferenceStep(value, standardUncertainty)
 step = max(abs(value) .* 1e-6, standardUncertainty .* 1e-3);
-step = max(step, eps(value) .^ 0.5 .* max(1, abs(value)));
+step = max(step, sqrt(eps(value)) .* max(1, abs(value)));
 end
 
 function relative = localRelative(standardUncertainty, nominal)
