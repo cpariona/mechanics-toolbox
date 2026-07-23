@@ -4,6 +4,7 @@ config.minimumSpecimens = 2;
 config.strainGridPointCount = 201;
 config.strainRangeMode = "common-overlap";
 config.explicitStrainRange = [NaN, NaN];
+config.centralStatistic = "mean";
 
 config.bootstrap.enabled = true;
 config.bootstrap.iterations = 1000;
