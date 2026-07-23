@@ -35,6 +35,58 @@ verifyEqual(testCase, record(end).fitResult.parameters(1), 2.5, "RelTol", 0.05);
 end
 
 function testGeometryMonteCarloRefitsParameters(testCase)
+[specimen, fit] = localTensionFit();
+config = mechanics.config.geometryMonteCarloFitConfig();
+config.sampleCount = 20;
+config.initialLengthStd = 0.1;
+config.initialAreaStd = 0.1;
+config.refitNumberOfStarts = 1;
+result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+    specimen, fit, config);
+verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
+verifySize(testCase, result.parameterSamples, [20, 1]);
+verifyLessThan(testCase, result.parameterLower(1), result.parameterUpper(1));
+end
+
+function testForceAndDisplacementMonteCarlo(testCase)
+[specimen, fit] = localTensionFit();
+config = mechanics.config.geometryMonteCarloFitConfig();
+config.sampleCount = 20;
+config.forceStd = 0.01;
+config.displacementStd = 0.005;
+config.refitNumberOfStarts = 1;
+result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+    specimen, fit, config);
+verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
+verifyGreaterThan(testCase, std(result.parameterSamples(result.successMask,1)), 0);
+end
+
+function testCompressionPopulationUsesDefaultLength(testCase)
+files = strings(4,1);
+cleanup = onCleanup(@() localDeleteMany(files)); %#ok<NASGU>
+for index = 1:4
+    files(index) = localCompressionFile(2 + 0.5 .* index, 25, 10);
+end
+manifest = table(files, ["A1";"A2";"B1";"B2"], ...
+    ["A";"A";"B";"B"], repmat(10,4,1), ...
+    'VariableNames', {'File','SpecimenId','Group','InitialArea'});
+config = mechanics.config.compressionPopulationConfig();
+config.studyConfig.cycle.smoothingFrameLength = 1;
+config.studyConfig.processing.analysis.summaryStrainRange = [0, 0.15];
+config.population.bootstrap.enabled = false;
+config.comparison.config.populationConfig.bootstrap.enabled = false;
+config.comparison.config.bootstrap.enabled = false;
+config.comparison.config.populationConfig.strainGridPointCount = 21;
+result = mechanics.workflow.runCompressionPopulationStudy(manifest, config);
+verifyEqual(testCase, result.manifest.InitialLength, repmat(25,4,1));
+verifyEqual(testCase, string({result.records.status})', repmat("processed",4,1));
+verifyEqual(testCase, string({result.groups.status})', ["processed";"processed"]);
+verifyEqual(testCase, [result.groups.specimenCount]', [2;2]);
+verifyTrue(testCase, isfield(result.comparison, "metricComparison"));
+verifyGreaterThan(testCase, height(result.comparison.metricComparison), 0);
+end
+
+function [specimen, fit] = localTensionFit()
 strain = linspace(0, 0.25, 41)';
 context.inputMeasure = "engineering-strain";
 context.outputStressMeasure = "nominal";
@@ -48,36 +100,6 @@ specimen.processed.force = stress .* 10;
 specimen.processed.strain = strain;
 specimen.processed.stress = stress;
 specimen.processingConfig = mechanics.config.tensionConfig();
-config = mechanics.config.geometryMonteCarloFitConfig();
-config.sampleCount = 20;
-config.initialLengthStd = 0.1;
-config.initialAreaStd = 0.1;
-config.refitNumberOfStarts = 1;
-result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
-    specimen, fit, config);
-verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
-verifySize(testCase, result.parameterSamples, [20, 1]);
-verifyLessThan(testCase, result.parameterLower(1), result.parameterUpper(1));
-end
-
-function testCompressionPopulationUsesDefaultLength(testCase)
-files = strings(4,1);
-cleanup = onCleanup(@() localDeleteMany(files)); %#ok<NASGU>
-for index = 1:4
-    files(index) = localCompressionFile(2 + 0.1 .* index, 25, 10);
-end
-manifest = table(files, ["A1";"A2";"B1";"B2"], ...
-    ["A";"A";"B";"B"], repmat(10,4,1), ...
-    'VariableNames', {'File','SpecimenId','Group','InitialArea'});
-config = mechanics.config.compressionPopulationConfig();
-config.studyConfig.cycle.smoothingFrameLength = 1;
-config.studyConfig.processing.analysis.summaryStrainRange = [0, 0.15];
-config.population.bootstrap.enabled = false;
-result = mechanics.workflow.runCompressionPopulationStudy(manifest, config);
-verifyEqual(testCase, result.manifest.InitialLength, repmat(25,4,1));
-verifyEqual(testCase, string({result.records.status})', repmat("processed",4,1));
-verifyEqual(testCase, string({result.groups.status})', ["processed";"processed"]);
-verifyEqual(testCase, [result.groups.specimenCount]', [2;2]);
 end
 
 function filename = localCompressionFile(mu, initialLength, initialArea)
@@ -98,15 +120,11 @@ writetable(table(force, displacement, ...
 end
 
 function localDelete(filename)
-if isfile(filename)
-    delete(filename);
-end
+if isfile(filename), delete(filename); end
 end
 
 function localDeleteMany(files)
 for index = 1:numel(files)
-    if strlength(files(index)) > 0 && isfile(files(index))
-        delete(files(index));
-    end
+    if strlength(files(index)) > 0 && isfile(files(index)), delete(files(index)); end
 end
 end
