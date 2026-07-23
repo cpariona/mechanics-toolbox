@@ -3,6 +3,10 @@ function config = tensileStudyConfig()
 config.extraction = mechanics.config.workbookExtractionConfig();
 config.datasetAnalysis = mechanics.config.datasetAnalysisConfig();
 
+config.specimens.excludeIndices = [];
+config.specimens.exclusionReason = "";
+config.specimens.preloadForceOverrides = [];
+
 config.fracture.enabled = true;
 config.fracture.config = mechanics.config.fractureAnalysisConfig();
 
