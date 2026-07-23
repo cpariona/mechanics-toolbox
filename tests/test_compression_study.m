@@ -52,7 +52,7 @@ end
 
 function testDissipativeCycleProducesPositiveHysteresis(testCase)
 loadingDisplacement = linspace(0, 1, 11)';
-unloadingDisplacement = linspace(0.9, 0, 10)';
+unloadingDisplacement = linspace(1, 0, 11)';
 raw.displacement = [loadingDisplacement; unloadingDisplacement];
 raw.force = [5 .* loadingDisplacement; 4 .* unloadingDisplacement];
 geometry.initialLength = 10;
