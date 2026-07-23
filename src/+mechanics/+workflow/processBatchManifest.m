@@ -86,6 +86,7 @@ importConfig.sheet = manifest.Sheet(rowIndex);
 importConfig.forceScale = manifest.ForceScale(rowIndex);
 importConfig.displacementScale = manifest.DisplacementScale(rowIndex);
 importConfig.timeScale = manifest.TimeScale(rowIndex);
+importConfig.currentAreaScale = manifest.CurrentAreaScale(rowIndex);
 
 forceColumn = strtrim(manifest.ForceColumn(rowIndex));
 if strlength(forceColumn) > 0
@@ -103,6 +104,12 @@ timeColumn = strtrim(manifest.TimeColumn(rowIndex));
 if strlength(timeColumn) > 0
     importConfig.timeColumns = unique( ...
         [timeColumn, string(importConfig.timeColumns)], "stable");
+end
+
+currentAreaColumn = strtrim(manifest.CurrentAreaColumn(rowIndex));
+if strlength(currentAreaColumn) > 0
+    importConfig.currentAreaColumns = unique( ...
+        [currentAreaColumn, string(importConfig.currentAreaColumns)], "stable");
 end
 end
 
