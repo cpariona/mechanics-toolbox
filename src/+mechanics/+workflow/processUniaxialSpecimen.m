@@ -12,7 +12,6 @@ if ~isfield(specimen, "raw") || ...
     error("mechanics:workflow:InvalidSpecimen", ...
         "Specimen must contain raw.force and raw.displacement.");
 end
-
 requiredConfig = ["preprocessing", "mechanics", "analysis"];
 if ~all(isfield(config, requiredConfig))
     error("mechanics:workflow:InvalidConfig", ...
@@ -21,19 +20,34 @@ end
 
 rawCurve.force = specimen.raw.force;
 rawCurve.displacement = specimen.raw.displacement;
-
 if isfield(specimen.raw, "time")
     rawCurve.time = specimen.raw.time;
 end
 
+if isfield(specimen.raw, "units")
+    rawCurve.units = specimen.raw.units;
+else
+    rawCurve.units = struct();
+    if isfield(specimen, "source")
+        if isfield(specimen.source, "forceUnit")
+            rawCurve.units.force = string(specimen.source.forceUnit);
+        end
+        if isfield(specimen.source, "displacementUnit")
+            rawCurve.units.displacement = string(specimen.source.displacementUnit);
+        end
+        if isfield(specimen.source, "timeUnit")
+            rawCurve.units.time = string(specimen.source.timeUnit);
+        end
+    end
+end
+
 processedCurve = mechanics.preprocessing.prepareCurve( ...
     rawCurve, config.preprocessing);
-
 processedCurve = mechanics.analysis.computeUniaxialMeasures( ...
     processedCurve, geometry, config.mechanics);
-
 analysisResult = mechanics.analysis.computeTangentModulus( ...
     processedCurve, config.analysis);
+analysisResult.units = processedCurve.units.stress;
 
 specimen.geometry = geometry;
 specimen.processed = processedCurve;
