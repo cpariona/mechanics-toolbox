@@ -8,24 +8,17 @@ config.extraction.defaultInitialLength = 25;
 config.datasetAnalysis.fitting.enabled = true;
 config.export.enabled = true;
 config.export.outputFolder = "results/my-study";
-
 study = mechanics.workflow.runTensileStudy(filename, config);
 ```
 
 ## Excluding specimens
-
-Extracted specimens retain workbook order. Exclude known specimens by extraction index:
 
 ```matlab
 config.specimens.excludeIndices = [1, 4];
 config.specimens.exclusionReason = "different preload or visible grip slip";
 ```
 
-The result records the excluded indices, specimen IDs, sheet names, and reason in `study.exclusion`.
-
 ## Mechanical zero and preload
-
-The default zero reference is the first selected sample. A preload threshold is usually preferable when the acquisition begins before the intended reference state:
 
 ```matlab
 processing = config.datasetAnalysis.processingConfig.preprocessing;
@@ -35,15 +28,9 @@ processing.zeroReference.sustainedPoints = 3;
 config.datasetAnalysis.processingConfig.preprocessing = processing;
 ```
 
-Exceptional specimen-specific preload values can be supplied in workbook order. Use `NaN` to retain the global configuration:
-
-```matlab
-config.specimens.preloadForceOverrides = [0.5; 0.1; 0.1; 0.1; 0.1];
-```
+Specimen-specific preload values can be supplied in workbook order through `config.specimens.preloadForceOverrides`.
 
 ## Tangent modulus
-
-Tangent modulus is estimated over strain-based local windows. The default method is local linear regression, which smooths and differentiates within the same local fit:
 
 ```matlab
 analysis = config.datasetAnalysis.processingConfig.analysis;
@@ -53,36 +40,56 @@ analysis.summaryStrainRange = [0.00, 0.05];
 config.datasetAnalysis.processingConfig.analysis = analysis;
 ```
 
-Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Smoothing used for derivative estimation does not modify the stress curves used in population averaging.
+Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Derivative smoothing does not modify the stress curves used in population averaging.
 
-## Geometry uncertainty
-
-Optional first-order propagation can quantify how standard uncertainty in initial gauge length and initial area affects each stress-strain point:
+## Pointwise geometry uncertainty
 
 ```matlab
 uncertainty = config.datasetAnalysis.processingConfig.uncertainty.geometry;
 uncertainty.enabled = true;
-uncertainty.initialLengthStd = 0.10; % same length unit as initialLength
-uncertainty.initialAreaStd = 0.20;   % same area unit as initialArea
+uncertainty.initialLengthStd = 0.10;
+uncertainty.initialAreaStd = 0.20;
 config.datasetAnalysis.processingConfig.uncertainty.geometry = uncertainty;
 ```
 
-The result is stored under `specimen.analysis.geometryUncertainty` and added to specimen-level curve exports. This propagation does not include force, displacement, preprocessing, or fitting uncertainty.
+Results are stored under `specimen.analysis.geometryUncertainty` and added to specimen-level curve exports.
+
+## Measurement Monte Carlo for fitted parameters
+
+After model selection, the selected full-window model can be refitted under repeated perturbations of geometry and signals:
+
+```matlab
+config.datasetAnalysis.fitting.enabled = true;
+mc = config.datasetAnalysis.fitting.measurementMonteCarlo;
+mc.enabled = true;
+mc.sampleCount = 500;
+mc.initialLengthStd = 0.10;
+mc.initialAreaStd = 0.20;
+mc.forceStd = 0.01;
+mc.displacementStd = 0.005;
+config.datasetAnalysis.fitting.measurementMonteCarlo = mc;
+```
+
+The result is stored in:
+
+```text
+specimen.measurementMonteCarloFit
+```
+
+and contains parameter samples, percentile limits, medians, and successful-refit statistics. This is separate from residual bootstrap uncertainty.
 
 ## Population response
-
-Curves are interpolated linearly on a configurable common strain grid. No additional smoothing is applied before aggregation. The central curve can be a mean or median:
 
 ```matlab
 config.population.config.centralStatistic = "mean";   % or "median"
 config.population.config.strainGridPointCount = 201;
 ```
 
-The 201 points form an interpolation grid; they do not represent experimental resolution.
+The common grid is an interpolation grid, not experimental resolution.
 
 ## Units
 
-The Zwick extractor reads variable names from row 2 and units from row 3 of each specimen sheet. Force and displacement are normalized internally to N and mm when the reported units are supported. Original units and conversion factors remain in the specimen results.
+The Zwick extractor reads variable names from row 2 and units from row 3. Force and displacement are normalized internally to N and mm when supported. Gauge length remains an explicit geometry input; for the calibrated specimens it should be configured as 25 mm when absent from the workbook.
 
 ## Main outputs
 
@@ -106,8 +113,4 @@ reportConfig.outputFolder = "results/my-study/report";
 files = mechanics.io.exportTensileStudyReport(study, reportConfig);
 ```
 
-Titles are generated from the source filename unless `reportConfig.studyTitle` is set explicitly. Standard figures include individual stress-strain curves, the population response, peak metrics, tangent modulus, and zero-reference diagnostics. Axes include propagated units.
-
-Peak metrics include peak force, peak displacement, peak stress, peak strain, post-peak force drop, residual force fraction, energy to peak, total recorded work, and energy density to peak. The toolbox no longer classifies fracture as detected or complete.
-
-The report exporter only renders an existing `study` structure. It does not rerun extraction, fitting, peak analysis, or population statistics.
+Standard figures include individual stress-strain curves, the population response, peak metrics, tangent modulus, and zero-reference diagnostics. Peak metrics retain descriptive peak, post-peak, and energy quantities without fracture classification.
