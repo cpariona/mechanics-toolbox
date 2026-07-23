@@ -42,12 +42,27 @@ verifyEqual(testCase, study.specimen.processed.stress(end), 2.5, ...
 verifyEqual(testCase, study.specimen.testType, "compression");
 verifyEqual(testCase, study.cycleMetrics.loadingEnergy, 2.5, ...
     "AbsTol", 1e-12);
-verifyEqual(testCase, study.cycleMetrics.recoveredEnergy, 2.025, ...
+verifyEqual(testCase, study.cycleMetrics.recoveredEnergy, 2.5, ...
     "AbsTol", 1e-12);
-verifyEqual(testCase, study.cycleMetrics.hysteresisEnergy, 0.475, ...
+verifyEqual(testCase, study.cycleMetrics.hysteresisEnergy, 0, ...
     "AbsTol", 1e-12);
-verifyEqual(testCase, study.cycleMetrics.hysteresisFraction, 0.19, ...
+verifyEqual(testCase, study.cycleMetrics.hysteresisFraction, 0, ...
     "AbsTol", 1e-12);
+end
+
+function testDissipativeCycleProducesPositiveHysteresis(testCase)
+loadingDisplacement = linspace(0, 1, 11)';
+unloadingDisplacement = linspace(0.9, 0, 10)';
+raw.displacement = [loadingDisplacement; unloadingDisplacement];
+raw.force = [5 .* loadingDisplacement; 4 .* unloadingDisplacement];
+geometry.initialLength = 10;
+geometry.initialArea = 2;
+metrics = mechanics.analysis.computeCompressionCycleMetrics( ...
+    raw, numel(loadingDisplacement), geometry);
+verifyEqual(testCase, metrics.loadingEnergy, 2.5, "AbsTol", 1e-12);
+verifyEqual(testCase, metrics.recoveredEnergy, 2.0, "AbsTol", 1e-12);
+verifyEqual(testCase, metrics.hysteresisEnergy, 0.5, "AbsTol", 1e-12);
+verifyEqual(testCase, metrics.hysteresisFraction, 0.2, "AbsTol", 1e-12);
 end
 
 function testCompressionStudyExport(testCase)
