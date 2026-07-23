@@ -30,8 +30,18 @@ loadingEnergy = trapz(loadingDisplacement, loadingForce);
 unloadingSignedEnergy = trapz(unloadingDisplacement, unloadingForce);
 recoveredEnergy = abs(unloadingSignedEnergy);
 hysteresisEnergy = loadingEnergy - recoveredEnergy;
+
+energyScale = max([abs(loadingEnergy), abs(recoveredEnergy), 1]);
+roundoffTolerance = 100 .* eps(energyScale);
+if abs(hysteresisEnergy) <= roundoffTolerance
+    hysteresisEnergy = 0;
+end
+
 if isfinite(loadingEnergy) && loadingEnergy ~= 0
     hysteresisFraction = hysteresisEnergy ./ loadingEnergy;
+    if abs(hysteresisFraction) <= 100 .* eps(max(abs(hysteresisFraction), 1))
+        hysteresisFraction = 0;
+    end
 else
     hysteresisFraction = NaN;
 end
