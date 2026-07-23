@@ -162,11 +162,20 @@ summary = table(Index, SpecimenId, Group, Status, PeakStress, PeakStrain, ...
 end
 
 function metrics = localMetricTable(records)
-metrics = table(string({records.specimenId})', ...
-    arrayfun(@(r) r.study.cycleMetrics.peakStress, records)', ...
-    arrayfun(@(r) r.study.cycleMetrics.hysteresisEnergy, records)', ...
-    arrayfun(@(r) r.study.cycleMetrics.hysteresisFraction, records)', ...
-    'VariableNames', {'SpecimenId','PeakStress','HysteresisEnergy','HysteresisFraction'});
+count = numel(records);
+SpecimenId = strings(count, 1);
+PeakStress = nan(count, 1);
+HysteresisEnergy = nan(count, 1);
+HysteresisFraction = nan(count, 1);
+for index = 1:count
+    SpecimenId(index) = records(index).specimenId;
+    PeakStress(index) = records(index).study.cycleMetrics.peakStress;
+    HysteresisEnergy(index) = ...
+        records(index).study.cycleMetrics.hysteresisEnergy;
+    HysteresisFraction(index) = ...
+        records(index).study.cycleMetrics.hysteresisFraction;
+end
+metrics = table(SpecimenId, PeakStress, HysteresisEnergy, HysteresisFraction);
 end
 
 function record = localEmptyRecord()
