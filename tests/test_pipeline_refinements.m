@@ -76,6 +76,62 @@ verifyEqual(testCase, processed.processed.units.displacement, "mm");
 verifyEqual(testCase, processed.processed.stress, [0; 0.5; 1], "AbsTol", 1e-12);
 end
 
+function testGeometryUncertaintyPropagation(testCase)
+specimen.id = "uncertainty-test";
+specimen.raw.force = [0; 10];
+specimen.raw.displacement = [0; 1];
+specimen.raw.units.force = "N";
+specimen.raw.units.displacement = "mm";
+specimen.processingHistory = struct("timestamp",datetime("now"), ...
+    "step","synthetic","description","synthetic");
+geometry.initialLength = 10;
+geometry.initialArea = 2;
+config = mechanics.config.tensionConfig();
+config.analysis.summaryStrainRange = [0, 0.1];
+config.analysis.minimumWindowPoints = 2;
+config.uncertainty.geometry.enabled = true;
+config.uncertainty.geometry.initialLengthStd = 0.1;
+config.uncertainty.geometry.initialAreaStd = 0.02;
+processed = mechanics.workflow.processUniaxialSpecimen( ...
+    specimen, geometry, config);
+uncertainty = processed.analysis.geometryUncertainty;
+verifyEqual(testCase, uncertainty.strainStandardUncertainty(end), ...
+    0.001, "RelTol", 1e-5);
+verifyEqual(testCase, uncertainty.stressStandardUncertainty(end), ...
+    0.05, "RelTol", 1e-5);
+verifyEqual(testCase, uncertainty.strainRelativeStandardUncertainty(end), ...
+    0.01, "RelTol", 1e-5);
+verifyEqual(testCase, uncertainty.stressRelativeStandardUncertainty(end), ...
+    0.01, "RelTol", 1e-5);
+end
+
+function testGeometryUncertaintyIsExported(testCase)
+specimen.id = "uncertainty-export";
+specimen.raw.force = [0; 10; 20];
+specimen.raw.displacement = [0; 1; 2];
+specimen.raw.units.force = "N";
+specimen.raw.units.displacement = "mm";
+specimen.processingHistory = struct("timestamp",datetime("now"), ...
+    "step","synthetic","description","synthetic");
+geometry.initialLength = 10;
+geometry.initialArea = 2;
+config = mechanics.config.tensionConfig();
+config.analysis.summaryStrainRange = [0, 0.2];
+config.uncertainty.geometry.enabled = true;
+config.uncertainty.geometry.initialLengthStd = 0.1;
+config.uncertainty.geometry.initialAreaStd = 0.02;
+processed = mechanics.workflow.processUniaxialSpecimen( ...
+    specimen, geometry, config);
+folder = string(tempname);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+files = mechanics.io.exportSpecimenResults(processed, folder);
+curveTable = readtable(files.curve);
+verifyTrue(testCase, ismember("StrainStandardUncertainty", ...
+    string(curveTable.Properties.VariableNames)));
+verifyTrue(testCase, ismember("StressStandardUncertainty", ...
+    string(curveTable.Properties.VariableNames)));
+end
+
 function testTensileStudyExcludesByExtractionIndex(testCase)
 filename = localCreateWorkbook();
 cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
@@ -135,5 +191,11 @@ end
 function localDelete(filename)
 if isfile(filename)
     delete(filename);
+end
+end
+
+function localDeleteFolder(folder)
+if isfolder(folder)
+    rmdir(folder, "s");
 end
 end
