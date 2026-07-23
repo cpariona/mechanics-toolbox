@@ -36,7 +36,7 @@ The current-area vector must use the same observation count as force and displac
 `context.inputMeasure` accepts:
 
 - `"engineering-strain"`, with `lambda = 1 + strain`;
-- `"true-strain"`, with `lambda = exp(strain`);
+- `"true-strain"`, with `lambda = exp(strain)`;
 - `"stretch"`.
 
 `context.outputStressMeasure` accepts:
