@@ -1,5 +1,5 @@
 function uncertainty = geometryMonteCarloFitUncertainty(specimen, fitResult, config)
-%GEOMETRYMONTECARLOFITUNCERTAINTY Propagate geometry uncertainty through refitting.
+%GEOMETRYMONTECARLOFITUNCERTAINTY Propagate measurement uncertainty through refitting.
 arguments
     specimen (1,1) struct
     fitResult (1,1) struct
@@ -21,9 +21,11 @@ if sampleCount < 2
 end
 lengthStd = localStd(config.initialLengthStd, "initialLengthStd");
 areaStd = localStd(config.initialAreaStd, "initialAreaStd");
-if lengthStd == 0 && areaStd == 0
+forceStd = localStd(config.forceStd, "forceStd");
+displacementStd = localStd(config.displacementStd, "displacementStd");
+if lengthStd == 0 && areaStd == 0 && forceStd == 0 && displacementStd == 0
     error("mechanics:fitting:MissingMonteCarloGeometryUncertainty", ...
-        "At least one positive geometry standard uncertainty is required.");
+        "At least one positive measurement standard uncertainty is required.");
 end
 
 mechanicsConfig = specimen.processingConfig.mechanics;
@@ -55,9 +57,17 @@ for index = 1:sampleCount
     geometry = baseGeometry;
     geometry.initialLength = localPositiveNormal(baseGeometry.initialLength, lengthStd);
     geometry.initialArea = localPositiveNormal(baseGeometry.initialArea, areaStd);
+    sampledCurve = specimen.processed;
+    if forceStd > 0
+        sampledCurve.force = sampledCurve.force(:) + forceStd .* randn(size(sampledCurve.force(:)));
+    end
+    if displacementStd > 0
+        sampledCurve.displacement = sampledCurve.displacement(:) + ...
+            displacementStd .* randn(size(sampledCurve.displacement(:)));
+    end
     try
         curve = mechanics.analysis.computeUniaxialMeasures( ...
-            specimen.processed, geometry, mechanicsConfig);
+            sampledCurve, geometry, mechanicsConfig);
         x = curve.strain(:);
         y = curve.stress(:);
         mask = isfinite(x) & isfinite(y) & x >= xMin & x <= xMax;
@@ -77,7 +87,7 @@ end
 successfulFraction = nnz(successMask) ./ sampleCount;
 if successfulFraction < config.minimumSuccessfulFraction
     error("mechanics:fitting:InsufficientMonteCarloSuccess", ...
-        "Only %.1f%% of geometry Monte Carlo refits succeeded.", ...
+        "Only %.1f%% of measurement Monte Carlo refits succeeded.", ...
         100 .* successfulFraction);
 end
 
