@@ -5,6 +5,7 @@ The documentation is organized by task.
 ## Workflows
 
 - [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis and reporting.
+- [`workflows/compression-study.md`](workflows/compression-study.md): last-cycle compression selection and specimen processing.
 - [`workflows/constitutive-analysis.md`](workflows/constitutive-analysis.md): fitting, diagnostics, model comparison, parameter summaries, group inference, and reporting.
 
 ## Data
@@ -15,7 +16,7 @@ The documentation is organized by task.
 
 - [`reference/constitutive-models.md`](reference/constitutive-models.md): deformation measures, stress measures, model equations, and parameter definitions.
 - [`reference/fit-diagnostics.md`](reference/fit-diagnostics.md): uncertainty, identifiability, window stability, residual diagnostics, and reliability.
-- [`reference/fracture-analysis.md`](reference/fracture-analysis.md): pre-fracture segmentation, fracture classification, and energy conventions.
+- [`reference/fracture-analysis.md`](reference/fracture-analysis.md): peak segmentation, post-peak descriptors, and energy conventions.
 - [`reference/population-and-group-analysis.md`](reference/population-and-group-analysis.md): replicate statistics and experimental group comparisons.
 
 ## Development
