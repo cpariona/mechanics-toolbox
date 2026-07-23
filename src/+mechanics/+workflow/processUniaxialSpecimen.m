@@ -23,6 +23,9 @@ rawCurve.displacement = specimen.raw.displacement;
 if isfield(specimen.raw, "time")
     rawCurve.time = specimen.raw.time;
 end
+if isfield(specimen.raw, "currentArea")
+    rawCurve.currentArea = specimen.raw.currentArea;
+end
 
 if isfield(specimen.raw, "units")
     rawCurve.units = specimen.raw.units;
