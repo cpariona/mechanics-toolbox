@@ -7,9 +7,13 @@ config.displacementColumns = [ ...
     "Displacement", "Displacement_mm", "Extension", ...
     "Extension_mm", "Desplazamiento"];
 config.timeColumns = ["Time", "Time_s", "Tiempo"];
+config.currentAreaColumns = [ ...
+    "CurrentArea", "CurrentArea_mm2", "Area", "Area_mm2", ...
+    "CrossSectionArea", "CrossSectionArea_mm2"];
 config.specimenId = "";
 config.forceScale = 1;
 config.displacementScale = 1;
 config.timeScale = 1;
+config.currentAreaScale = 1;
 config.preserveVariableNames = true;
 end
