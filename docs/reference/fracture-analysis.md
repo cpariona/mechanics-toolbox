@@ -1,34 +1,34 @@
-# Curve segmentation and tensile fracture analysis
+# Curve segmentation and tensile peak analysis
 
-## Pre-fracture segmentation
+## Loading-curve segmentation
 
-Constitutive analysis should use the loading response before fracture or machine return. The segmentation workflow identifies peak force, selects the configured analysis endpoint, and preserves the complete raw acquisition separately.
+Constitutive analysis uses the loading response up to peak force or a configured fraction of peak force. The complete raw acquisition remains preserved separately.
 
 ```matlab
 config = mechanics.config.curveSegmentationConfig();
 segmentation = mechanics.segmentation.segmentTensileCurve(raw, config);
 ```
 
-The original vectors remain in `specimen.raw`; the selected constitutive interval is stored in `specimen.analysisRaw`.
+The original vectors remain in `specimen.raw`; the selected constitutive interval is stored in `specimen.analysisRaw`. The segmentation result reports peak location, analysis endpoint, and post-peak drop fraction, but it does not classify fracture.
 
-## Fracture metrics
+## Peak and post-peak metrics
 
 ```matlab
 config = mechanics.config.fractureAnalysisConfig();
 metrics = mechanics.analysis.computeFractureMetrics(specimen, config);
 ```
 
-Reported quantities include peak force and displacement, peak stress and strain, minimum post-peak force, final force, post-peak drop fraction, residual force fraction, fracture flags, energy to peak, total recorded work, and energy density to peak.
+Despite the retained function name, the maintained output is a peak-metric description rather than a fracture classifier. Reported quantities include:
 
-Fracture detection uses:
+- peak force and displacement;
+- peak stress and the strain at the peak-stress index;
+- minimum post-peak force and final force;
+- post-peak drop fraction and residual-force fraction;
+- energy to peak;
+- total recorded force-displacement work;
+- energy density to peak.
 
-```matlab
-config.fractureDetectionDropFraction = 0.20;
-```
-
-Complete fracture additionally requires the configured post-peak drop and residual-force thresholds.
-
-Fracture analysis does not require segmentation metadata. Setting `config.enabled = false` leaves specimen records unchanged and returns an empty fracture summary.
+No `fractureDetected` or `completeFracture` field is produced.
 
 ## Energy convention
 
@@ -53,4 +53,4 @@ analysis = mechanics.workflow.addFractureMetrics(analysis, config);
 files = mechanics.io.exportFractureAnalysis(analysis, outputFolder);
 ```
 
-Classification is descriptive and does not alter specimen-quality status.
+Setting `config.enabled = false` leaves specimen records unchanged and returns an empty peak-metric summary.
