@@ -15,7 +15,7 @@ result = mechanics.segmentation.segmentTensileCurve(raw,config);
 verifyEqual(testCase,result.peakIndex,4);
 verifyEqual(testCase,result.analysisEndIndex,4);
 verifyEqual(testCase,result.analysisRaw.force,[0;1;2;3]);
-verifyTrue(testCase,result.fractureDetected);
+verifyFalse(testCase,isfield(result,"fractureDetected"));
 verifyEqual(testCase,result.postPeakDropFraction,1);
 end
 
@@ -30,7 +30,7 @@ verifyEqual(testCase,result.analysisEndIndex,9);
 verifyEqual(testCase,result.analysisRaw.force(end),8);
 end
 
-function testPostFractureReversalDoesNotFailQuality(testCase)
+function testPostPeakReversalDoesNotFailQuality(testCase)
 dataset.specimens=localSpecimen();
 config=mechanics.config.datasetAnalysisConfig();
 config.segmentation.minimumObservations=3;
@@ -40,7 +40,8 @@ analysis=mechanics.workflow.analyzeExtractedDataset(dataset,config);
 verifyEqual(testCase,analysis.summary.Status,"processed");
 verifyEqual(testCase,analysis.summary.DisplacementReversalFraction,0);
 verifyEqual(testCase,analysis.summary.AnalysisEndIndex,6);
-verifyTrue(testCase,analysis.summary.FractureDetected);
+verifyFalse(testCase,ismember("FractureDetected", ...
+    string(analysis.summary.Properties.VariableNames)));
 verifyEqual(testCase,numel(analysis.records(1).specimen.raw.force),9);
 verifyEqual(testCase,numel(analysis.records(1).specimen.analysisRaw.force),6);
 end
@@ -55,5 +56,5 @@ specimen.geometry.initialArea=2;
 specimen.source.filename="synthetic";
 specimen.metadata=struct();
 specimen.processingHistory=struct("timestamp",datetime("now"), ...
-    "step","synthetic","description","synthetic fracture curve");
+    "step","synthetic","description","synthetic peak curve");
 end
