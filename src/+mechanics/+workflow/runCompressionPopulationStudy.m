@@ -204,10 +204,17 @@ end
 function adapter=localComparisonAdapter(records,summary)
 adapter.summary=summary; adapter.summary.MaximumStrain=summary.PeakStrain;
 adapter.summary.MaximumStress=summary.PeakStress;
-adapter.records=repmat(struct('status',"",'group',"",'specimen',struct()),numel(records),1);
+adapter.records=repmat(struct('index',NaN,'specimenId',"",'sheetName',"", ...
+    'status',"",'group',"",'specimen',struct()),numel(records),1);
 for i=1:numel(records)
-    adapter.records(i).status=records(i).status; adapter.records(i).group=records(i).group;
-    if records(i).status=="processed", adapter.records(i).specimen=records(i).study.specimen; end
+    adapter.records(i).index=records(i).index;
+    adapter.records(i).specimenId=records(i).specimenId;
+    adapter.records(i).sheetName=records(i).file;
+    adapter.records(i).status=records(i).status;
+    adapter.records(i).group=records(i).group;
+    if records(i).status=="processed"
+        adapter.records(i).specimen=records(i).study.specimen;
+    end
 end
 end
 
