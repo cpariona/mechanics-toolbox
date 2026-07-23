@@ -43,6 +43,8 @@ displacementName = mechanics.io.resolveColumnName( ...
     data.Properties.VariableNames, config.displacementColumns, true);
 timeName = mechanics.io.resolveColumnName( ...
     data.Properties.VariableNames, config.timeColumns, false);
+areaName = mechanics.io.resolveColumnName( ...
+    data.Properties.VariableNames, config.currentAreaColumns, false);
 
 force = data.(forceName);
 displacement = data.(displacementName);
@@ -71,6 +73,7 @@ specimen.source.sheet = config.sheet;
 specimen.source.forceColumn = forceName;
 specimen.source.displacementColumn = displacementName;
 specimen.source.timeColumn = timeName;
+specimen.source.currentAreaColumn = areaName;
 specimen.source.importConfig = config;
 
 specimen.raw.force = force;
@@ -82,7 +85,24 @@ if strlength(timeName) > 0
         error("mechanics:io:NonNumericData", ...
             "The selected time column must contain numeric values.");
     end
+    if numel(time) ~= numel(force)
+        error("mechanics:io:SizeMismatch", ...
+            "The selected time column must match force and displacement length.");
+    end
     specimen.raw.time = time(:) .* config.timeScale;
+end
+
+if strlength(areaName) > 0
+    currentArea = data.(areaName);
+    if ~isnumeric(currentArea)
+        error("mechanics:io:NonNumericData", ...
+            "The selected current-area column must contain numeric values.");
+    end
+    if numel(currentArea) ~= numel(force)
+        error("mechanics:io:SizeMismatch", ...
+            "The selected current-area column must match force and displacement length.");
+    end
+    specimen.raw.currentArea = currentArea(:) .* config.currentAreaScale;
 end
 
 specimen.raw.originalTable = data;
