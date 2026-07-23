@@ -53,6 +53,30 @@ specimen.cycleMetrics = cycleMetrics;
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, config.geometry, config.processing);
 
+if config.fitting.enabled
+    compressionDeformation = -specimen.processed.strain;
+    compressionStress = -specimen.processed.stress;
+    specimen.modelSelection = mechanics.fitting.fitAcrossWindows( ...
+        config.fitting.modelNames, compressionDeformation, ...
+        compressionStress, config.fitting.context, ...
+        config.fitting.fitConfig, config.fitting.selectionConfig);
+    specimen.modelSelection.compressionSignTransform = ...
+        "positive compression converted to negative engineering strain and nominal stress";
+
+    monteCarloConfig = config.fitting.geometryMonteCarlo;
+    if monteCarloConfig.enabled && specimen.modelSelection.selection.succeeded
+        selectedRecord = localSelectedFitRecord(specimen.modelSelection);
+        fitSpecimen = specimen;
+        fitSpecimen.processed.force = -specimen.processed.force;
+        fitSpecimen.processed.displacement = -specimen.processed.displacement;
+        fitSpecimen.processed.strain = compressionDeformation;
+        fitSpecimen.processed.stress = compressionStress;
+        specimen.geometryMonteCarloFit = ...
+            mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+                fitSpecimen, selectedRecord.fitResult, monteCarloConfig);
+    end
+end
+
 study.sourceFile = filename;
 study.specimen = specimen;
 study.cycle = specimen.cycleSelection;
@@ -63,6 +87,20 @@ study.createdAt = datetime("now");
 if config.export.enabled
     study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
 end
+end
+
+function record = localSelectedFitRecord(modelSelection)
+selection = modelSelection.selection;
+records = modelSelection.records;
+mask = [records.succeeded] & ...
+    string({records.modelName}) == string(selection.modelName) & ...
+    [records.windowFraction] == selection.windowFraction;
+index = find(mask, 1, "first");
+if isempty(index)
+    error("mechanics:workflow:SelectedCompressionFitMissing", ...
+        "The selected compression fit record could not be resolved.");
+end
+record = records(index);
 end
 
 function output = localPositiveIncrement(input)
@@ -79,6 +117,9 @@ output.force = raw.force(indices);
 output.displacement = raw.displacement(indices);
 if isfield(raw, "time")
     output.time = raw.time(indices);
+end
+if isfield(raw, "currentArea")
+    output.currentArea = raw.currentArea(indices);
 end
 if isfield(raw, "units")
     output.units = raw.units;
