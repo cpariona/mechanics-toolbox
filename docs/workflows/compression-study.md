@@ -4,7 +4,7 @@ The compression workflow imports one tabular specimen, detects complete preparat
 
 ```matlab
 config = mechanics.config.compressionStudyConfig();
-config.geometry.initialLength = 10;
+config.geometry.initialLength = 25;
 config.geometry.initialArea = 100;
 
 study = mechanics.workflow.runCompressionStudy( ...
@@ -13,11 +13,9 @@ study = mechanics.workflow.runCompressionStudy( ...
 
 ## Required input
 
-The source file must contain numeric force and displacement columns recognized by `mechanics.config.excelImportConfig`. Optional time data are preserved.
+The source file must contain numeric force and displacement columns recognized by `mechanics.config.excelImportConfig`. Optional time and measured-area data are preserved. The default calibrated length for population compression manifests is 25 mm when `InitialLength` is omitted.
 
 ## Cycle selection
-
-Defaults:
 
 ```matlab
 config.cycle.selection = "last-complete-cycle";
@@ -27,76 +25,86 @@ config.cycle.loadingDirection = "increasing";
 
 Use `loadingDirection = "decreasing"` when instrument displacement becomes more negative during compression. `branch` also accepts `unloading` and `full-cycle`.
 
-The detected cycle boundaries and selected indices are stored in:
-
-```text
-study.cycle.detectedCycles
-study.cycle.selectedCycleIndex
-study.cycle.cycleStartIndex
-study.cycle.loadingEndIndex
-study.cycle.cycleEndIndex
-study.cycle.selectedIndices
-```
-
 ## Sign convention
 
-The default convention is positive compression:
-
-```matlab
-config.signConvention = "positive-compression";
-```
-
-The selected force and displacement branch is reoriented so loading increments are positive. Set `instrument` to preserve imported signs.
+The default convention reports compression force, displacement, stress, and strain as positive. Constitutive fitting internally converts the loading branch to negative engineering strain and negative nominal stress, which is the convention used by the registered hyperelastic models for stretches below one.
 
 ## Mechanical processing
 
-The selected branch is processed with `mechanics.config.compressionConfig`, including zero-reference correction, engineering or true measures, and tangent-modulus estimation. Preload or contact thresholds can be configured through:
+The selected branch uses the shared uniaxial pipeline, including zero-reference correction, engineering or true measures, and tangent-modulus estimation.
 
 ```matlab
 config.processing.preprocessing.zeroReference.method = "preload-threshold";
 config.processing.preprocessing.zeroReference.preloadForce = 0.1;
 ```
 
-## Cycle metrics
+## Constitutive fitting
 
-The complete selected cycle is retained separately from the branch used for fitting or modulus estimation. The workflow reports:
+The same incompressible uniaxial models used in tension can be fitted to compression data:
 
-```text
-study.cycleMetrics.peakForce
-study.cycleMetrics.peakDisplacement
-study.cycleMetrics.peakStress
-study.cycleMetrics.peakStrain
-study.cycleMetrics.loadingEnergy
-study.cycleMetrics.recoveredEnergy
-study.cycleMetrics.hysteresisEnergy
-study.cycleMetrics.hysteresisFraction
-study.cycleMetrics.hysteresisEnergyDensity
+```matlab
+config.fitting.enabled = true;
+config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
 ```
 
-With force in N and displacement in mm, the force-displacement energies are in mJ. Hysteresis is the loading work minus the recovered unloading work.
+Results are stored under:
+
+```text
+study.specimen.modelSelection
+```
+
+Geometry-aware Monte Carlo refitting can be enabled for the selected model:
+
+```matlab
+config.fitting.geometryMonteCarlo.enabled = true;
+config.fitting.geometryMonteCarlo.sampleCount = 200;
+config.fitting.geometryMonteCarlo.initialLengthStd = 0.1;
+config.fitting.geometryMonteCarlo.initialAreaStd = 0.2;
+```
+
+This is most useful when parameter differences between specimens or groups are comparable to the uncertainty introduced by specimen geometry. It is not required for routine exploratory fitting when geometry uncertainty is negligible relative to biological or manufacturing variability.
+
+## Cycle metrics
+
+The workflow reports peak force, peak displacement, peak stress, peak strain, loading energy, recovered energy, hysteresis energy, hysteresis fraction, and hysteresis energy density.
+
+## Population and group analysis
+
+Use a manifest with at least:
+
+```text
+File
+SpecimenId
+InitialArea
+```
+
+Optional columns are `Group`, `InitialLength`, and `Include`. When `InitialLength` is absent, the configured default of 25 mm is used.
+
+```matlab
+config = mechanics.config.compressionPopulationConfig();
+config.defaultInitialLength = 25;
+config.studyConfig.fitting.enabled = true;
+config.population.bootstrap.enabled = true;
+
+population = mechanics.workflow.runCompressionPopulationStudy( ...
+    "compression_manifest.csv", config);
+```
+
+The result contains specimen records, a scalar summary, and one population stress-strain aggregate per group. Groups with fewer than `minimumSpecimensPerGroup` remain marked as insufficient.
+
+## Area units
+
+Table import can normalize measured area automatically to mm2:
+
+```matlab
+config.import.currentAreaUnit = "cm2";
+config.import.normalizeCurrentAreaUnits = true;
+```
+
+Supported units include `um2`, `mm2`, `cm2`, `m2`, and `in2` with common textual variants.
 
 ## Export and figures
 
-```matlab
-config.export.enabled = true;
-config.export.outputFolder = "results/compression-study";
-config.export.report.studyTitle = "Compression test";
+Single-specimen export includes processed curves, cycle metrics, a MAT study file, and report figures. Population export writes a study summary, one population curve per valid group, and a MAT file.
 
-study = mechanics.workflow.runCompressionStudy(filename, config);
-```
-
-The export bundle contains:
-
-```text
-compression_processed.csv
-compression_cycle_metrics.csv
-compression_study.mat
-report/report.md
-report/compression_cycle.png
-report/compression_response.png
-report/compression_tangent_modulus.png
-```
-
-The cycle figure distinguishes loading and unloading. The response figure uses the configured selected branch. The tangent-modulus figure marks the strain range used for the summary value.
-
-Cycle detection, contact detection, and sign normalization remain configuration-dependent and should be checked visually for a new machine format or protocol.
+Cycle detection, contact detection, sign normalization, and fitted compression conventions should be checked visually for each new machine format or protocol.
