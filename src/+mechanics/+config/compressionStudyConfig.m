@@ -15,6 +15,14 @@ config.cycle.smoothingFrameLength = 5;
 
 config.signConvention = "positive-compression";
 
+config.fitting.enabled = false;
+config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
+config.fitting.context.inputMeasure = "engineering-strain";
+config.fitting.context.outputStressMeasure = "nominal";
+config.fitting.fitConfig = mechanics.config.fittingConfig();
+config.fitting.selectionConfig = mechanics.config.modelSelectionConfig();
+config.fitting.geometryMonteCarlo = mechanics.config.geometryMonteCarloFitConfig();
+
 config.export.enabled = false;
 config.export.outputFolder = "results/compression-study";
 config.export.saveStudyMat = true;
