@@ -1,5 +1,5 @@
 function summary = summarizeFractureMetrics(records)
-%SUMMARIZEFRACTUREMETRICS Build specimen-level fracture summary.
+%SUMMARIZEFRACTUREMETRICS Build specimen-level peak-metric summary.
 arguments
     records struct
 end
@@ -9,8 +9,6 @@ processedRecords = records(processedMask);
 n = numel(processedRecords);
 
 specimenId = strings(n,1);
-fractureDetected = false(n,1);
-completeFracture = false(n,1);
 peakForce = nan(n,1);
 peakDisplacement = nan(n,1);
 peakStress = nan(n,1);
@@ -24,34 +22,28 @@ energyDensityToPeak = nan(n,1);
 for index = 1:n
     record = processedRecords(index);
     specimenId(index) = record.specimenId;
-
     if ~isfield(record.specimen, "fracture")
         continue;
     end
-
-    fracture = record.specimen.fracture;
-    fractureDetected(index) = fracture.fractureDetected;
-    completeFracture(index) = fracture.completeFracture;
-    peakForce(index) = fracture.peakForce;
-    peakDisplacement(index) = fracture.peakDisplacement;
-    peakStress(index) = fracture.peakStress;
-    peakStrain(index) = fracture.peakStrain;
-    postPeakDropFraction(index) = fracture.postPeakDropFraction;
-    residualForceFraction(index) = fracture.residualForceFraction;
-    energyToPeak(index) = fracture.energyToPeak;
-    totalRecordedEnergy(index) = fracture.totalRecordedEnergy;
-    energyDensityToPeak(index) = fracture.energyDensityToPeak;
+    metrics = record.specimen.fracture;
+    peakForce(index) = metrics.peakForce;
+    peakDisplacement(index) = metrics.peakDisplacement;
+    peakStress(index) = metrics.peakStress;
+    peakStrain(index) = metrics.peakStrain;
+    postPeakDropFraction(index) = metrics.postPeakDropFraction;
+    residualForceFraction(index) = metrics.residualForceFraction;
+    energyToPeak(index) = metrics.energyToPeak;
+    totalRecordedEnergy(index) = metrics.totalRecordedEnergy;
+    energyDensityToPeak(index) = metrics.energyDensityToPeak;
 end
 
 summary = table( ...
-    specimenId, fractureDetected, completeFracture, ...
-    peakForce, peakDisplacement, peakStress, peakStrain, ...
-    postPeakDropFraction, residualForceFraction, ...
-    energyToPeak, totalRecordedEnergy, energyDensityToPeak, ...
+    specimenId, peakForce, peakDisplacement, peakStress, peakStrain, ...
+    postPeakDropFraction, residualForceFraction, energyToPeak, ...
+    totalRecordedEnergy, energyDensityToPeak, ...
     'VariableNames', { ...
-        'SpecimenId', 'FractureDetected', 'CompleteFracture', ...
-        'PeakForce', 'PeakDisplacement', 'PeakStress', 'PeakStrain', ...
-        'PostPeakDropFraction', 'ResidualForceFraction', ...
-        'EnergyToPeak', 'TotalRecordedEnergy', ...
-        'EnergyDensityToPeak'});
+        'SpecimenId', 'PeakForce', 'PeakDisplacement', ...
+        'PeakStress', 'PeakStrain', 'PostPeakDropFraction', ...
+        'ResidualForceFraction', 'EnergyToPeak', ...
+        'TotalRecordedEnergy', 'EnergyDensityToPeak'});
 end
