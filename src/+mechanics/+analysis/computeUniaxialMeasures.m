@@ -30,9 +30,10 @@ switch lower(string(config.stressMeasure))
     case "engineering"
         stress = engineeringStress;
         currentArea = repmat(geometry.initialArea, size(stretch));
+        areaScale = ones(size(stretch));
     case "true"
         [currentArea, areaScale] = localCurrentArea( ...
-            geometry.initialArea, stretch, config);
+            curve, geometry.initialArea, stretch, config);
         stress = engineeringStress ./ areaScale;
     otherwise
         error("mechanics:analysis:UnknownStressMeasure", ...
@@ -43,13 +44,14 @@ curve.engineeringStrain = engineeringStrain;
 curve.engineeringStress = engineeringStress;
 curve.stretch = stretch;
 curve.currentArea = currentArea;
+curve.areaScale = areaScale;
 curve.strain = strain;
 curve.stress = stress;
 curve.geometry = geometry;
 curve.mechanicsConfig = config;
 end
 
-function [currentArea, areaScale] = localCurrentArea(initialArea, stretch, config)
+function [currentArea, areaScale] = localCurrentArea(curve, initialArea, stretch, config)
 method = "incompressible";
 if isfield(config, "areaEvolution")
     method = lower(string(config.areaEvolution));
@@ -57,6 +59,7 @@ end
 switch method
     case "incompressible"
         areaScale = stretch .^ (-1);
+        currentArea = initialArea .* areaScale;
     case "poisson-power"
         if ~isfield(config, "poissonRatio") || ...
                 ~isscalar(config.poissonRatio) || ...
@@ -66,11 +69,26 @@ switch method
                 "poissonRatio must lie between 0 and 0.5.");
         end
         areaScale = stretch .^ (-2 .* config.poissonRatio);
+        currentArea = initialArea .* areaScale;
+    case "measured-area"
+        if ~isfield(curve, "currentAreaMeasured")
+            error("mechanics:analysis:MissingMeasuredArea", ...
+                "areaEvolution='measured-area' requires a measured current-area vector.");
+        end
+        currentArea = curve.currentAreaMeasured(:);
+        if numel(currentArea) ~= numel(stretch)
+            error("mechanics:analysis:MeasuredAreaSizeMismatch", ...
+                "Measured current area must match the processed curve length.");
+        end
+        if any(~isfinite(currentArea) | currentArea <= 0)
+            error("mechanics:analysis:InvalidMeasuredArea", ...
+                "Measured current area must contain positive finite values.");
+        end
+        areaScale = currentArea ./ initialArea;
     otherwise
         error("mechanics:analysis:UnknownAreaEvolution", ...
             "Unknown area-evolution method: %s", method);
 end
-currentArea = initialArea .* areaScale;
 end
 
 function mustHavePositiveScalar(value, fieldName)
