@@ -64,7 +64,8 @@ if config.fitting.enabled
         "positive compression converted to negative engineering strain and nominal stress";
 
     monteCarloConfig = config.fitting.geometryMonteCarlo;
-    if monteCarloConfig.enabled && specimen.modelSelection.selection.succeeded
+    if monteCarloConfig.enabled && ...
+            specimen.modelSelection.selection.hasEligibleModel
         selectedRecord = localSelectedFitRecord(specimen.modelSelection);
         fitSpecimen = specimen;
         fitSpecimen.processed.force = -specimen.processed.force;
@@ -92,15 +93,15 @@ end
 function record = localSelectedFitRecord(modelSelection)
 selection = modelSelection.selection;
 records = modelSelection.records;
-mask = [records.succeeded] & ...
-    string({records.modelName}) == string(selection.modelName) & ...
-    [records.windowFraction] == selection.windowFraction;
-index = find(mask, 1, "first");
-if isempty(index)
+modelMask = string({records.modelName}) == string(selection.bestModel);
+successMask = [records.succeeded];
+candidates = find(modelMask & successMask);
+if isempty(candidates)
     error("mechanics:workflow:SelectedCompressionFitMissing", ...
         "The selected compression fit record could not be resolved.");
 end
-record = records(index);
+[~, localIndex] = max([records(candidates).windowFraction]);
+record = records(candidates(localIndex));
 end
 
 function output = localPositiveIncrement(input)
