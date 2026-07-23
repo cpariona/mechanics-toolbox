@@ -41,6 +41,10 @@ else
     end
 end
 
+[rawCurve.force, rawCurve.displacement, rawCurve.units, unitConversion] = ...
+    mechanics.io.normalizeRawMechanicalUnits( ...
+        rawCurve.force, rawCurve.displacement, rawCurve.units);
+
 processedCurve = mechanics.preprocessing.prepareCurve( ...
     rawCurve, config.preprocessing);
 processedCurve = mechanics.analysis.computeUniaxialMeasures( ...
@@ -52,10 +56,11 @@ analysisResult.units = processedCurve.units.stress;
 specimen.geometry = geometry;
 specimen.processed = processedCurve;
 specimen.analysis.tangentModulus = analysisResult;
+specimen.unitConversion = unitConversion;
 specimen.processingConfig = config;
 specimen.processingHistory(end + 1) = localHistoryEntry( ...
     "uniaxial-processing", ...
-    "Prepared the curve, computed stress-strain measures, and estimated tangent modulus.");
+    "Normalized units, prepared the curve, computed stress-strain measures, and estimated tangent modulus.");
 end
 
 function entry = localHistoryEntry(stepName, description)
