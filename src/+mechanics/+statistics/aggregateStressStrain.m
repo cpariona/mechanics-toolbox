@@ -6,7 +6,6 @@ arguments
 end
 
 specimens = specimens(:);
-
 if numel(specimens) < config.minimumSpecimens
     error("mechanics:statistics:InsufficientSpecimens", ...
         "At least %d processed specimens are required.", ...
@@ -22,7 +21,6 @@ specimenIds = strings(curveCount, 1);
 
 for index = 1:curveCount
     specimen = specimens(index);
-
     if ~isfield(specimen, "processed") || ...
             ~isfield(specimen.processed, "strain") || ...
             ~isfield(specimen.processed, "stress")
@@ -32,7 +30,6 @@ for index = 1:curveCount
 
     [strain, stress] = localPrepareCurve( ...
         specimen.processed.strain, specimen.processed.stress);
-
     preparedStrain{index} = strain;
     preparedStress{index} = stress;
     minimumStrain(index) = min(strain);
@@ -48,22 +45,18 @@ end
 switch lower(string(config.strainRangeMode))
     case "common-overlap"
         strainLimits = [max(minimumStrain), min(maximumStrain)];
-
     case "explicit"
         strainLimits = config.explicitStrainRange;
-
     otherwise
         error("mechanics:statistics:UnknownStrainRangeMode", ...
             "Unknown strain range mode: %s", config.strainRangeMode);
 end
 
-if numel(strainLimits) ~= 2 || ...
-        any(~isfinite(strainLimits)) || ...
+if numel(strainLimits) ~= 2 || any(~isfinite(strainLimits)) || ...
         strainLimits(2) <= strainLimits(1)
     error("mechanics:statistics:InvalidStrainRange", ...
         "The aggregation strain range must contain two increasing finite values.");
 end
-
 if strainLimits(1) < max(minimumStrain) || ...
         strainLimits(2) > min(maximumStrain)
     error("mechanics:statistics:StrainRangeOutsideOverlap", ...
@@ -76,10 +69,8 @@ if ~isscalar(gridPointCount) || gridPointCount < 2
         "strainGridPointCount must be at least 2.");
 end
 
-strainGrid = linspace( ...
-    strainLimits(1), strainLimits(2), gridPointCount)';
+strainGrid = linspace(strainLimits(1), strainLimits(2), gridPointCount)';
 stressMatrix = nan(gridPointCount, curveCount);
-
 for index = 1:curveCount
     stressMatrix(:, index) = interp1( ...
         preparedStrain{index}, preparedStress{index}, ...
@@ -87,21 +78,34 @@ for index = 1:curveCount
 end
 
 meanStress = mean(stressMatrix, 2);
+medianStress = median(stressMatrix, 2);
+centralStatistic = lower(string(config.centralStatistic));
+switch centralStatistic
+    case "mean"
+        centralStress = meanStress;
+    case "median"
+        centralStress = medianStress;
+    otherwise
+        error("mechanics:statistics:UnknownCentralStatistic", ...
+            "centralStatistic must be 'mean' or 'median'.");
+end
+
 standardDeviation = std(stressMatrix, 0, 2);
 standardError = standardDeviation ./ sqrt(curveCount);
-
 confidenceLower = nan(gridPointCount, 1);
 confidenceUpper = nan(gridPointCount, 1);
 
 if config.bootstrap.enabled
     for pointIndex = 1:gridPointCount
+        values = stressMatrix(pointIndex, :);
         pointConfig = config.bootstrap;
-        pointConfig.randomSeed = ...
-            config.bootstrap.randomSeed + pointIndex - 1;
-
-        interval = mechanics.statistics.bootstrapMeanConfidenceInterval( ...
-            stressMatrix(pointIndex, :), pointConfig);
-
+        pointConfig.randomSeed = config.bootstrap.randomSeed + pointIndex - 1;
+        if centralStatistic == "mean"
+            interval = mechanics.statistics.bootstrapMeanConfidenceInterval( ...
+                values, pointConfig);
+        else
+            interval = localBootstrapMedian(values, pointConfig);
+        end
         confidenceLower(pointIndex) = interval.lower;
         confidenceUpper(pointIndex) = interval.upper;
     end
@@ -113,6 +117,9 @@ aggregate.strainRange = strainLimits;
 aggregate.strain = strainGrid;
 aggregate.stressMatrix = stressMatrix;
 aggregate.meanStress = meanStress;
+aggregate.medianStress = medianStress;
+aggregate.centralStatistic = centralStatistic;
+aggregate.centralStress = centralStress;
 aggregate.standardDeviation = standardDeviation;
 aggregate.standardError = standardError;
 aggregate.confidenceLower = confidenceLower;
@@ -120,33 +127,45 @@ aggregate.confidenceUpper = confidenceUpper;
 aggregate.config = config;
 end
 
+function interval = localBootstrapMedian(values, config)
+values = values(isfinite(values));
+rng(config.randomSeed, "twister");
+iterations = round(config.iterations);
+samples = nan(iterations, 1);
+for index = 1:iterations
+    draw = values(randi(numel(values), numel(values), 1));
+    samples(index) = median(draw);
+end
+alpha = 1 - config.confidenceLevel;
+probabilities = [alpha / 2, 1 - alpha / 2];
+ordered = sort(samples);
+indices = 1 + (iterations - 1) .* probabilities;
+interval.lower = interp1(1:iterations, ordered, indices(1), "linear");
+interval.upper = interp1(1:iterations, ordered, indices(2), "linear");
+interval.median = median(samples);
+end
+
 function [strain, stress] = localPrepareCurve(strain, stress)
 strain = strain(:);
 stress = stress(:);
-
 if numel(strain) ~= numel(stress)
     error("mechanics:statistics:CurveSizeMismatch", ...
         "Strain and stress must have equal lengths.");
 end
-
 valid = isfinite(strain) & isfinite(stress);
 strain = strain(valid);
 stress = stress(valid);
-
 if numel(strain) < 2
     error("mechanics:statistics:InsufficientCurveData", ...
         "Every curve must contain at least two finite observations.");
 end
-
 [strain, order] = sort(strain, "ascend");
 stress = stress(order);
-
 [uniqueStrain, ~, groupIndex] = unique(strain, "stable");
 if numel(uniqueStrain) < numel(strain)
     stress = accumarray(groupIndex, stress, [], @mean);
     strain = uniqueStrain;
 end
-
 if numel(strain) < 2 || strain(end) <= strain(1)
     error("mechanics:statistics:InvalidCurveRange", ...
         "Every curve must span a nonzero strain range.");
