@@ -15,5 +15,7 @@ config.forceScale = 1;
 config.displacementScale = 1;
 config.timeScale = 1;
 config.currentAreaScale = 1;
+config.currentAreaUnit = "mm2";
+config.normalizeCurrentAreaUnits = true;
 config.preserveVariableNames = true;
 end
