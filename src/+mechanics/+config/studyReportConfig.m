@@ -8,6 +8,7 @@ config.studyTitle = "auto";
 config.includeIndividualCurves = true;
 config.includePopulationCurve = true;
 config.includePeakMetrics = true;
+config.includeFractureMetrics = true; % compatibility alias
 config.includeTangentModulus = true;
 config.closeFiguresAfterExport = true;
 end
