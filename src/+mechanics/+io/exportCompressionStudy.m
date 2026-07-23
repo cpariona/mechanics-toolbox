@@ -42,8 +42,10 @@ reportConfig.outputFolder = fullfile(folder, "report");
 reportFiles = mechanics.io.exportCompressionStudyReport(study, reportConfig);
 reportNames = fieldnames(reportFiles);
 for index = 1:numel(reportNames)
-    files.("report" + upper(extractBefore(reportNames{index},2)) + ...
-        extractAfter(reportNames{index},1)) = reportFiles.(reportNames{index});
+    sourceName = string(reportNames{index});
+    targetName = "report" + upper(extractBetween(sourceName,1,1)) + ...
+        extractAfter(sourceName,1);
+    files.(char(targetName)) = reportFiles.(reportNames{index});
 end
 
 names = fieldnames(files);
