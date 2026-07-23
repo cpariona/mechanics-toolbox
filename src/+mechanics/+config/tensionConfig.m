@@ -30,4 +30,8 @@ config.analysis.derivativeSmoothing.enabled = true;
 config.analysis.derivativeSmoothing.method = "sgolay";
 config.analysis.derivativeSmoothing.windowStrain = 0.02;
 config.analysis.derivativeSmoothing.polynomialOrder = 3;
+
+config.uncertainty.geometry.enabled = false;
+config.uncertainty.geometry.initialLengthStd = NaN;
+config.uncertainty.geometry.initialAreaStd = NaN;
 end
