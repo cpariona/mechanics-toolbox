@@ -107,6 +107,19 @@ if ~isfield(geometry, "initialArea") || ...
         "Specimen %s does not define a positive initialArea.", ...
         char(string(specimen.id)));
 end
+
+if isfield(specimen, "processingOverrides")
+    overrides = specimen.processingOverrides;
+    if isfield(overrides, "zeroReferenceMethod")
+        processingConfig.preprocessing.zeroReference.method = ...
+            string(overrides.zeroReferenceMethod);
+    end
+    if isfield(overrides, "preloadForce")
+        processingConfig.preprocessing.zeroReference.preloadForce = ...
+            overrides.preloadForce;
+    end
+end
+
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, geometry, processingConfig);
 end
