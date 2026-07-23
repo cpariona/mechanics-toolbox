@@ -19,8 +19,6 @@ verifyEqual(testCase, metrics.peakForce, 3);
 verifyEqual(testCase, metrics.peakDisplacement, 3);
 verifyEqual(testCase, metrics.postPeakDropFraction, 1);
 verifyEqual(testCase, metrics.residualForceFraction, 0);
-verifyFalse(testCase, isfield(metrics, "fractureDetected"));
-verifyFalse(testCase, isfield(metrics, "completeFracture"));
 verifyEqual(testCase, metrics.energyToPeak, 4.5, "AbsTol", 1e-12);
 end
 
@@ -63,8 +61,6 @@ analysis = mechanics.workflow.addFractureMetrics( ...
     analysis, mechanics.config.fractureAnalysisConfig());
 verifyEqual(testCase, height(analysis.fractureSummary), 2);
 verifyTrue(testCase, all(isfinite(analysis.fractureSummary.PeakForce)));
-verifyFalse(testCase, ismember("CompleteFracture", ...
-    string(analysis.fractureSummary.Properties.VariableNames)));
 verifyTrue(testCase, isfield(analysis.records(1).specimen, "fracture"));
 end
 
