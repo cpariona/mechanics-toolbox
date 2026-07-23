@@ -17,12 +17,27 @@ if ~isfolder(outputFolder)
 end
 
 safeId = regexprep(string(specimen.id), "[^A-Za-z0-9_-]", "_");
-
+processed = specimen.processed;
 curveTable = table( ...
-    specimen.processed.strain(:), ...
-    specimen.processed.stress(:), ...
-    'VariableNames', {'Strain', 'Stress'});
+    processed.displacement(:), ...
+    processed.force(:), ...
+    processed.strain(:), ...
+    processed.stress(:), ...
+    'VariableNames', {'Displacement', 'Force', 'Strain', 'Stress'});
 
+if isfield(processed, "currentArea")
+    curveTable.CurrentArea = processed.currentArea(:);
+end
+if isfield(processed, "areaScale")
+    curveTable.AreaScale = processed.areaScale(:);
+end
+if isfield(specimen, "analysis") && ...
+        isfield(specimen.analysis, "tangentModulus")
+    tangent = specimen.analysis.tangentModulus.tangentModulus;
+    if numel(tangent) == height(curveTable)
+        curveTable.TangentModulus = tangent(:);
+    end
+end
 if isfield(specimen, "analysis") && ...
         isfield(specimen.analysis, "geometryUncertainty")
     uncertainty = specimen.analysis.geometryUncertainty;
