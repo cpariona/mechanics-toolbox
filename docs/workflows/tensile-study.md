@@ -55,6 +55,20 @@ config.datasetAnalysis.processingConfig.analysis = analysis;
 
 Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Smoothing used for derivative estimation does not modify the stress curves used in population averaging.
 
+## Geometry uncertainty
+
+Optional first-order propagation can quantify how standard uncertainty in initial gauge length and initial area affects each stress-strain point:
+
+```matlab
+uncertainty = config.datasetAnalysis.processingConfig.uncertainty.geometry;
+uncertainty.enabled = true;
+uncertainty.initialLengthStd = 0.10; % same length unit as initialLength
+uncertainty.initialAreaStd = 0.20;   % same area unit as initialArea
+config.datasetAnalysis.processingConfig.uncertainty.geometry = uncertainty;
+```
+
+The result is stored under `specimen.analysis.geometryUncertainty` and added to specimen-level curve exports. This propagation does not include force, displacement, preprocessing, or fitting uncertainty.
+
 ## Population response
 
 Curves are interpolated linearly on a configurable common strain grid. No additional smoothing is applied before aggregation. The central curve can be a mean or median:
