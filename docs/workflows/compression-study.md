@@ -57,4 +57,46 @@ config.processing.preprocessing.zeroReference.method = "preload-threshold";
 config.processing.preprocessing.zeroReference.preloadForce = 0.1;
 ```
 
-The current workflow provides cycle selection and specimen-level processing. A dedicated compression report and loading-unloading hysteresis summary remain separate future extensions.
+## Cycle metrics
+
+The complete selected cycle is retained separately from the branch used for fitting or modulus estimation. The workflow reports:
+
+```text
+study.cycleMetrics.peakForce
+study.cycleMetrics.peakDisplacement
+study.cycleMetrics.peakStress
+study.cycleMetrics.peakStrain
+study.cycleMetrics.loadingEnergy
+study.cycleMetrics.recoveredEnergy
+study.cycleMetrics.hysteresisEnergy
+study.cycleMetrics.hysteresisFraction
+study.cycleMetrics.hysteresisEnergyDensity
+```
+
+With force in N and displacement in mm, the force-displacement energies are in mJ. Hysteresis is the loading work minus the recovered unloading work.
+
+## Export and figures
+
+```matlab
+config.export.enabled = true;
+config.export.outputFolder = "results/compression-study";
+config.export.report.studyTitle = "Compression test";
+
+study = mechanics.workflow.runCompressionStudy(filename, config);
+```
+
+The export bundle contains:
+
+```text
+compression_processed.csv
+compression_cycle_metrics.csv
+compression_study.mat
+report/report.md
+report/compression_cycle.png
+report/compression_response.png
+report/compression_tangent_modulus.png
+```
+
+The cycle figure distinguishes loading and unloading. The response figure uses the configured selected branch. The tangent-modulus figure marks the strain range used for the summary value.
+
+Cycle detection, contact detection, and sign normalization remain configuration-dependent and should be checked visually for a new machine format or protocol.
