@@ -21,11 +21,16 @@ specimen = mechanics.io.readSpecimenTable(filename, config.import);
 specimen.testType = "compression";
 cycle = mechanics.segmentation.selectCompressionCycle( ...
     specimen.raw, config.cycle);
+
+fullCycleIndices = (cycle.cycleStartIndex:cycle.cycleEndIndex)';
+fullCycleRaw = localSubsetRaw(specimen.raw, fullCycleIndices);
 selectedRaw = cycle.selectedRaw;
 
 signConvention = lower(string(config.signConvention));
 switch signConvention
     case "positive-compression"
+        fullCycleRaw.force = localPositiveIncrement(fullCycleRaw.force);
+        fullCycleRaw.displacement = localPositiveIncrement(fullCycleRaw.displacement);
         selectedRaw.force = localPositiveIncrement(selectedRaw.force);
         selectedRaw.displacement = localPositiveIncrement(selectedRaw.displacement);
     case "instrument"
@@ -35,26 +40,28 @@ switch signConvention
             "Unknown compression sign convention: %s", config.signConvention);
 end
 
+relativeLoadingEndIndex = ...
+    cycle.loadingEndIndex - cycle.cycleStartIndex + 1;
+cycleMetrics = mechanics.analysis.computeCompressionCycleMetrics( ...
+    fullCycleRaw, relativeLoadingEndIndex, config.geometry);
+
 specimen.originalRaw = specimen.raw;
+specimen.fullCycleRaw = fullCycleRaw;
 specimen.raw = selectedRaw;
 specimen.cycleSelection = rmfield(cycle, "selectedRaw");
+specimen.cycleMetrics = cycleMetrics;
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, config.geometry, config.processing);
 
 study.sourceFile = filename;
 study.specimen = specimen;
 study.cycle = specimen.cycleSelection;
+study.cycleMetrics = cycleMetrics;
 study.config = config;
 study.createdAt = datetime("now");
 
 if config.export.enabled
-    folder = string(config.export.outputFolder);
-    if ~isfolder(folder)
-        mkdir(folder);
-    end
-    study.outputFiles = mechanics.io.exportSpecimenResults(specimen, folder);
-    save(fullfile(folder, "compression_study.mat"), "study");
-    study.outputFiles.study = fullfile(folder, "compression_study.mat");
+    study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
 end
 end
 
@@ -64,5 +71,16 @@ if input(end) - input(1) < 0
     output = -input;
 else
     output = input;
+end
+end
+
+function output = localSubsetRaw(raw, indices)
+output.force = raw.force(indices);
+output.displacement = raw.displacement(indices);
+if isfield(raw, "time")
+    output.time = raw.time(indices);
+end
+if isfield(raw, "units")
+    output.units = raw.units;
 end
 end
