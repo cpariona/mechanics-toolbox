@@ -108,6 +108,7 @@ if numel(values) ~= observationCount
         "Optional processed field %s must match the stress-strain length.", ...
         sourceField);
 end
-tableValue = addvars(tableValue, values(:), ...
-    "Before", 1, "NewVariableNames", outputName);
+newColumn = table(values(:), ...
+    'VariableNames', {char(outputName)});
+tableValue = [newColumn, tableValue];
 end
