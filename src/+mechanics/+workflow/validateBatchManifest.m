@@ -36,18 +36,22 @@ manifest = localAddDefault(manifest, "Sheet", ones(rowCount, 1));
 manifest = localAddDefault(manifest, "ForceScale", ones(rowCount, 1));
 manifest = localAddDefault(manifest, "DisplacementScale", ones(rowCount, 1));
 manifest = localAddDefault(manifest, "TimeScale", ones(rowCount, 1));
+manifest = localAddDefault(manifest, "CurrentAreaScale", ones(rowCount, 1));
 manifest = localAddDefault(manifest, "ForceColumn", strings(rowCount, 1));
 manifest = localAddDefault(manifest, "DisplacementColumn", strings(rowCount, 1));
 manifest = localAddDefault(manifest, "TimeColumn", strings(rowCount, 1));
+manifest = localAddDefault(manifest, "CurrentAreaColumn", strings(rowCount, 1));
 manifest = localAddDefault(manifest, "TestType", repmat("tension", rowCount, 1));
 
 manifest.Include = localToLogical(manifest.Include);
 manifest.ForceColumn = string(manifest.ForceColumn);
 manifest.DisplacementColumn = string(manifest.DisplacementColumn);
 manifest.TimeColumn = string(manifest.TimeColumn);
+manifest.CurrentAreaColumn = string(manifest.CurrentAreaColumn);
 manifest.TestType = lower(string(manifest.TestType));
 
-numericVariables = ["Sheet", "ForceScale", "DisplacementScale", "TimeScale"];
+numericVariables = ["Sheet", "ForceScale", "DisplacementScale", ...
+    "TimeScale", "CurrentAreaScale"];
 for variableName = numericVariables
     values = manifest.(variableName);
     if ~isnumeric(values) || any(~isfinite(values))
