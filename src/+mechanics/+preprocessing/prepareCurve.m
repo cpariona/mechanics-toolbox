@@ -5,11 +5,28 @@ force = rawCurve.force(:);
 displacement = rawCurve.displacement(:);
 originalIndex = (1:numel(force))';
 
+hasCurrentArea = isfield(rawCurve, "currentArea");
+if hasCurrentArea
+    currentArea = rawCurve.currentArea(:);
+    if numel(currentArea) ~= numel(force)
+        error("mechanics:preprocessing:CurrentAreaSizeMismatch", ...
+            "rawCurve.currentArea must match force and displacement length.");
+    end
+else
+    currentArea = [];
+end
+
 if config.removeNonfinite
     valid = isfinite(force) & isfinite(displacement);
+    if hasCurrentArea
+        valid = valid & isfinite(currentArea);
+    end
     force = force(valid);
     displacement = displacement(valid);
     originalIndex = originalIndex(valid);
+    if hasCurrentArea
+        currentArea = currentArea(valid);
+    end
 end
 
 startIndex = max(1, round(config.startIndex));
@@ -26,6 +43,9 @@ end
 force = force(startIndex:endIndex);
 displacement = displacement(startIndex:endIndex);
 originalIndex = originalIndex(startIndex:endIndex);
+if hasCurrentArea
+    currentArea = currentArea(startIndex:endIndex);
+end
 
 [referenceIndex, referenceMethod] = localReferenceIndex(force, config);
 referenceForce = force(referenceIndex);
@@ -35,6 +55,9 @@ if config.zeroReference.trimBeforeReference
     force = force(referenceIndex:end);
     displacement = displacement(referenceIndex:end);
     originalIndex = originalIndex(referenceIndex:end);
+    if hasCurrentArea
+        currentArea = currentArea(referenceIndex:end);
+    end
     referenceIndexInOutput = 1;
 else
     referenceIndexInOutput = referenceIndex;
@@ -53,6 +76,9 @@ end
 curve.raw = rawCurve;
 curve.force = force;
 curve.displacement = displacement;
+if hasCurrentArea
+    curve.currentAreaMeasured = currentArea;
+end
 curve.originalIndex = originalIndex;
 curve.units = mechanics.internal.defaultUnits(rawCurve);
 curve.processingConfig = config;
