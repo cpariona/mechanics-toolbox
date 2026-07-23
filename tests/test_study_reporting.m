@@ -20,6 +20,7 @@ verifyTrue(testCase, isfile(files.individualCurves));
 verifyFalse(testCase, isfield(files, "populationCurve"));
 verifyFalse(testCase, isfield(files, "peakMetrics"));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
+verifyFalse(testCase, isfield(files, "zeroReferenceDiagnostics"));
 end
 
 function testMarkdownReport(testCase)
@@ -42,6 +43,7 @@ config = mechanics.config.studyReportConfig();
 verifyEqual(testCase, config.figureFormat, "png");
 verifyTrue(testCase, config.includeIndividualCurves);
 verifyTrue(testCase, config.includeTangentModulus);
+verifyTrue(testCase, config.includeZeroReferenceDiagnostics);
 verifyTrue(testCase, config.closeFiguresAfterExport);
 end
 
@@ -52,6 +54,7 @@ config.includePopulationCurve = false;
 config.includePeakMetrics = false;
 config.includeFractureMetrics = false;
 config.includeTangentModulus = false;
+config.includeZeroReferenceDiagnostics = false;
 config.figureResolution = 72;
 end
 
