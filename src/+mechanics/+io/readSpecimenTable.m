@@ -102,7 +102,17 @@ if strlength(areaName) > 0
         error("mechanics:io:SizeMismatch", ...
             "The selected current-area column must match force and displacement length.");
     end
-    specimen.raw.currentArea = currentArea(:) .* config.currentAreaScale;
+    currentArea = currentArea(:) .* config.currentAreaScale;
+    if isfield(config, "normalizeCurrentAreaUnits") && ...
+            config.normalizeCurrentAreaUnits
+        [currentArea, areaUnit, areaConversion] = ...
+            mechanics.io.normalizeAreaUnits(currentArea, config.currentAreaUnit);
+        specimen.raw.units.currentArea = areaUnit;
+        specimen.source.currentAreaUnitConversion = areaConversion;
+    else
+        specimen.raw.units.currentArea = string(config.currentAreaUnit);
+    end
+    specimen.raw.currentArea = currentArea;
 end
 
 specimen.raw.originalTable = data;
