@@ -1,50 +1,71 @@
-# Geometry uncertainty propagation
+# Measurement uncertainty propagation
 
-The uniaxial workflow can propagate standard uncertainty in the initial gauge length and initial cross-sectional area to the reported strain and stress curves.
+The uniaxial workflow supports two complementary uncertainty calculations.
 
-The feature is disabled by default:
+## Pointwise geometry uncertainty
+
+Standard uncertainty in initial gauge length and initial cross-sectional area can be propagated to each reported strain and stress value.
 
 ```matlab
 config = mechanics.config.tensionConfig();
-config.uncertainty.geometry.enabled = false;
-```
-
-Enable it by providing standard uncertainties in the same units as the geometry:
-
-```matlab
 config.uncertainty.geometry.enabled = true;
 config.uncertainty.geometry.initialLengthStd = 0.10; % mm
 config.uncertainty.geometry.initialAreaStd = 0.20;   % mm^2
 ```
 
-For the end-to-end tensile workflow, use:
+The implementation uses first-order propagation with numerical central differences. Results are stored under:
+
+```text
+specimen.analysis.geometryUncertainty
+```
+
+and are added to specimen-level CSV exports.
+
+## Monte Carlo uncertainty of fitted parameters
+
+Measurement uncertainty can also be propagated through constitutive refitting. Each realization perturbs the configured inputs, recomputes stress and strain, and refits the selected model.
+
+Supported standard uncertainties are:
+
+```text
+initialLengthStd
+initialAreaStd
+forceStd
+displacementStd
+```
+
+For tensile dataset analysis:
 
 ```matlab
 config = mechanics.config.tensileStudyConfig();
-config.datasetAnalysis.processingConfig.uncertainty.geometry.enabled = true;
-config.datasetAnalysis.processingConfig.uncertainty.geometry.initialLengthStd = 0.10;
-config.datasetAnalysis.processingConfig.uncertainty.geometry.initialAreaStd = 0.20;
+config.datasetAnalysis.fitting.enabled = true;
+mc = config.datasetAnalysis.fitting.measurementMonteCarlo;
+mc.enabled = true;
+mc.sampleCount = 500;
+mc.initialLengthStd = 0.10;
+mc.initialAreaStd = 0.20;
+mc.forceStd = 0.01;
+mc.displacementStd = 0.005;
+config.datasetAnalysis.fitting.measurementMonteCarlo = mc;
 ```
 
-## Method
+For compression:
 
-The implementation uses first-order uncertainty propagation. Numerical central differences estimate the sensitivity of the configured stress and strain measures to `initialLength` and `initialArea`; independent contributions are then combined in quadrature.
-
-This supports engineering and true measures, including the configured area-evolution model. It does not currently propagate force, displacement, preload-threshold, smoothing, or constitutive-fitting uncertainty.
-
-## Results
-
-When enabled, the processed specimen contains:
-
-```text
-specimen.analysis.geometryUncertainty.strainStandardUncertainty
-specimen.analysis.geometryUncertainty.stressStandardUncertainty
-specimen.analysis.geometryUncertainty.strainRelativeStandardUncertainty
-specimen.analysis.geometryUncertainty.stressRelativeStandardUncertainty
+```matlab
+config = mechanics.config.compressionStudyConfig();
+config.fitting.enabled = true;
+config.fitting.geometryMonteCarlo.enabled = true;
+config.fitting.geometryMonteCarlo.sampleCount = 500;
+config.fitting.geometryMonteCarlo.initialLengthStd = 0.10;
+config.fitting.geometryMonteCarlo.initialAreaStd = 0.20;
+config.fitting.geometryMonteCarlo.forceStd = 0.01;
+config.fitting.geometryMonteCarlo.displacementStd = 0.005;
 ```
 
-The exported specimen curve CSV adds the same four quantities as columns.
+Results include parameter samples, percentile limits, median estimates, and the successful refit fraction.
 
 ## Interpretation
 
-The values are standard uncertainties, not 95% confidence intervals. A coverage interval requires an explicitly chosen coverage factor or a probabilistic model. Geometry uncertainty should remain separate from between-specimen biological or manufacturing variability.
+Pointwise standard uncertainties are not confidence intervals. Monte Carlo percentile intervals depend on the supplied measurement model and standard uncertainties. They should remain distinct from residual bootstrap intervals and between-specimen population variability.
+
+The default calibrated gauge length for the compression population workflow is 25 mm when the manifest does not provide `InitialLength`. Its uncertainty is never invented automatically; `initialLengthStd` must be supplied from calibration or measurement information.
