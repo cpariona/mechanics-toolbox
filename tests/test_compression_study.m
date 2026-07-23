@@ -40,6 +40,42 @@ verifyEqual(testCase, study.specimen.processed.strain(end), 0.1, ...
 verifyEqual(testCase, study.specimen.processed.stress(end), 2.5, ...
     "AbsTol", 1e-12);
 verifyEqual(testCase, study.specimen.testType, "compression");
+verifyEqual(testCase, study.cycleMetrics.loadingEnergy, 2.5, ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, study.cycleMetrics.recoveredEnergy, 2.5, ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, study.cycleMetrics.hysteresisEnergy, 0, ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, study.cycleMetrics.hysteresisFraction, 0, ...
+    "AbsTol", 1e-12);
+end
+
+function testCompressionStudyExport(testCase)
+[displacement, force] = localThreeCycles();
+filename = string(tempname) + ".csv";
+cleanupFile = onCleanup(@() localDelete(filename)); %#ok<NASGU>
+writetable(table(force, displacement, ...
+    'VariableNames', {'Force','Displacement'}), filename);
+
+folder = string(tempname);
+cleanupFolder = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+config = mechanics.config.compressionStudyConfig();
+config.geometry.initialLength = 10;
+config.geometry.initialArea = 2;
+config.cycle.smoothingFrameLength = 1;
+config.processing.analysis.summaryStrainRange = [0, 0.1];
+config.export.enabled = true;
+config.export.outputFolder = folder;
+config.export.report.figureResolution = 72;
+study = mechanics.workflow.runCompressionStudy(filename, config);
+
+verifyTrue(testCase, isfile(study.outputFiles.processed));
+verifyTrue(testCase, isfile(study.outputFiles.metrics));
+verifyTrue(testCase, isfile(study.outputFiles.study));
+verifyTrue(testCase, isfile(study.outputFiles.reportReport));
+verifyTrue(testCase, isfile(study.outputFiles.reportCycleOverview));
+verifyTrue(testCase, isfile(study.outputFiles.reportSelectedBranch));
+verifyTrue(testCase, isfile(study.outputFiles.reportTangentModulus));
 end
 
 function testDecreasingInstrumentSignalsCanBeNormalized(testCase)
@@ -66,5 +102,11 @@ end
 function localDelete(filename)
 if isfile(filename)
     delete(filename);
+end
+end
+
+function localDeleteFolder(folder)
+if isfolder(folder)
+    rmdir(folder, "s");
 end
 end
