@@ -4,7 +4,6 @@ config.import = mechanics.config.excelImportConfig();
 config.geometry.initialLength = NaN;
 config.geometry.initialArea = NaN;
 config.processing = mechanics.config.compressionConfig();
-config.signConvention = "positive-compression";
 
 config.cycle.enabled = true;
 config.cycle.selection = "last-complete-cycle";
@@ -14,6 +13,12 @@ config.cycle.minimumCycleAmplitude = 0;
 config.cycle.minimumObservations = 5;
 config.cycle.smoothingFrameLength = 5;
 
+config.signConvention = "positive-compression";
+
 config.export.enabled = false;
 config.export.outputFolder = "results/compression-study";
+config.export.saveStudyMat = true;
+config.export.saveProcessedTable = true;
+config.export.saveCycleMetrics = true;
+config.export.report = mechanics.config.compressionStudyReportConfig();
 end
