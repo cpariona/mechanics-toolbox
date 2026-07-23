@@ -4,6 +4,7 @@ config.import = mechanics.config.excelImportConfig();
 config.geometry.initialLength = NaN;
 config.geometry.initialArea = NaN;
 config.processing = mechanics.config.compressionConfig();
+config.signConvention = "positive-compression";
 
 config.cycle.enabled = true;
 config.cycle.selection = "last-complete-cycle";
