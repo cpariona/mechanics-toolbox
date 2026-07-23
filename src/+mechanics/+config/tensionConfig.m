@@ -19,6 +19,8 @@ config.preprocessing.smoothing.polynomialOrder = 3;
 
 config.mechanics.stressMeasure = "engineering";
 config.mechanics.strainMeasure = "engineering";
+config.mechanics.areaEvolution = "incompressible";
+config.mechanics.poissonRatio = 0.5;
 
 config.analysis.modulusMethod = "local-linear";
 config.analysis.derivativeWindowStrain = 0.02;
