@@ -14,8 +14,8 @@ config.quality.rejectFailedQuality = true;
 
 config.fitting.enabled = false;
 config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
-config.fitting.context.inputMeasure = "engineering-strain";
-config.fitting.context.outputStressMeasure = "nominal";
+config.fitting.context.deformationMeasure = "engineering-strain";
+config.fitting.context.stressMeasure = "nominal";
 config.fitting.fitConfig = mechanics.config.fittingConfig();
 config.fitting.selectionConfig = mechanics.config.modelSelectionConfig();
 config.fitting.measurementMonteCarlo = ...
