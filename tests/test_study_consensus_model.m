@@ -14,6 +14,8 @@ result = mechanics.workflow.selectStudyConsensusModel(batch, config);
 verifyTrue(testCase, result.hasConsensusModel);
 verifyEqual(testCase, result.modelName, "yeoh");
 verifyEqual(testCase, result.metricSummary.MedianBIC, [100;90;80]);
+verifyEqual(testCase, result.metricSummary.DeltaBIC, [20;10;0]);
+verifyEqual(testCase, result.reason, "Selected by lowest median BIC.");
 verifyEqual(testCase, height(result.parameterSummary), 3);
 end
 
@@ -25,6 +27,8 @@ config.bootstrap.enabled = false;
 result = mechanics.workflow.selectStudyConsensusModel(batch, config);
 verifyEqual(testCase, result.modelName, "neo-hookean");
 verifyEqual(testCase, result.metricSummary.ParameterCount, [1;2;3]);
+verifyEqual(testCase, result.reason, ...
+    "Selected by parsimony among models within the median-BIC tie tolerance.");
 end
 
 function testInsufficientEligibilityReturnsNoConsensus(testCase)
@@ -36,6 +40,7 @@ result = mechanics.workflow.selectStudyConsensusModel(batch, config);
 verifyFalse(testCase, result.hasConsensusModel);
 verifyEqual(testCase, result.modelName, "");
 verifyEqual(testCase, height(result.parameterTable), 0);
+verifyTrue(testCase, all(isnan(result.metricSummary.DeltaBIC)));
 end
 
 function testConsensusPlotIsCreated(testCase)
