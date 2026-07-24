@@ -56,9 +56,8 @@ function testParameterPlotSeparatesModelParameterCombinations(testCase)
 population = localMixedPopulation();
 figureHandle = mechanics.plotting.plotSelectedParameterPopulation(population);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
-axesHandles = findall(figureHandle, 'Type', 'axes', ...
-    'Tag', 'parameter-data-axes');
-verifyEqual(testCase, numel(axesHandles), 3);
+seriesHandles = findall(figureHandle, 'Tag', 'parameter-data-series');
+verifyEqual(testCase, numel(seriesHandles), 3);
 verifyTrue(testCase, isgraphics(figureHandle));
 end
 
