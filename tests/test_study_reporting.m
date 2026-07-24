@@ -20,6 +20,41 @@ verifyTrue(testCase, isfile(files.individualCurves));
 verifyFalse(testCase, isfield(files, "populationCurve"));
 verifyFalse(testCase, isfield(files, "peakMetrics"));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
+verifyFalse(testCase, isfield(files, "populationTangentModulus"));
+end
+
+function testPopulationTangentModulusFigureExport(testCase)
+study = localStudy();
+study.population.tangentModulusStatus = "completed";
+study.population.tangentModulus = localPopulationTangentModulus();
+config = localConfig();
+folder = string(tempname);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+config.outputFolder = folder;
+config.includeIndividualCurves = false;
+config.includeTangentModulus = true;
+
+files = mechanics.plotting.exportTensileStudyFigures(study, config);
+
+verifyTrue(testCase, isfield(files, "populationTangentModulus"));
+verifyTrue(testCase, isfile(files.populationTangentModulus));
+verifyFalse(testCase, isfield(files, "tangentModulus"));
+end
+
+function testUnavailablePopulationTangentModulusIsNotExported(testCase)
+study = localStudy();
+study.population.tangentModulusStatus = "unavailable";
+study.population.tangentModulus = struct();
+config = localConfig();
+folder = string(tempname);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+config.outputFolder = folder;
+config.includeIndividualCurves = false;
+config.includeTangentModulus = true;
+
+files = mechanics.plotting.exportTensileStudyFigures(study, config);
+
+verifyFalse(testCase, isfield(files, "populationTangentModulus"));
 end
 
 function testMarkdownReport(testCase)
@@ -107,6 +142,20 @@ study.provenance.specimenCount = 1;
 study.provenance.processedSpecimenCount = 1;
 study.provenance.qualityFailedSpecimenCount = 0;
 study.provenance.failedSpecimenCount = 0;
+end
+
+function tangent = localPopulationTangentModulus()
+tangent.strain = [0.1; 0.2; 0.3];
+tangent.modulusMatrix = [2, 4; 3, 5; 4, 6];
+tangent.meanModulus = [3; 4; 5];
+tangent.medianModulus = [3; 4; 5];
+tangent.centralStatistic = "mean";
+tangent.centralModulus = [3; 4; 5];
+tangent.standardDeviation = [sqrt(2); sqrt(2); sqrt(2)];
+tangent.standardError = [1; 1; 1];
+tangent.confidenceLower = [2.5; 3.5; 4.5];
+tangent.confidenceUpper = [3.5; 4.5; 5.5];
+tangent.specimenCountByPoint = [2; 2; 2];
 end
 
 function localDeleteFolder(folder)
