@@ -5,7 +5,7 @@ arguments
 end
 
 data = population.parameterTable;
-figureHandle = figure('Color','w');
+figureHandle = figure('Color','w','Position',[100 100 1300 760]);
 if isempty(data)
     figureHandle.UserData.parameterKeys = strings(0,1);
     axesHandle = axes(figureHandle); %#ok<LAXES>
@@ -20,7 +20,7 @@ figureHandle.UserData.parameterKeys = keys;
 columnCount = min(3, numel(keys));
 rowCount = ceil(numel(keys) / columnCount);
 tiledlayout(figureHandle, rowCount, columnCount, ...
-    'TileSpacing','compact','Padding','compact');
+    'TileSpacing','compact','Padding','loose');
 
 for index = 1:numel(keys)
     parts = split(keys(index), "::");
@@ -43,12 +43,13 @@ for index = 1:numel(keys)
     if ~isempty(summaryRows)
         yline(axesHandle, summaryRows.Median(1), '--', ...
             'Median', 'LabelHorizontalAlignment','left', ...
-            'DisplayName','Median');
+            'HandleVisibility','off');
     end
 
     axesHandle.XTick = specimenPosition;
     axesHandle.XTickLabel = cellstr(rows.SpecimenId);
-    axesHandle.XTickLabelRotation = 45;
+    axesHandle.XTickLabelRotation = 35;
+    axesHandle.XLim = [0.5 max(height(rows)+0.5,1.5)];
     xlabel(axesHandle,'Specimen');
     ylabel(axesHandle,'Fitted parameter value');
     title(axesHandle, modelName + " / " + parameterName, ...
@@ -59,5 +60,5 @@ end
 
 sgtitle(figureHandle, sprintf( ...
     'Selected-model parameters across %d specimens', ...
-    population.specimenCount), 'Interpreter','none');
+    population.specimenCount), 'Interpreter','none','FontSize',18);
 end
