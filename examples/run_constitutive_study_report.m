@@ -1,8 +1,8 @@
 %RUN_CONSTITUTIVE_STUDY_REPORT Build and export an integrated study report.
 startup;
 strain = linspace(0, 0.5, 51)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 parameters = [12 13 14 20 21 22];
 groups = ["Control" "Control" "Control" "Treatment" "Treatment" "Treatment"];
 for index = 1:numel(parameters)
