@@ -52,6 +52,25 @@ verifyEqual(testCase, result.errors.ErrorIdentifier, ...
     "mechanics:statistics:UnsupportedInitialShearModel");
 end
 
+function testParameterPlotSeparatesModelParameterCombinations(testCase)
+population = localMixedPopulation();
+figureHandle = mechanics.plotting.plotSelectedParameterPopulation(population);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+axesHandles = findall(figureHandle, 'Type', 'axes');
+verifyEqual(testCase, numel(axesHandles), 3);
+titles = string(get(get(figureHandle,'Children'),'Title'));
+verifyTrue(testCase, isgraphics(figureHandle));
+end
+
+function testInitialShearModulusPlot(testCase)
+population = localMixedPopulation();
+figureHandle = mechanics.plotting.plotInitialShearModulusPopulation(population);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(figureHandle));
+axesHandles = findall(figureHandle, 'Type', 'axes');
+verifyEqual(testCase, numel(axesHandles), 1);
+end
+
 function testExportCreatesFiles(testCase)
 batch = localBatch();
 population = mechanics.workflow.summarizeSelectedParameters(batch);
@@ -62,7 +81,35 @@ verifyTrue(testCase, isfile(files.parameters));
 verifyTrue(testCase, isfile(files.overall));
 verifyTrue(testCase, isfile(files.groups));
 verifyTrue(testCase, isfile(files.errors));
+verifyTrue(testCase, isfile(files.initialShearValues));
+verifyTrue(testCase, isfile(files.initialShearSummary));
+verifyTrue(testCase, isfile(files.initialShearErrors));
 verifyTrue(testCase, isfile(files.data));
+end
+
+function population = localMixedPopulation()
+parameterTable = table( ...
+    ["S1";"S2";"S2";"S3";"S3";"S3"], ...
+    repmat("all",6,1), ...
+    ["neo-hookean";"mooney-rivlin";"mooney-rivlin"; ...
+     "yeoh";"yeoh";"yeoh"], ...
+    ["mu";"C10";"C01";"C10";"C20";"C30"], ...
+    [10;3;2;4;7;9], ...
+    nan(6,1), nan(6,1), nan(6,1), ...
+    'VariableNames', {'SpecimenId','Group','ModelName','Parameter','Value', ...
+    'BootstrapLower','BootstrapMedian','BootstrapUpper'});
+population.parameterTable = parameterTable;
+population.overallSummary = table( ...
+    ["neo-hookean";"mooney-rivlin";"mooney-rivlin";"yeoh";"yeoh";"yeoh"], ...
+    ["mu";"C10";"C01";"C10";"C20";"C30"], ...
+    ones(6,1), [10;3;2;4;7;9], zeros(6,1), [10;3;2;4;7;9], ...
+    [10;3;2;4;7;9], [10;3;2;4;7;9], zeros(6,1), true(6,1), ...
+    'VariableNames', {'ModelName','Parameter','SpecimenCount','Mean', ...
+    'StandardDeviation','Median','Minimum','Maximum', ...
+    'CoefficientOfVariation','MeetsMinimumCount'});
+population.specimenCount = 3;
+population.initialShearModulus = ...
+    mechanics.statistics.deriveInitialShearModulus(parameterTable);
 end
 
 function batch = localBatch()
