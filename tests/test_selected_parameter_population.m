@@ -58,7 +58,6 @@ figureHandle = mechanics.plotting.plotSelectedParameterPopulation(population);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 axesHandles = findall(figureHandle, 'Type', 'axes');
 verifyEqual(testCase, numel(axesHandles), 3);
-titles = string(get(get(figureHandle,'Children'),'Title'));
 verifyTrue(testCase, isgraphics(figureHandle));
 end
 
