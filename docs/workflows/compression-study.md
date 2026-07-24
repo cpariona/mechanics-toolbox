@@ -38,15 +38,19 @@ The public compression curve remains positive. Internally, fitting uses negative
 Measurement Monte Carlo refitting can perturb gauge length, area, force, and displacement:
 
 ```matlab
-mc = config.fitting.geometryMonteCarlo;
+mc = config.fitting.measurementMonteCarlo;
 mc.enabled = true;
 mc.sampleCount = 500;
 mc.initialLengthStd = 0.10;
 mc.initialAreaStd = 0.20;
 mc.forceStd = 0.01;
 mc.displacementStd = 0.005;
-config.fitting.geometryMonteCarlo = mc;
+config.fitting.measurementMonteCarlo = mc;
 ```
+
+`config.fitting.geometryMonteCarlo` remains accepted as a compatibility alias. New code should use `measurementMonteCarlo` because the calculation is not limited to geometry.
+
+Successful results are stored in `study.specimen.measurementMonteCarloFit`. The previous `geometryMonteCarloFit` result field remains available as a compatibility alias.
 
 ## Cycle metrics
 
