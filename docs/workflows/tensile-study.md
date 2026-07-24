@@ -152,6 +152,36 @@ study.population.tangentModulus.centralStatistic
 
 If fewer than `minimumSpecimens` expose tangent-modulus curves, the remaining population analyses still run and `tangentModulusStatus` is `"unavailable"`.
 
+## Selected constitutive parameters
+
+Selected-parameter population analysis is a composable downstream workflow because it requires a batch model-comparison result rather than only the core tensile-study result:
+
+```matlab
+parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
+    parameterBatch, mechanics.config.selectedParameterPopulationConfig());
+
+files = mechanics.io.exportSelectedParameterPopulation( ...
+    parameterPopulation, "results/my-study/selected-parameter-population");
+```
+
+Native fitted parameters remain separated by model family and parameter name. The workflow also derives a common initial shear modulus while retaining the selected model identity:
+
+```text
+neo-hookean:    mu0 = mu
+mooney-rivlin: mu0 = 2 * (C10 + C01)
+yeoh:          mu0 = 2 * C10
+```
+
+Derived results are stored under:
+
+```text
+parameterPopulation.initialShearModulus.values
+parameterPopulation.initialShearModulus.summary
+parameterPopulation.initialShearModulus.errors
+```
+
+The maintained exporter writes the native-parameter tables, initial-shear-modulus tables, a MAT file, `selected_parameter_population.png`, and `initial_shear_modulus_population.png`.
+
 ## Units
 
 The Zwick extractor reads variable names from row 2 and units from row 3. Force and displacement are normalized internally to N and mm when supported. Gauge length remains an explicit geometry input; for the calibrated specimens it should be configured as 25 mm when absent from the workbook.
