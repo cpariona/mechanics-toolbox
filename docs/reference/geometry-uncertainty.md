@@ -70,6 +70,16 @@ When strain is computed from crosshead displacement, machine and grip compliance
 
 Measurement uncertainty can also be propagated through constitutive refitting. Each realization perturbs the configured inputs, recomputes stress and strain, and refits the selected model.
 
+The canonical configuration and fitting entrypoints are:
+
+```matlab
+mc = mechanics.config.measurementMonteCarloFitConfig();
+result = mechanics.fitting.measurementMonteCarloFitUncertainty( ...
+    specimen, fitResult, mc);
+```
+
+The previous geometry-named functions remain available as compatibility aliases. New code should use the measurement-named API because force and displacement uncertainty are supported in addition to geometry.
+
 Supported standard uncertainties are:
 
 ```text
@@ -99,13 +109,17 @@ For compression:
 ```matlab
 config = mechanics.config.compressionStudyConfig();
 config.fitting.enabled = true;
-config.fitting.geometryMonteCarlo.enabled = true;
-config.fitting.geometryMonteCarlo.sampleCount = 500;
-config.fitting.geometryMonteCarlo.initialLengthStd = 0.10;
-config.fitting.geometryMonteCarlo.initialAreaStd = 0.20;
-config.fitting.geometryMonteCarlo.forceStd = 0.01;
-config.fitting.geometryMonteCarlo.displacementStd = 0.005;
+mc = config.fitting.measurementMonteCarlo;
+mc.enabled = true;
+mc.sampleCount = 500;
+mc.initialLengthStd = 0.10;
+mc.initialAreaStd = 0.20;
+mc.forceStd = 0.01;
+mc.displacementStd = 0.005;
+config.fitting.measurementMonteCarlo = mc;
 ```
+
+For compression, `config.fitting.geometryMonteCarlo` remains accepted as a compatibility alias.
 
 Results include parameter samples, percentile limits, median estimates, and the successful refit fraction.
 
