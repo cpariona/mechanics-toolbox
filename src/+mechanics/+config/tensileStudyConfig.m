@@ -1,5 +1,7 @@
 function config = tensileStudyConfig()
 %TENSILESTUDYCONFIG Default end-to-end tensile-study configuration.
+config.input.type = "auto";
+config.input.manifestImportConfig = mechanics.config.excelImportConfig();
 config.extraction = mechanics.config.workbookExtractionConfig();
 config.datasetAnalysis = mechanics.config.datasetAnalysisConfig();
 
