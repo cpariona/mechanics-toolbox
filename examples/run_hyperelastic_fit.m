@@ -5,8 +5,8 @@ startup
 
 rng(3)
 strain = linspace(0, 1, 151)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 trueParameters = [0.08, 0.025];
 cleanStress = mechanics.models.evaluateModel( ...
     "mooney-rivlin", strain, trueParameters, context);
