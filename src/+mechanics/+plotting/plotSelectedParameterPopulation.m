@@ -7,6 +7,7 @@ end
 data = population.parameterTable;
 figureHandle = figure('Color','w');
 if isempty(data)
+    figureHandle.UserData.parameterKeys = strings(0,1);
     axesHandle = axes(figureHandle); %#ok<LAXES>
     text(axesHandle,0.5,0.5,'No selected-model parameters', ...
         'HorizontalAlignment','center');
@@ -15,6 +16,7 @@ if isempty(data)
 end
 
 keys = unique(data.ModelName + "::" + data.Parameter, "stable");
+figureHandle.UserData.parameterKeys = keys;
 columnCount = min(3, numel(keys));
 rowCount = ceil(numel(keys) / columnCount);
 tiledlayout(figureHandle, rowCount, columnCount, ...
