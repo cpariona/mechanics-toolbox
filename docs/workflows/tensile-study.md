@@ -11,6 +11,14 @@ config.export.outputFolder = "results/my-study";
 study = mechanics.workflow.runTensileStudy(filename, config);
 ```
 
+A complete executable configuration for a real experiment is maintained at:
+
+```text
+studies/tension/run_tensile_experiment.m
+```
+
+This study driver is intended to be copied or adapted for an experimental campaign. It is not a simplified example and does not contain reusable implementation.
+
 ## Excluding specimens
 
 ```matlab
@@ -37,10 +45,35 @@ analysis = config.datasetAnalysis.processingConfig.analysis;
 analysis.modulusMethod = "local-linear";
 analysis.derivativeWindowStrain = 0.02;
 analysis.summaryStrainRange = [0.00, 0.05];
+
+% Plot only: hide unstable values at the leading edge.
+analysis.modulusPlotStartStrain = NaN;
+analysis.modulusPlotAutomaticStartFraction = 0.01;
+
 config.datasetAnalysis.processingConfig.analysis = analysis;
 ```
 
 Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Derivative smoothing does not modify the stress curves used in population averaging.
+
+`tangentModulus` always retains the complete numerical derivative. `tangentModulusForPlot` replaces only values before the configured plot start with `NaN`:
+
+- `modulusPlotStartStrain = NaN` selects an automatic start;
+- `modulusPlotAutomaticStartFraction` defines the skipped fraction of the complete strain span;
+- a finite `modulusPlotStartStrain` specifies the first strain shown manually.
+
+This plot-only trimming does not alter the reported mean or median modulus, the processed stress-strain curve, or constitutive fitting.
+
+## Constitutive fitting measures
+
+The fitting context describes how the constitutive model interprets deformation and which stress measure it returns:
+
+```matlab
+config.datasetAnalysis.fitting.context.deformationMeasure = ...
+    "engineering-strain";
+config.datasetAnalysis.fitting.context.stressMeasure = "nominal";
+```
+
+The default values remain engineering strain and nominal stress and should match the processed curve representation.
 
 ## Pointwise geometry uncertainty
 
