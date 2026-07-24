@@ -25,6 +25,21 @@ verifyEqual(testCase, aggregate.meanStress, ...
 verifyEqual(testCase, aggregate.standardError(end), 1);
 end
 
+function testMedianPopulationCurve(testCase)
+strain = linspace(0, 1, 21)';
+specimens(1) = localProcessedSpecimenFromData("one", strain, strain);
+specimens(2) = localProcessedSpecimenFromData("two", strain, 2 .* strain);
+specimens(3) = localProcessedSpecimenFromData("three", strain, 100 .* strain);
+config = mechanics.config.populationAnalysisConfig();
+config.centralStatistic = "median";
+config.strainGridPointCount = 21;
+config.bootstrap.enabled = false;
+aggregate = mechanics.statistics.aggregateStressStrain(specimens, config);
+verifyEqual(testCase, aggregate.centralStress, 2 .* strain, "AbsTol", 1e-12);
+verifyEqual(testCase, aggregate.centralStatistic, "median");
+verifyEqual(testCase, aggregate.meanStress, (103/3) .* strain, "AbsTol", 1e-12);
+end
+
 function testBootstrapMeanInterval(testCase)
 config.enabled = true;
 config.iterations = 200;
@@ -104,7 +119,7 @@ end
 
 function testPopulationExport(testCase)
 folder = string(tempname);
-cleanup = onCleanup(@() localRemoveFolder(folder));
+cleanup = onCleanup(@() localRemoveFolder(folder)); %#ok<NASGU>
 
 population.curves.strain = [0; 1];
 population.curves.meanStress = [0; 2];
@@ -127,10 +142,13 @@ end
 
 function specimen = localProcessedSpecimen(id, slope)
 strain = linspace(0, 1, 21)';
+specimen = localProcessedSpecimenFromData(id, strain, slope .* strain);
+end
 
+function specimen = localProcessedSpecimenFromData(id, strain, stress)
 specimen.id = string(id);
 specimen.processed.strain = strain;
-specimen.processed.stress = slope .* strain;
+specimen.processed.stress = stress;
 end
 
 function record = localRecord(id, slope)

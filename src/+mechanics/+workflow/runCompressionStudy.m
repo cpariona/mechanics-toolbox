@@ -63,7 +63,7 @@ if config.fitting.enabled
     specimen.modelSelection.compressionSignTransform = ...
         "positive compression converted to negative engineering strain and nominal stress";
 
-    monteCarloConfig = config.fitting.geometryMonteCarlo;
+    monteCarloConfig = config.fitting.measurementMonteCarlo;
     if monteCarloConfig.enabled && ...
             specimen.modelSelection.selection.hasEligibleModel
         selectedRecord = localSelectedFitRecord(specimen.modelSelection);
@@ -72,8 +72,8 @@ if config.fitting.enabled
         fitSpecimen.processed.displacement = -specimen.processed.displacement;
         fitSpecimen.processed.strain = compressionDeformation;
         fitSpecimen.processed.stress = compressionStress;
-        specimen.geometryMonteCarloFit = ...
-            mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+        specimen.measurementMonteCarloFit = ...
+            mechanics.fitting.measurementMonteCarloFitUncertainty( ...
                 fitSpecimen, selectedRecord.fitResult, monteCarloConfig);
     end
 end

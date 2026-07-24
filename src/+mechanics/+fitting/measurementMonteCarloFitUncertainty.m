@@ -1,16 +1,16 @@
-function uncertainty = geometryMonteCarloFitUncertainty(specimen, fitResult, config)
-%GEOMETRYMONTECARLOFITUNCERTAINTY Propagate measurement uncertainty through refitting.
+function uncertainty = measurementMonteCarloFitUncertainty(specimen, fitResult, config)
+%MEASUREMENTMONTECARLOFITUNCERTAINTY Propagate measurement uncertainty through refitting.
 arguments
     specimen (1,1) struct
     fitResult (1,1) struct
-    config (1,1) struct = mechanics.config.geometryMonteCarloFitConfig()
+    config (1,1) struct = mechanics.config.measurementMonteCarloFitConfig()
 end
 
 requiredSpecimen = ["processed", "geometry", "processingConfig"];
 if ~all(isfield(specimen, requiredSpecimen)) || ...
         ~isfield(specimen.processed, "force") || ...
         ~isfield(specimen.processed, "displacement")
-    error("mechanics:fitting:InvalidGeometryMonteCarloInput", ...
+    error("mechanics:fitting:InvalidMeasurementMonteCarloInput", ...
         "Specimen must contain processed force/displacement, geometry, and processingConfig.");
 end
 
@@ -24,7 +24,7 @@ areaStd = localStd(config.initialAreaStd, "initialAreaStd");
 forceStd = localStd(config.forceStd, "forceStd");
 displacementStd = localStd(config.displacementStd, "displacementStd");
 if lengthStd == 0 && areaStd == 0 && forceStd == 0 && displacementStd == 0
-    error("mechanics:fitting:MissingMonteCarloGeometryUncertainty", ...
+    error("mechanics:fitting:MissingMeasurementMonteCarloUncertainty", ...
         "At least one positive measurement standard uncertainty is required.");
 end
 
@@ -112,7 +112,7 @@ function value = localStd(value, name)
 if isempty(value) || (isscalar(value) && isnan(value))
     value = 0;
 elseif ~isscalar(value) || ~isfinite(value) || value < 0
-    error("mechanics:fitting:InvalidMonteCarloGeometryUncertainty", ...
+    error("mechanics:fitting:InvalidMeasurementMonteCarloUncertainty", ...
         "%s must be NaN or a nonnegative finite scalar.", name);
 end
 end

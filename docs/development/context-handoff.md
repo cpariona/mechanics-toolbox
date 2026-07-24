@@ -8,28 +8,33 @@ Use this document when continuing repository work in a new chat.
 cpariona/mechanics-toolbox
 ```
 
-Current working branch:
+Current maintenance branch:
 
 ```text
-feature/mechanics-pipeline-refinement
+maintenance/api-doc-consistency
 ```
 
-Do not create a pull request, merge, or modify `main` unless explicitly requested.
+The previous implementation branch, `feature/mechanics-pipeline-refinement`, was merged into `main` through PR #16. Its merge commit is:
+
+```text
+4a55b6f476a112a3c8c1b4d5b70c21317121805e
+```
+
+Do not modify `main`, merge branches, or open a pull request unless explicitly requested.
 
 ## Current state
 
-The repository contains maintained tensile and compression workflows, constitutive fitting, diagnostics, Monte Carlo measurement uncertainty, population analysis, group comparison, plotting, exports, and automated tests.
+The maintained repository contains tensile and compression workflows, constitutive fitting, diagnostics, measurement-uncertainty propagation, population analysis, group comparison, plotting, exports, and automated tests.
 
-The complete MATLAB test suite passes on the current branch.
+The maintenance branch completed a direct breaking cleanup of terminology, examples, tests, and disconnected public functions. The user repeatedly reported that the complete MATLAB test suite passed after each functional cleanup block, including the final public-API cleanup.
 
-The next work phase is intentionally limited to:
+The current phase is limited to:
 
-1. repository organization and cleanup;
-2. terminology and public-API consistency;
-3. documentation review;
-4. real-data validation of the tensile workflow.
+1. repository-level diff and whitespace checks;
+2. real-data validation of the tensile workflow;
+3. pull-request preparation only when explicitly requested.
 
-Prefer simple changes. Do not add new abstractions unless they solve a demonstrated problem.
+Prefer simple changes and uniform public names. Breaking cleanup is acceptable when explicitly chosen; repair affected callers and tests directly instead of retaining wrappers or compatibility aliases.
 
 ## Read first
 
@@ -43,30 +48,21 @@ Read only these files initially, in order:
 6. `docs/workflows/tensile-study.md`
 7. `docs/reference/geometry-uncertainty.md`
 
-Read additional implementation files only when needed for the selected task.
+Read additional implementation files only when needed for a concrete maintenance finding.
 
-## Verify the repository before proposing changes
-
-Run:
+## Verify the repository before working
 
 ```bash
-git fetch origin
-git switch feature/mechanics-pipeline-refinement
+git fetch origin --prune
+git switch maintenance/api-doc-consistency
 git status -sb
 git rev-parse HEAD
-git rev-parse origin/feature/mechanics-pipeline-refinement
+git rev-parse origin/maintenance/api-doc-consistency
+git rev-parse origin/main
 git log -5 --oneline --decorate
 ```
 
-Report:
-
-- local branch and SHA;
-- remote branch SHA;
-- whether the branch is ahead, behind, or synchronized;
-- working-tree status;
-- recent relevant commits.
-
-Do not discard local changes automatically.
+Report the local and remote SHAs, synchronization state, working-tree status, and recent relevant commits. Do not discard local changes automatically.
 
 ## Validation commands
 
@@ -82,10 +78,17 @@ assert(all([results.Passed]), "Focused tests failed.")
 Complete suite:
 
 ```matlab
+restoredefaultpath
+clear classes
+clear functions
 clear
 clc
 close all
+
+cd("D:\\Escritorio\\mechanics-toolbox")
+startup
 results = run_all_tests();
+assert(all([results.Passed]), "Repository tests failed.")
 ```
 
 Repository checks:
@@ -97,66 +100,71 @@ git status --ignored -s
 git ls-files --others --exclude-standard
 ```
 
-Local experimental data and generated results are ignored under `data/` and `results/`. Do not delete them without confirming that the user has preserved anything needed.
+Local experimental data and generated results are ignored under `data/` and `results/`. Do not delete them without confirming that anything needed has been preserved.
 
 ## Current conventions
 
 - Maintained implementation belongs under `src/+mechanics/`.
 - Runnable user examples belong under `examples/`.
+- Example input templates belong under `examples/templates/`.
 - Automated tests belong under `tests/`.
 - Documentation belongs under `docs/`.
 - Root MATLAB entrypoints are limited to `startup.m` and `run_all_tests.m`.
+- `startup.m` adds only the repository root and `src`; examples and tests are not placed on the global path.
 - Preserve raw experimental data separately from processed results.
-- Prefer current descriptive names; avoid names such as `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
-- `processingHistory` currently means the processing trace applied to a specimen; do not rename it casually because it is part of existing contracts.
-- Peak and post-peak analysis is descriptive and must not claim automatic fracture classification.
+- Prefer descriptive and uniform public names.
+- Avoid `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
+- Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
+- `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
+- Peak and post-peak analysis is descriptive and must not claim automatic rupture classification.
+- Keep a public plotting or validation utility only when it is consumed by a maintained workflow, report, runnable example, or documented public use case.
 
-## Pending review
+## Standardized names
 
-The next chat should verify, without broad refactoring:
-
-- obsolete or duplicated examples;
-- unused public functions or configuration options;
-- stale terminology in source, tests, exports, and documentation;
-- consistency between documented and actual accepted option names;
-- whether test files are organized clearly without removing coverage;
-- whether the tensile live workflow runs correctly with real data.
-
-After review, summarize findings before modifying files. Apply cleanup in small commits and rerun the relevant tests after each functional change.
-
-## Prompt for a new chat
-
-Copy and send:
+Measurement Monte Carlo uses:
 
 ```text
-Quiero continuar el trabajo técnico en el repositorio `cpariona/mechanics-toolbox`.
-
-La rama de trabajo es `feature/mechanics-pipeline-refinement`. La implementación funcional está completa y la suite de MATLAB pasa. La siguiente fase es organización y limpieza, revisión de terminología y consistencia de la API, revisión documental y luego validación con datos reales.
-
-Antes de proponer cambios:
-
-1. Ejecuta `git fetch origin` y verifica el estado real de la rama local frente a la remota.
-2. Reporta SHA local, SHA remota, `git status -sb` y los últimos commits relevantes.
-3. Lee, en orden:
-   - `README.md`
-   - `docs/README.md`
-   - `docs/development/context-handoff.md`
-   - `docs/development/repository-structure.md`
-   - `docs/development/testing.md`
-   - `docs/workflows/tensile-study.md`
-   - `docs/reference/geometry-uncertainty.md`
-4. Revisa únicamente archivos adicionales necesarios para identificar problemas concretos.
-5. Resume el estado, los asuntos pendientes y una propuesta simple de limpieza.
-
-No abras PR, no fusiones ramas y no modifiques `main`. No hagas una refactorización amplia. Prioriza simplicidad, compatibilidad y cambios pequeños verificables.
+measurementMonteCarlo
+measurementMonteCarloFitConfig
+measurementMonteCarloFitUncertainty
+measurementMonteCarloFit
 ```
+
+Peak analysis uses:
+
+```text
+peakAnalysis
+peakAnalysisConfig
+computePeakMetrics
+addPeakMetrics
+summarizePeakMetrics
+exportPeakAnalysis
+peakSummary
+peakMetrics
+```
+
+All callers, tests, examples, exports, and documentation must use the canonical contracts above.
+
+## Completed maintenance work
+
+- Standardized measurement-uncertainty and peak-analysis terminology.
+- Removed compatibility aliases, migration-only tests, and superseded APIs.
+- Consolidated granular Ecoflex and fitting examples into maintained end-to-end workflows.
+- Separated example templates from runnable scripts.
+- Removed examples and tests from the global startup path.
+- Reorganized mixed tests into subsystem-specific files.
+- Removed duplicated comparison helpers, unused statistical helpers, disconnected plotting functions, and an isolated validation utility.
+- Documented configuration hierarchy and public diagnostic contracts.
+- Completed the stale-reference audit; only canonical public names remain in maintained documentation.
+
+## Remaining review
+
+- Run repository checks and inspect the complete branch diff.
+- Validate the tensile workflow with representative real data when available.
+- Open a pull request only after explicit user instruction.
+
+Apply cleanup in small commits and rerun focused tests after each functional change. Run the complete suite before merge.
 
 ## Closing a work session
 
-Before moving to another chat:
-
-1. ensure the working tree state is known;
-2. record the latest commit SHA;
-3. record which tests passed;
-4. update this document only when the persistent state or next phase changes;
-5. provide a short copyable prompt for the next chat.
+Before moving to another chat, record the working-tree state, latest commit SHA, tests executed, persistent-state changes, and the next concrete objective.

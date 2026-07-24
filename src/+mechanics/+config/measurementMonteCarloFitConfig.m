@@ -1,5 +1,5 @@
-function config = geometryMonteCarloFitConfig()
-%GEOMETRYMONTECARLOFITCONFIG Configuration for measurement-aware fit uncertainty.
+function config = measurementMonteCarloFitConfig()
+%MEASUREMENTMONTECARLOFITCONFIG Configuration for measurement-aware fit uncertainty.
 config.enabled = false;
 config.sampleCount = 200;
 config.confidenceLevel = 0.95;

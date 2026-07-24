@@ -113,4 +113,4 @@ reportConfig.outputFolder = "results/my-study/report";
 files = mechanics.io.exportTensileStudyReport(study, reportConfig);
 ```
 
-Standard figures include individual stress-strain curves, the population response, peak metrics, tangent modulus, and zero-reference diagnostics. Peak metrics retain descriptive peak, post-peak, and energy quantities without fracture classification.
+Standard figures include individual stress-strain curves, the population response, peak metrics, tangent modulus, and zero-reference diagnostics. Peak metrics retain descriptive peak, post-peak, and energy quantities without automatic rupture classification.

@@ -27,9 +27,11 @@ Test files are grouped by subsystem or workflow rather than by implementation ph
 - tensile and compression workflows;
 - population and group analysis;
 - exports and reports;
-- compatibility and end-to-end regression behavior.
+- end-to-end regression behavior.
 
 `test_measurement_monte_carlo.m` covers measurement-uncertainty propagation through constitutive refitting. `test_compression_population.m` covers compression fitting, default calibrated length, population aggregation, and group comparison. Keeping these concerns separate makes failures easier to localize.
+
+Tests created only to verify a temporary migration or removed compatibility alias should be deleted once the canonical API is covered by functional tests. Test count alone is not a cleanup target; redundant behavior coverage, duplicated fixtures, and unnecessarily repeated expensive workflows are.
 
 Run one test file directly:
 

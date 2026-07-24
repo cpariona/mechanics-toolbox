@@ -1,28 +1,28 @@
-function metrics = computeFractureMetrics(specimen, config)
-%COMPUTEFRACTUREMETRICS Compute peak and post-peak tensile metrics.
+function metrics = computePeakMetrics(specimen, config)
+%COMPUTEPEAKMETRICS Compute peak and post-peak tensile metrics.
 arguments
     specimen (1,1) struct
-    config (1,1) struct = mechanics.config.fractureAnalysisConfig()
+    config (1,1) struct = mechanics.config.peakAnalysisConfig()
 end
 
 if ~isfield(specimen, "raw") || ...
         ~isfield(specimen.raw, "force") || ...
         ~isfield(specimen.raw, "displacement")
-    error("mechanics:analysis:InvalidFractureSpecimen", ...
+    error("mechanics:analysis:InvalidPeakSpecimen", ...
         "Specimen must contain raw.force and raw.displacement.");
 end
 
 force = specimen.raw.force(:);
 displacement = specimen.raw.displacement(:);
 if numel(force) ~= numel(displacement)
-    error("mechanics:analysis:FractureSizeMismatch", ...
+    error("mechanics:analysis:PeakSizeMismatch", ...
         "Force and displacement must have equal lengths.");
 end
 
 finiteMask = isfinite(force) & isfinite(displacement);
 finiteIndices = find(finiteMask);
 if numel(finiteIndices) < config.minimumObservations
-    error("mechanics:analysis:InsufficientFractureData", ...
+    error("mechanics:analysis:InsufficientPeakData", ...
         "At least %d finite observations are required.", ...
         config.minimumObservations);
 end

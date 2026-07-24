@@ -1,5 +1,7 @@
 # Constitutive fit diagnostics
 
+Each diagnostic has its own configuration contract. `fitDiagnosticsWorkflowConfig` composes these lower-level configurations when the complete diagnostic workflow is used.
+
 ## Bootstrap uncertainty
 
 Residual bootstrap resampling refits the selected model to synthetic responses built from centered fitted residuals. It reports parameter and prediction intervals and the successful-refit fraction.
@@ -15,8 +17,9 @@ The intervals are conditional on the selected model, preprocessing, parameter bo
 ## Parameter identifiability
 
 ```matlab
+config = mechanics.config.fitIdentifiabilityConfig();
 diagnostics = mechanics.fitting.analyzeFitIdentifiability( ...
-    fitResult, uncertainty);
+    fitResult, uncertainty, config);
 ```
 
 The analysis screens parameter coefficients of variation, interval widths, boundary concentration, and bootstrap parameter correlation. A low fitting error does not guarantee identifiable individual parameters.
@@ -24,6 +27,7 @@ The analysis screens parameter coefficients of variation, interval widths, bound
 ## Stability across deformation windows
 
 ```matlab
+config = mechanics.config.fitWindowStabilityConfig();
 stability = mechanics.fitting.analyzeFitWindowStability( ...
     modelName, deformation, measuredStress, context, ...
     fitConfig, config);
@@ -34,7 +38,8 @@ The same model is fitted over nested maximum-deformation windows. Parameter rang
 ## Residual diagnostics
 
 ```matlab
-diagnostics = mechanics.fitting.analyzeFitResiduals(fitResult);
+config = mechanics.config.residualDiagnosticsConfig();
+diagnostics = mechanics.fitting.analyzeFitResiduals(fitResult, config);
 ```
 
 The analysis reports residual magnitude, lag-one autocorrelation, residual correlation with deformation, residual-magnitude correlation with predicted stress, and standardized-residual outliers. These are screening diagnostics; observations are not removed automatically.
@@ -42,9 +47,10 @@ The analysis reports residual magnitude, lag-one autocorrelation, residual corre
 ## Integrated reliability
 
 ```matlab
+config = mechanics.config.fitReliabilityConfig();
 assessment = mechanics.fitting.assessFitReliability( ...
     fitResult, uncertainty, identifiability, ...
-    windowStability, residualDiagnostics);
+    windowStability, residualDiagnostics, config);
 ```
 
 Possible statuses are:
@@ -61,6 +67,9 @@ The classification combines convergence, fit quality, bootstrap success, identif
 ## Integrated entrypoint
 
 ```matlab
+fitConfig = mechanics.config.fittingConfig();
+workflowConfig = mechanics.config.fitDiagnosticsWorkflowConfig();
+
 analysis = mechanics.workflow.runFitDiagnostics( ...
     modelName, deformation, measuredStress, context, ...
     fitConfig, workflowConfig);

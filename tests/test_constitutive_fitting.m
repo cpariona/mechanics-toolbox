@@ -1,7 +1,6 @@
 function tests = test_constitutive_fitting
 tests = functiontests(localfunctions);
 end
-
 function setupOnce(~)
 startup;
 end
@@ -67,18 +66,6 @@ yhat = [1;2;3];
 metrics = mechanics.fitting.computeFitMetrics(y, yhat, 1);
 verifyEqual(testCase, metrics.rmse, 0);
 verifyEqual(testCase, metrics.rSquared, 1);
-end
-
-function testMultipleModelComparison(testCase)
-strain = linspace(0, 0.8, 81)';
-context.inputMeasure = "engineering-strain";
-stress = mechanics.models.evaluateModel("neo-hookean", strain, 0.2, context);
-config = mechanics.config.fittingConfig();
-config.numberOfStarts = 3;
-comparison = mechanics.fitting.fitMultipleModels( ...
-    ["neo-hookean", "mooney-rivlin"], strain, stress, context, config);
-verifyEqual(testCase, height(comparison.summary), 2);
-verifyTrue(testCase, any(comparison.summary.Model == "neo-hookean"));
 end
 
 function testMismatchedInputRejected(testCase)

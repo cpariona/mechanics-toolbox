@@ -2,6 +2,17 @@
 
 The compression workflow imports one tabular specimen, detects complete preparation cycles, selects the configured cycle and branch, normalizes the compression sign convention, and runs the common uniaxial processing pipeline.
 
+## Configuration hierarchy
+
+Compression uses separate contracts for separate execution layers:
+
+- `compressionConfig` controls mechanics and preprocessing for one processed compression curve;
+- `compressionStudyConfig` coordinates import, cycle selection, geometry, fitting, export, and reporting for one specimen;
+- `compressionPopulationConfig` coordinates multiple compression studies and group analysis;
+- `compressionStudyReportConfig` controls report figures and Markdown rendering only.
+
+The higher-level configurations contain the lower-level settings they orchestrate. They are not aliases for one another.
+
 ```matlab
 config = mechanics.config.compressionStudyConfig();
 config.geometry.initialLength = 25;
@@ -38,15 +49,17 @@ The public compression curve remains positive. Internally, fitting uses negative
 Measurement Monte Carlo refitting can perturb gauge length, area, force, and displacement:
 
 ```matlab
-mc = config.fitting.geometryMonteCarlo;
+mc = config.fitting.measurementMonteCarlo;
 mc.enabled = true;
 mc.sampleCount = 500;
 mc.initialLengthStd = 0.10;
 mc.initialAreaStd = 0.20;
 mc.forceStd = 0.01;
 mc.displacementStd = 0.005;
-config.fitting.geometryMonteCarlo = mc;
+config.fitting.measurementMonteCarlo = mc;
 ```
+
+Successful results are stored in `study.specimen.measurementMonteCarloFit`.
 
 ## Cycle metrics
 
@@ -108,6 +121,14 @@ compression_population_curves.png
 compression_hysteresis_by_group.png
 compression_modulus_by_group.png
 compression_population_study.mat
+```
+
+For a single-specimen report, the report contract can also be used directly:
+
+```matlab
+reportConfig = mechanics.config.compressionStudyReportConfig();
+reportConfig.outputFolder = "results/compression-study/report";
+files = mechanics.io.exportCompressionStudyReport(study, reportConfig);
 ```
 
 Single-specimen export continues to provide processed curves, cycle metrics, a MAT study file, a Markdown report, and diagnostic figures.

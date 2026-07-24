@@ -7,8 +7,8 @@ config.specimens.excludeIndices = [];
 config.specimens.exclusionReason = "manual exclusion";
 config.specimens.preloadForceOverrides = [];
 
-config.fracture.enabled = true;
-config.fracture.config = mechanics.config.fractureAnalysisConfig();
+config.peakAnalysis.enabled = true;
+config.peakAnalysis.config = mechanics.config.peakAnalysisConfig();
 
 config.population.enabled = true;
 config.population.config = mechanics.config.populationAnalysisConfig();

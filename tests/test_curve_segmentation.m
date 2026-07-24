@@ -44,7 +44,7 @@ verifyEqual(testCase,numel(analysis.records(1).specimen.analysisRaw.force),6);
 end
 
 function specimen=localSpecimen()
-specimen.id="fracture"; specimen.sheetName="fracture";
+specimen.id="peak-response"; specimen.sheetName="peak-response";
 specimen.testType="tension";
 specimen.raw.displacement=[0;1;2;3;4;5;4.5;4;3.5];
 specimen.raw.force=[0;1;2;3;4;5;3;1;0];
@@ -53,5 +53,5 @@ specimen.geometry.initialArea=2;
 specimen.source.filename="synthetic";
 specimen.metadata=struct();
 specimen.processingHistory=struct("timestamp",datetime("now"), ...
-    "step","synthetic","description","synthetic fracture curve");
+    "step","synthetic","description","synthetic peak-response curve");
 end

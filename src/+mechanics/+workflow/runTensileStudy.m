@@ -12,20 +12,17 @@ end
 
 dataset = mechanics.extraction.extractWorkbook(filename, config.extraction);
 [dataset, exclusion] = localApplySpecimenConfiguration(dataset, config.specimens);
+analysis = mechanics.workflow.analyzeExtractedDataset(dataset, config.datasetAnalysis);
 
-analysis = mechanics.workflow.analyzeExtractedDataset( ...
-    dataset, config.datasetAnalysis);
-
-if config.fracture.enabled
-    analysis = mechanics.workflow.addFractureMetrics( ...
-        analysis, config.fracture.config);
+if config.peakAnalysis.enabled
+    analysis = mechanics.workflow.addPeakMetrics( ...
+        analysis, config.peakAnalysis.config);
 end
 
 population = struct();
 populationStatus = "disabled";
 populationErrorIdentifier = "";
 populationErrorMessage = "";
-
 if config.population.enabled
     try
         population = mechanics.workflow.analyzeSpecimenPopulation( ...
@@ -61,14 +58,12 @@ end
 function [dataset, exclusion] = localApplySpecimenConfiguration(dataset, specimenConfig)
 specimens = dataset.specimens(:);
 specimenCount = numel(specimens);
-
 excludeIndices = unique(round(specimenConfig.excludeIndices(:)));
 if any(~isfinite(excludeIndices)) || any(excludeIndices < 1) || ...
         any(excludeIndices > specimenCount)
     error("mechanics:workflow:InvalidExcludedSpecimenIndex", ...
         "Every excluded specimen index must identify an extracted specimen.");
 end
-
 excludedMask = false(specimenCount, 1);
 excludedMask(excludeIndices) = true;
 excludedSpecimens = specimens(excludedMask);
@@ -83,7 +78,6 @@ else
             "preloadForceOverrides must be empty or contain one value per extracted specimen.");
     end
 end
-
 for index = 1:specimenCount
     if isfinite(preloadOverrides(index))
         specimens(index).processingOverrides.zeroReferenceMethod = "preload-threshold";
@@ -92,7 +86,6 @@ for index = 1:specimenCount
 end
 
 dataset.specimens = specimens(~excludedMask);
-
 exclusion.indices = excludeIndices;
 exclusion.specimenIds = strings(numel(excludedSpecimens), 1);
 exclusion.sheetNames = strings(numel(excludedSpecimens), 1);

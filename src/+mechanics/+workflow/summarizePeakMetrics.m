@@ -1,13 +1,11 @@
-function summary = summarizeFractureMetrics(records)
-%SUMMARIZEFRACTUREMETRICS Build specimen-level peak-metric summary.
+function summary = summarizePeakMetrics(records)
+%SUMMARIZEPEAKMETRICS Build specimen-level peak-metric summary.
 arguments
     records struct
 end
 
-processedMask = [records.status] == "processed";
-processedRecords = records(processedMask);
+processedRecords = records([records.status] == "processed");
 n = numel(processedRecords);
-
 specimenId = strings(n,1);
 peakForce = nan(n,1);
 peakDisplacement = nan(n,1);
@@ -22,10 +20,10 @@ energyDensityToPeak = nan(n,1);
 for index = 1:n
     record = processedRecords(index);
     specimenId(index) = record.specimenId;
-    if ~isfield(record.specimen, "fracture")
+    if ~isfield(record.specimen, "peakMetrics")
         continue;
     end
-    metrics = record.specimen.fracture;
+    metrics = record.specimen.peakMetrics;
     peakForce(index) = metrics.peakForce;
     peakDisplacement(index) = metrics.peakDisplacement;
     peakStress(index) = metrics.peakStress;
@@ -37,13 +35,10 @@ for index = 1:n
     energyDensityToPeak(index) = metrics.energyDensityToPeak;
 end
 
-summary = table( ...
-    specimenId, peakForce, peakDisplacement, peakStress, peakStrain, ...
-    postPeakDropFraction, residualForceFraction, energyToPeak, ...
-    totalRecordedEnergy, energyDensityToPeak, ...
-    'VariableNames', { ...
-        'SpecimenId', 'PeakForce', 'PeakDisplacement', ...
-        'PeakStress', 'PeakStrain', 'PostPeakDropFraction', ...
-        'ResidualForceFraction', 'EnergyToPeak', ...
-        'TotalRecordedEnergy', 'EnergyDensityToPeak'});
+summary = table(specimenId, peakForce, peakDisplacement, peakStress, ...
+    peakStrain, postPeakDropFraction, residualForceFraction, energyToPeak, ...
+    totalRecordedEnergy, energyDensityToPeak, 'VariableNames', { ...
+    'SpecimenId', 'PeakForce', 'PeakDisplacement', 'PeakStress', ...
+    'PeakStrain', 'PostPeakDropFraction', 'ResidualForceFraction', ...
+    'EnergyToPeak', 'TotalRecordedEnergy', 'EnergyDensityToPeak'});
 end

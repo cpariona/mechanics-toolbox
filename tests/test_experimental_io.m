@@ -86,29 +86,6 @@ verifyEqual(testCase, processed.processed.stress, [0; 5; 10]);
 verifyEqual(testCase, numel(processed.processingHistory), 2);
 end
 
-function testIdenticalCurveComparison(testCase)
-curve.strain = linspace(0, 1, 20)';
-curve.stress = 2 .* curve.strain;
-
-comparison = mechanics.validation.compareCurves(curve, curve, 1e-12);
-
-verifyTrue(testCase, comparison.passed);
-verifyEqual(testCase, comparison.rmse, 0, "AbsTol", 1e-12);
-end
-
-function testDifferentCurveComparison(testCase)
-reference.strain = linspace(0, 1, 20)';
-reference.stress = 2 .* reference.strain;
-candidate.strain = reference.strain;
-candidate.stress = 2.2 .* candidate.strain;
-
-comparison = mechanics.validation.compareCurves( ...
-    reference, candidate, 0.01);
-
-verifyFalse(testCase, comparison.passed);
-verifyGreaterThan(testCase, comparison.normalizedRmse, 0.01);
-end
-
 function testExportCreatesFiles(testCase)
 folder = string(tempname);
 cleanup = onCleanup(@() localRemoveFolder(folder));

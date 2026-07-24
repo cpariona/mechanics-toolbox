@@ -2,6 +2,20 @@
 
 The constitutive workflow separates specimen fitting, diagnostic assessment, model selection, population summaries, group inference, and report rendering.
 
+## Configuration hierarchy
+
+The public configuration functions correspond to different execution layers:
+
+- `fittingConfig` controls one constitutive fit;
+- `fitDiagnosticsWorkflowConfig` composes uncertainty, identifiability, window-stability, residual, and reliability settings for one fitted model;
+- `modelComparisonWorkflowConfig` compares candidate models for one specimen;
+- `batchModelComparisonConfig` applies model comparison across specimens;
+- `selectedParameterPopulationConfig` controls extraction and summary of selected-model parameters;
+- `groupParameterInferenceConfig` controls between-group inference;
+- `constitutiveStudyReportConfig` controls rendering and export only.
+
+These configurations are intentionally separate. Higher-level configurations contain lower-level configurations when orchestration requires them.
+
 ## One model and one specimen
 
 ```matlab
@@ -40,10 +54,13 @@ The output preserves every specimen-level comparison and summarizes selected-mod
 ## Selected-parameter summaries
 
 ```matlab
-population = mechanics.workflow.summarizeSelectedParameters(batch);
+config = mechanics.config.selectedParameterPopulationConfig();
+config.minimumSpecimensPerSummary = 3;
+
+population = mechanics.workflow.summarizeSelectedParameters(batch, config);
 ```
 
-Parameters remain separated by model family and parameter name. The result includes a long-form specimen table, overall summaries, group summaries, bootstrap intervals when available, and extraction errors.
+Parameters remain separated by model family and parameter name. The result includes a long-form specimen table, overall summaries, group summaries, bootstrap intervals when available, and extraction errors. `requireFiniteParameters` controls whether nonfinite selected parameters are rejected, while `continueOnExtractionError` controls whether one failed specimen aborts the complete summary.
 
 ## Group inference
 

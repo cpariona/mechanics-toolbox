@@ -14,13 +14,13 @@ The original vectors remain in `specimen.raw`; the selected constitutive interva
 ## Peak and post-peak metrics
 
 ```matlab
-config = mechanics.config.fractureAnalysisConfig();
-metrics = mechanics.analysis.computeFractureMetrics(specimen, config);
+config = mechanics.config.peakAnalysisConfig();
+metrics = mechanics.analysis.computePeakMetrics(specimen, config);
 ```
 
 Reported quantities include peak force and displacement, peak stress and its corresponding strain, minimum post-peak force, final force, post-peak drop fraction, residual force fraction, energy to peak, total recorded work, and energy density to peak.
 
-These quantities describe the recorded response. They are not used to classify whether rupture occurred or whether it was complete.
+These quantities describe the recorded response. They do not classify specimen rupture.
 
 ## Energy convention
 
@@ -36,13 +36,13 @@ Dividing by initial volume in cubic millimetres gives:
 N mm / mm^3 = N/mm^2 = MPa = mJ/mm^3
 ```
 
-`totalRecordedEnergy` is signed force-displacement work when `integrateAbsoluteDisplacement` is false. Machine return or unloading can reduce it, so it must not automatically be interpreted as absorbed fracture energy.
+`totalRecordedEnergy` is signed force-displacement work when `integrateAbsoluteDisplacement` is false. Machine return or unloading can reduce it, so it must not automatically be interpreted as absorbed failure energy.
 
 ## Workflow and export
 
 ```matlab
-analysis = mechanics.workflow.addFractureMetrics(analysis, config);
-files = mechanics.io.exportFractureAnalysis(analysis, outputFolder);
+analysis = mechanics.workflow.addPeakMetrics(analysis, config);
+files = mechanics.io.exportPeakAnalysis(analysis, outputFolder);
 ```
 
 Peak and post-peak metrics do not alter specimen-quality status.

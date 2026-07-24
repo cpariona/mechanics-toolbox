@@ -19,8 +19,8 @@ if isfield(study, "exclusion") && isfield(study.exclusion, "count")
 end
 
 peakMetricSpecimenCount = 0;
-if isfield(study.analysis, "fractureSummary")
-    peakMetricSpecimenCount = height(study.analysis.fractureSummary);
+if isfield(study.analysis, "peakSummary")
+    peakMetricSpecimenCount = height(study.analysis.peakSummary);
 end
 
 summary = table(sourceFile, createdAt, specimenCount, ...
