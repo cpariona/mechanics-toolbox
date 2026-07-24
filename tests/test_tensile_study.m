@@ -11,7 +11,7 @@ end
 
 function testEndToEndStudy(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 study = mechanics.workflow.runTensileStudy( ...
     filename, localStudyConfig());
@@ -19,15 +19,14 @@ study = mechanics.workflow.runTensileStudy( ...
 verifyEqual(testCase, height(study.analysis.summary), 2);
 verifyEqual(testCase, ...
     nnz(study.analysis.summary.Status == "processed"), 2);
-verifyEqual(testCase, ...
-    height(study.analysis.fractureSummary), 2);
+verifyEqual(testCase, height(study.analysis.peakSummary), 2);
 verifyEqual(testCase, study.populationStatus, "completed");
 verifyEqual(testCase, study.population.specimenCount, 2);
 end
 
 function testStudySummary(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 study = mechanics.workflow.runTensileStudy( ...
     filename, localStudyConfig());
@@ -41,19 +40,19 @@ end
 
 function testStudyExport(testCase)
 filename = localCreateWorkbook();
-cleanupFile = onCleanup(@() localDelete(filename));
+cleanupFile = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 config = localStudyConfig();
 config.export.enabled = true;
 config.export.outputFolder = string(tempname);
 cleanupFolder = onCleanup( ...
-    @() localDeleteFolder(config.export.outputFolder));
+    @() localDeleteFolder(config.export.outputFolder)); %#ok<NASGU>
 
 study = mechanics.workflow.runTensileStudy(filename, config);
 
 verifyTrue(testCase, isfile(study.outputFiles.studySummary));
 verifyTrue(testCase, isfile(study.outputFiles.datasetSummary));
-verifyTrue(testCase, isfile(study.outputFiles.fractureSummary));
+verifyTrue(testCase, isfile(study.outputFiles.peakSummary));
 verifyTrue(testCase, isfile(study.outputFiles.provenance));
 verifyTrue(testCase, isfile(study.outputFiles.study));
 verifyTrue(testCase, isfile(study.outputFiles.config));
