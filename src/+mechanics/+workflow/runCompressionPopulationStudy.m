@@ -187,10 +187,10 @@ for index=1:numel(records)
     mask=[rec.succeeded] & string({rec.modelName})==best; selected=rec(mask);
     [~,j]=max([selected.windowFraction]); fit=selected(j).fitResult;
     lower=nan(size(fit.parameters)); median=nan(size(fit.parameters)); upper=nan(size(fit.parameters));
-    if isfield(specimen,"geometryMonteCarloFit")
-        lower=specimen.geometryMonteCarloFit.parameterLower;
-        median=specimen.geometryMonteCarloFit.parameterMedian;
-        upper=specimen.geometryMonteCarloFit.parameterUpper;
+    if isfield(specimen,"measurementMonteCarloFit")
+        lower=specimen.measurementMonteCarloFit.parameterLower;
+        median=specimen.measurementMonteCarloFit.parameterMedian;
+        upper=specimen.measurementMonteCarloFit.parameterUpper;
     end
     for p=1:numel(fit.parameters)
         row=row+1; rows(row).SpecimenId=string(specimen.id); rows(row).Model=best;
