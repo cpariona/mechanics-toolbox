@@ -48,9 +48,7 @@ mc.displacementStd = 0.005;
 config.fitting.measurementMonteCarlo = mc;
 ```
 
-`config.fitting.geometryMonteCarlo` remains accepted as a compatibility alias. New code should use `measurementMonteCarlo` because the calculation is not limited to geometry.
-
-Successful results are stored in `study.specimen.measurementMonteCarloFit`. The previous `geometryMonteCarloFit` result field remains available as a compatibility alias.
+Successful results are stored in `study.specimen.measurementMonteCarloFit`.
 
 ## Cycle metrics
 
