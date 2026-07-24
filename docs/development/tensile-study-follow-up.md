@@ -81,15 +81,23 @@ Representative real-data validation completed on 24 July 2026 using `studies/ten
 
 ## Selected-parameter figures
 
-The existing `summarizeSelectedParameters` workflow requires a batch model-comparison result because it extracts the model selected for each specimen. It is not produced directly by `runTensileStudy`. The study driver contains an optional block that constructs the required comparison input from processed tensile specimens.
+Implementation status: functionally implemented on `feature/selected-parameter-figures`; focused automated tests pass. Complete-suite and representative real-data validation remain required before merge.
 
-Add two maintained figures.
+The existing `summarizeSelectedParameters` workflow remains composable and downstream of batch model comparison. It now also derives a small-strain shear modulus while preserving the selected model identity.
 
-### Native parameters by selected model
+Implemented result contract:
 
-Plot individual values and summary statistics separately for every model and parameter combination. Do not pool parameters across model families.
+```text
+parameterPopulation.parameterTable
+parameterPopulation.overallSummary
+parameterPopulation.groupSummary
+parameterPopulation.initialShearModulus.values
+parameterPopulation.initialShearModulus.summary
+parameterPopulation.initialShearModulus.errors
+parameterPopulation.initialShearModulus.specimenCount
+```
 
-Examples:
+Native parameter plotting separates every model and parameter combination. Parameters from different model families are never pooled on one axis. Maintained examples include:
 
 ```text
 neo-hookean / mu
@@ -100,9 +108,7 @@ yeoh / C20
 yeoh / C30
 ```
 
-### Initial shear modulus by specimen
-
-Derive a common small-strain shear modulus:
+The derived initial shear modulus uses:
 
 ```text
 neo-hookean:    mu0 = mu
@@ -110,9 +116,24 @@ mooney-rivlin: mu0 = 2 * (C10 + C01)
 yeoh:          mu0 = 2 * C10
 ```
 
-Plot specimen values plus central and interval summaries. Preserve model identity because the derived value does not make the complete constitutive models interchangeable.
+The derived table preserves `SpecimenId`, `Group`, and `ModelName`. Unsupported models or incomplete parameter sets are recorded as extraction errors instead of being silently discarded.
 
-Before adding new plotting entrypoints, audit the existing selected-parameter plotting and constitutive-report exporters. Extend maintained entrypoints instead of creating parallel figures with overlapping responsibilities.
+The maintained exporter writes:
+
+```text
+selected_parameters.csv
+selected_parameter_overall_summary.csv
+selected_parameter_group_summary.csv
+selected_parameter_extraction_errors.csv
+initial_shear_modulus_values.csv
+initial_shear_modulus_summary.csv
+initial_shear_modulus_errors.csv
+selected_parameter_population.png
+initial_shear_modulus_population.png
+selected_parameter_population.mat
+```
+
+The selected-parameter population remains optional in `run_tensile_experiment.m` because it requires a batch model-comparison result that is not part of the core `runTensileStudy` contract.
 
 ## Study-level consensus model
 
@@ -173,12 +194,23 @@ Population tangent-modulus validation completed:
 - representative real-data execution through `studies/tension/run_tensile_experiment.m`;
 - inspection of the populated tangent-modulus result and generated study artifacts.
 
-Repository diff and whitespace checks remain part of branch-closing review before pull-request preparation.
+Selected-parameter figure validation completed:
+
+- parameter-family separation tests;
+- analytical tests for Neo-Hookean, Mooney-Rivlin, and Yeoh initial shear modulus;
+- unsupported-model error recording;
+- native-parameter and initial-shear-modulus figure tests;
+- CSV, MAT, and PNG export tests.
+
+Still required before merging `feature/selected-parameter-figures`:
+
+- complete MATLAB suite execution;
+- representative real-data execution of the optional selected-parameter population block;
+- inspection of the two generated figures and derived CSV files;
+- repository diff and whitespace checks.
 
 Future blocks still require:
 
-- parameter-family separation tests;
-- analytical tests for derived initial shear modulus;
 - consensus-model tests covering ties, insufficient eligibility, and parsimony;
 - regression tests proving each supported input form produces the same downstream study contract.
 
