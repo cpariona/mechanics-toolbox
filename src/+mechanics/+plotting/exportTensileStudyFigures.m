@@ -16,11 +16,12 @@ records = study.analysis.records;
 units = localStudyUnits(records);
 studyTitle = localStudyTitle(study, config);
 strainLabel = localUnitLabel("Engineering strain, \epsilon", units.strain);
-stressLabel = localUnitLabel("Engineering stress, \sigma", units.stress);
+stressLabel = localUnitLabel(localStressName(study), units.stress);
 modulusLabel = localUnitLabel("Tangent modulus", units.stress);
 
 if config.includeIndividualCurves
-    figureHandle = figure("Visible", "off", "Color", "w");
+    figureHandle = figure("Visible", "off", "Color", "w", ...
+        "Position", [100 100 1050 760]);
     axesHandle = axes(figureHandle);
     hold(axesHandle, "on");
     for index = 1:numel(records)
@@ -38,7 +39,7 @@ if config.includeIndividualCurves
         "Interpreter", "none");
     grid(axesHandle, "on");
     box(axesHandle, "on");
-    legend(axesHandle, "Location", "best", "Interpreter", "none");
+    legend(axesHandle, "Location", "southeast", "Interpreter", "none");
     filename = fullfile(folder, "individual_curves." + format);
     exportgraphics(figureHandle, filename, ...
         "Resolution", config.figureResolution);
@@ -56,7 +57,8 @@ if config.includePopulationCurve && ...
     if ~isfield(curves, "centralStatistic")
         curves.centralStatistic = "mean";
     end
-    figureHandle = figure("Visible", "off", "Color", "w");
+    figureHandle = figure("Visible", "off", "Color", "w", ...
+        "Position", [100 100 1050 760]);
     axesHandle = axes(figureHandle);
     hold(axesHandle, "on");
     if all(isfinite(curves.confidenceLower)) && ...
@@ -68,7 +70,7 @@ if config.includePopulationCurve && ...
             "DisplayName", "Bootstrap confidence interval");
     end
     plot(axesHandle, curves.strain, curves.centralStress, ...
-        "LineWidth", 1.6, "DisplayName", ...
+        "LineWidth", 1.8, "DisplayName", ...
         char(curves.centralStatistic + " stress"));
     xlabel(axesHandle, strainLabel);
     ylabel(axesHandle, stressLabel);
@@ -76,7 +78,7 @@ if config.includePopulationCurve && ...
         "Interpreter", "none");
     grid(axesHandle, "on");
     box(axesHandle, "on");
-    legend(axesHandle, "Location", "best");
+    legend(axesHandle, "Location", "northwest");
     filename = fullfile(folder, "population_curve." + format);
     exportgraphics(figureHandle, filename, ...
         "Resolution", config.figureResolution);
@@ -88,32 +90,36 @@ if config.includePeakMetrics && ...
         isfield(study.analysis, "peakSummary") && ...
         ~isempty(study.analysis.peakSummary)
     summary = study.analysis.peakSummary;
-    figureHandle = figure("Visible", "off", "Color", "w");
+    figureHandle = figure("Visible", "off", "Color", "w", ...
+        "Position", [100 100 1300 720]);
     tiledlayout(figureHandle, 1, 3, ...
-        "TileSpacing", "compact", "Padding", "compact");
+        "TileSpacing", "compact", "Padding", "loose");
     labels = categorical(summary.SpecimenId);
     labels = reordercats(labels, cellstr(summary.SpecimenId));
 
-    nexttile;
-    bar(labels, summary.PeakForce);
-    ylabel(localUnitLabel("Peak force", units.force));
-    title("Peak force");
-    grid on;
-    box on;
+    axesHandle = nexttile;
+    bar(axesHandle, labels, summary.PeakForce);
+    ylabel(axesHandle, localUnitLabel("Peak force", units.force));
+    title(axesHandle, "Peak force");
+    axesHandle.XTickLabelRotation = 25;
+    grid(axesHandle, "on");
+    box(axesHandle, "on");
 
-    nexttile;
-    bar(labels, summary.PeakStress);
-    ylabel(localUnitLabel("Peak stress", units.stress));
-    title("Peak stress");
-    grid on;
-    box on;
+    axesHandle = nexttile;
+    bar(axesHandle, labels, summary.PeakStress);
+    ylabel(axesHandle, localUnitLabel("Peak nominal stress", units.stress));
+    title(axesHandle, "Peak stress");
+    axesHandle.XTickLabelRotation = 25;
+    grid(axesHandle, "on");
+    box(axesHandle, "on");
 
-    nexttile;
-    bar(labels, summary.EnergyToPeak);
-    ylabel(localUnitLabel("Energy to peak", units.energy));
-    title("Energy to peak");
-    grid on;
-    box on;
+    axesHandle = nexttile;
+    bar(axesHandle, labels, summary.EnergyToPeak);
+    ylabel(axesHandle, localUnitLabel("Energy to peak", units.energy));
+    title(axesHandle, "Energy to peak");
+    axesHandle.XTickLabelRotation = 25;
+    grid(axesHandle, "on");
+    box(axesHandle, "on");
 
     sgtitle(figureHandle, studyTitle + " — peak metrics", ...
         "Interpreter", "none");
@@ -125,7 +131,8 @@ if config.includePeakMetrics && ...
 end
 
 if config.includeTangentModulus
-    figureHandle = figure("Visible", "off", "Color", "w");
+    figureHandle = figure("Visible", "off", "Color", "w", ...
+        "Position", [100 100 1050 760]);
     axesHandle = axes(figureHandle);
     hold(axesHandle, "on");
     plotted = false;
@@ -138,14 +145,17 @@ if config.includeTangentModulus
         end
         modulus = records(index).specimen.analysis.tangentModulus;
         plot(axesHandle, modulus.strain, modulus.tangentModulusForPlot, ...
-            "LineWidth", 1.1, ...
+            "LineWidth", 1.0, ...
             "DisplayName", char(records(index).specimenId));
         plotted = true;
     end
     if plotted
         summaryRange = records(firstProcessedIndex).specimen.analysis ...
             .tangentModulus.summaryStrainRange;
-        xline(axesHandle, summaryRange(1), "--", "Summary range");
+        xline(axesHandle, summaryRange(1), "--", "Summary range", ...
+            "HandleVisibility", "off", ...
+            "LabelOrientation", "aligned", ...
+            "LabelVerticalAlignment", "middle");
         xline(axesHandle, summaryRange(2), "--", ...
             "HandleVisibility", "off");
         xlabel(axesHandle, strainLabel);
@@ -154,7 +164,7 @@ if config.includeTangentModulus
             "Interpreter", "none");
         grid(axesHandle, "on");
         box(axesHandle, "on");
-        legend(axesHandle, "Location", "best", "Interpreter", "none");
+        legend(axesHandle, "Location", "southwest", "Interpreter", "none");
         filename = fullfile(folder, "tangent_modulus." + format);
         exportgraphics(figureHandle, filename, ...
             "Resolution", config.figureResolution);
@@ -169,13 +179,14 @@ if config.includeTangentModulus && ...
         isfield(study.population, "tangentModulusStatus") && ...
         string(study.population.tangentModulusStatus) == "completed"
     tangent = study.population.tangentModulus;
-    figureHandle = figure("Visible", "off", "Color", "w");
+    figureHandle = figure("Visible", "off", "Color", "w", ...
+        "Position", [100 100 1050 760]);
     axesHandle = axes(figureHandle);
     hold(axesHandle, "on");
 
     for index = 1:size(tangent.modulusMatrix, 2)
         plot(axesHandle, tangent.strain, tangent.modulusMatrix(:, index), ...
-            "LineWidth", 0.8, "HandleVisibility", "off");
+            "LineWidth", 0.65, "HandleVisibility", "off");
     end
 
     if all(isfinite(tangent.confidenceLower)) && ...
@@ -188,7 +199,7 @@ if config.includeTangentModulus && ...
     end
 
     plot(axesHandle, tangent.strain, tangent.centralModulus, ...
-        "LineWidth", 1.8, "DisplayName", ...
+        "LineWidth", 2.2, "DisplayName", ...
         char(tangent.centralStatistic + " tangent modulus"));
     xlabel(axesHandle, strainLabel);
     ylabel(axesHandle, modulusLabel);
@@ -196,7 +207,7 @@ if config.includeTangentModulus && ...
         "Interpreter", "none");
     grid(axesHandle, "on");
     box(axesHandle, "on");
-    legend(axesHandle, "Location", "best");
+    legend(axesHandle, "Location", "northwest");
     filename = fullfile(folder, "population_tangent_modulus." + format);
     exportgraphics(figureHandle, filename, ...
         "Resolution", config.figureResolution);
@@ -207,11 +218,12 @@ end
 if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
     processedIndices = find([records.status] == "processed");
     if ~isempty(processedIndices)
-        figureHandle = figure("Visible", "off", "Color", "w");
+        figureHandle = figure("Visible", "off", "Color", "w", ...
+            "Position", [100 100 1200 780]);
         columnCount = min(3, numel(processedIndices));
         rowCount = ceil(numel(processedIndices) / columnCount);
         tiledlayout(figureHandle, rowCount, columnCount, ...
-            "TileSpacing", "compact", "Padding", "compact");
+            "TileSpacing", "compact", "Padding", "loose");
         for outputIndex = 1:numel(processedIndices)
             record = records(processedIndices(outputIndex));
             specimen = record.specimen;
@@ -225,8 +237,8 @@ if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
                 markerIndex = reference.inputIndex;
                 if markerIndex >= 1 && markerIndex <= numel(raw.force)
                     plot(axesHandle, raw.displacement(markerIndex), ...
-                        raw.force(markerIndex), "o", "MarkerSize", 7, ...
-                        "LineWidth", 1.2, "DisplayName", "Mechanical zero");
+                        raw.force(markerIndex), "o", "MarkerSize", 6, ...
+                        "LineWidth", 1.1, "DisplayName", "Mechanical zero");
                 end
             end
             xlabel(axesHandle, localUnitLabel("Displacement", units.displacement));
@@ -266,6 +278,21 @@ if isfield(specimen.processed, "units")
 end
 if units.strain == "1"
     units.strain = "-";
+end
+end
+
+function name = localStressName(study)
+name = "Nominal stress, P";
+if ~isfield(study, "config") || ...
+        ~isfield(study.config, "datasetAnalysis") || ...
+        ~isfield(study.config.datasetAnalysis, "processingConfig") || ...
+        ~isfield(study.config.datasetAnalysis.processingConfig, "mechanics")
+    return;
+end
+mechanicsConfig = study.config.datasetAnalysis.processingConfig.mechanics;
+if isfield(mechanicsConfig, "stressMeasure") && ...
+        lower(string(mechanicsConfig.stressMeasure)) == "true"
+    name = "True stress, \sigma";
 end
 end
 
