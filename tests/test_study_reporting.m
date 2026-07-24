@@ -41,6 +41,8 @@ function testDefaultConfiguration(testCase)
 config = mechanics.config.studyReportConfig();
 verifyEqual(testCase, config.figureFormat, "png");
 verifyTrue(testCase, config.includeIndividualCurves);
+verifyTrue(testCase, config.includePeakMetrics);
+verifyFalse(testCase, isfield(config, "includeFractureMetrics"));
 verifyTrue(testCase, config.includeTangentModulus);
 verifyTrue(testCase, config.closeFiguresAfterExport);
 end
@@ -50,7 +52,6 @@ config = mechanics.config.studyReportConfig();
 config.studyTitle = "Tensile study report";
 config.includePopulationCurve = false;
 config.includePeakMetrics = false;
-config.includeFractureMetrics = false;
 config.includeTangentModulus = false;
 config.figureResolution = 72;
 end
