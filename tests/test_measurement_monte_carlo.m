@@ -43,8 +43,8 @@ end
 
 function [specimen, fit] = localTensionFit()
 strain = linspace(0, 0.25, 41)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 stress = mechanics.models.evaluateModel("neo-hookean", strain, 3, context);
 fit = mechanics.fitting.fitModel("neo-hookean", strain, stress, context, ...
     mechanics.config.fittingConfig());
