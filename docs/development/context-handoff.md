@@ -28,7 +28,7 @@ The maintained repository contains tensile and compression workflows, constituti
 
 The complete MATLAB test suite passed before PR #16 was merged. Maintenance changes must be validated again before merge.
 
-The current phase is intentionally limited to:
+The current phase is limited to:
 
 1. repository organization and cleanup;
 2. terminology and public-API consistency;
@@ -53,8 +53,6 @@ Read additional implementation files only when needed for a concrete maintenance
 
 ## Verify the repository before working
 
-Run:
-
 ```bash
 git fetch origin --prune
 git switch maintenance/api-doc-consistency
@@ -65,15 +63,7 @@ git rev-parse origin/main
 git log -5 --oneline --decorate
 ```
 
-Report:
-
-- local branch and SHA;
-- remote branch SHA;
-- whether the branch is ahead, behind, or synchronized;
-- working-tree status;
-- recent relevant commits.
-
-Do not discard local changes automatically.
+Report the local and remote SHAs, synchronization state, working-tree status, and recent relevant commits. Do not discard local changes automatically.
 
 ## Validation commands
 
@@ -118,11 +108,11 @@ Local experimental data and generated results are ignored under `data/` and `res
 - Avoid `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
 - Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
 - `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
-- Peak and post-peak analysis is descriptive and must not claim automatic fracture classification.
+- Peak and post-peak analysis is descriptive and must not claim automatic rupture classification.
 
-## Current maintenance findings
+## Standardized names
 
-Measurement Monte Carlo terminology is standardized across tension and compression:
+Measurement Monte Carlo uses:
 
 ```text
 measurementMonteCarlo
@@ -131,11 +121,23 @@ measurementMonteCarloFitUncertainty
 measurementMonteCarloFit
 ```
 
-Geometry-named alternatives were removed. All callers, tests, exports, and documentation must use the measurement-named contract.
+Peak analysis uses:
+
+```text
+peakAnalysis
+peakAnalysisConfig
+computePeakMetrics
+addPeakMetrics
+summarizePeakMetrics
+exportPeakAnalysis
+plotPeakMetrics
+peakSummary
+peakMetrics
+```
+
+Superseded geometry- and failure-named alternatives were removed. All callers, tests, examples, exports, and documentation must use the canonical contracts.
 
 ## Pending review
-
-Continue the review without broad refactoring:
 
 - obsolete or duplicated examples;
 - unused public functions or configuration options;
@@ -148,10 +150,4 @@ Apply cleanup in small commits and rerun focused tests after each functional cha
 
 ## Closing a work session
 
-Before moving to another chat:
-
-1. record the working-tree state;
-2. record the latest commit SHA;
-3. record which tests passed;
-4. update this document only when persistent state or the next phase changes;
-5. provide a short prompt for the next chat.
+Before moving to another chat, record the working-tree state, latest commit SHA, tests executed, persistent-state changes, and the next concrete objective.
