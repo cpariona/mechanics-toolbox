@@ -1,7 +1,8 @@
 %RUN_BATCH_PROCESSING Process a specimen manifest.
 startup;
 
-manifestFile = "path/to/specimen_manifest.xlsx";
+manifestFile = fullfile( ...
+    "examples", "templates", "specimen_manifest_template.csv");
 
 config = mechanics.config.batchProcessingConfig();
 config.continueOnError = true;
