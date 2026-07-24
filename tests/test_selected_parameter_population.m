@@ -13,6 +13,9 @@ verifyEqual(testCase, population.specimenCount, 3);
 verifyEqual(testCase, height(population.parameterTable), 3);
 verifyTrue(testCase, all(population.parameterTable.Parameter == "mu"));
 verifyEqual(testCase, height(population.extractionErrors), 0);
+verifyEqual(testCase, ...
+    population.initialShearModulus.values.InitialShearModulus, ...
+    [12;15;18], "AbsTol", 1e-8);
 end
 
 function testGroupSummariesAreProduced(testCase)
@@ -21,6 +24,32 @@ population = mechanics.workflow.summarizeSelectedParameters(batch);
 verifyGreaterThan(testCase, height(population.overallSummary), 0);
 verifyGreaterThan(testCase, height(population.groupSummary), 0);
 verifyTrue(testCase, all(ismember(["A";"B"], unique(population.groupSummary.Group))));
+end
+
+function testInitialShearModulusModelFormulas(testCase)
+parameterTable = table( ...
+    ["neo";"mr";"mr";"yeoh";"yeoh";"yeoh"], ...
+    repmat("all",6,1), ...
+    ["neo-hookean";"mooney-rivlin";"mooney-rivlin"; ...
+     "yeoh";"yeoh";"yeoh"], ...
+    ["mu";"C10";"C01";"C10";"C20";"C30"], ...
+    [10;3;2;4;7;9], ...
+    'VariableNames', {'SpecimenId','Group','ModelName','Parameter','Value'});
+
+result = mechanics.statistics.deriveInitialShearModulus(parameterTable);
+verifyEqual(testCase, result.values.SpecimenId, ["neo";"mr";"yeoh"]);
+verifyEqual(testCase, result.values.InitialShearModulus, [10;10;8]);
+verifyEqual(testCase, result.summary.Median, 10);
+verifyEqual(testCase, height(result.errors), 0);
+end
+
+function testUnsupportedInitialShearModelIsRecorded(testCase)
+parameterTable = table("sample", "all", "unknown-model", "p", 1, ...
+    'VariableNames', {'SpecimenId','Group','ModelName','Parameter','Value'});
+result = mechanics.statistics.deriveInitialShearModulus(parameterTable);
+verifyEqual(testCase, height(result.values), 0);
+verifyEqual(testCase, result.errors.ErrorIdentifier, ...
+    "mechanics:statistics:UnsupportedInitialShearModel");
 end
 
 function testExportCreatesFiles(testCase)
