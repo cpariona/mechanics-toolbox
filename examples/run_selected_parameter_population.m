@@ -1,8 +1,8 @@
 %RUN_SELECTED_PARAMETER_POPULATION Summarize selected parameters across specimens.
 startup;
 strain = linspace(0,0.5,51)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 parameters = [12,14,17,19];
 groups = ["Control","Control","Treatment","Treatment"];
 for index = 1:numel(parameters)
