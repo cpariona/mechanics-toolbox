@@ -7,7 +7,7 @@ end
 data = population.parameterTable;
 figureHandle = figure('Color','w');
 if isempty(data)
-    axesHandle = axes(figureHandle, 'Tag', 'parameter-data-axes'); %#ok<LAXES>
+    axesHandle = axes(figureHandle); %#ok<LAXES>
     text(axesHandle,0.5,0.5,'No selected-model parameters', ...
         'HorizontalAlignment','center');
     axis(axesHandle,'off');
@@ -31,8 +31,9 @@ for index = 1:numel(keys)
     axesHandle.Tag = 'parameter-data-axes';
     hold(axesHandle,'on');
     specimenPosition = (1:height(rows))';
-    scatter(axesHandle, specimenPosition, rows.Value, 36, 'filled', ...
-        'DisplayName','Specimens');
+    scatterHandle = scatter(axesHandle, specimenPosition, rows.Value, 36, ...
+        'filled', 'DisplayName','Specimens');
+    scatterHandle.Tag = 'parameter-data-series';
 
     summaryRows = population.overallSummary( ...
         population.overallSummary.ModelName == modelName & ...
