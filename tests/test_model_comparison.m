@@ -75,8 +75,8 @@ end
 
 function [strain, measuredStress, context] = localData()
 strain = linspace(0, 0.6, 61)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 measuredStress = mechanics.models.evaluateModel( ...
     "neo-hookean", strain, 15, context);
 end
