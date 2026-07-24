@@ -30,7 +30,7 @@ The maintenance branch completed a direct breaking cleanup of terminology, examp
 
 The current phase is limited to:
 
-1. final public-API and stale-reference audit;
+1. final stale-reference audit;
 2. repository-level diff and whitespace checks;
 3. real-data validation of the tensile workflow;
 4. pull-request preparation only when explicitly requested.
@@ -118,7 +118,7 @@ Local experimental data and generated results are ignored under `data/` and `res
 - Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
 - `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
 - Peak and post-peak analysis is descriptive and must not claim automatic rupture classification.
-- Keep a public plotting function only when it is consumed by a maintained workflow, report, or runnable example.
+- Keep a public plotting or validation utility only when it is consumed by a maintained workflow, report, runnable example, or documented public use case.
 
 ## Standardized names
 
@@ -159,11 +159,11 @@ Superseded geometry- and failure-named alternatives were removed. All callers, t
 - Reorganized `test_pipeline_refinements.m` into subsystem-specific tests.
 - Removed obsolete `fitMultipleModels` and unused `bootstrapMedianCI` APIs.
 - Removed disconnected plotting functions that had no maintained consumers.
+- Removed the isolated `mechanics.validation.compareCurves` utility and its misplaced tests.
 - Documented configuration hierarchy and public diagnostic contracts.
 
 ## Remaining review
 
-- Resolve `mechanics.validation.compareCurves`, which currently appears isolated from maintained workflows and examples.
 - Run a final grep for removed terminology and deleted API names.
 - Run repository checks and inspect the complete branch diff.
 - Validate the tensile workflow with representative real data when available.
