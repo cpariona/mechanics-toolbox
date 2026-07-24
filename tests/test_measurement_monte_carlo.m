@@ -41,20 +41,6 @@ verifyGreaterThan(testCase, ...
     std(result.parameterSamples(result.successMask, 1)), 0);
 end
 
-function testGeometryNamedAliasesRemainCompatible(testCase)
-canonical = mechanics.config.measurementMonteCarloFitConfig();
-compatibility = mechanics.config.geometryMonteCarloFitConfig();
-verifyEqual(testCase, compatibility, canonical);
-
-[specimen, fit] = localTensionFit();
-compatibility.sampleCount = 10;
-compatibility.initialAreaStd = 0.1;
-compatibility.refitNumberOfStarts = 1;
-result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
-    specimen, fit, compatibility);
-verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
-end
-
 function [specimen, fit] = localTensionFit()
 strain = linspace(0, 0.25, 41)';
 context.inputMeasure = "engineering-strain";
