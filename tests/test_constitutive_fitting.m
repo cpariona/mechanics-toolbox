@@ -7,8 +7,8 @@ end
 
 function testNeoHookeanParameterRecovery(testCase)
 strain = linspace(0, 0.8, 101)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 trueMu = 0.125;
 stress = mechanics.models.evaluateModel("neo-hookean", strain, trueMu, context);
 config = mechanics.config.fittingConfig();
@@ -22,8 +22,8 @@ end
 function testMooneyRivlinRecoveryWithNoise(testCase)
 rng(12);
 strain = linspace(0, 1, 151)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 trueParameters = [0.08, 0.025];
 cleanStress = mechanics.models.evaluateModel("mooney-rivlin", strain, trueParameters, context);
 noise = 2e-4 * randn(size(cleanStress));
@@ -37,7 +37,7 @@ end
 
 function testBoundsAreRespected(testCase)
 strain = linspace(0, 0.5, 41)';
-context.inputMeasure = "engineering-strain";
+context.deformationMeasure = "engineering-strain";
 stress = mechanics.models.evaluateModel("neo-hookean", strain, 2, context);
 config = mechanics.config.fittingConfig();
 config.initialGuess = 0.2;
