@@ -80,8 +80,10 @@ results = runtests([ ...
     "tests/test_constitutive_fitting.m", ...
     "tests/test_fitting_context.m", ...
     "tests/test_tangent_modulus_plotting.m", ...
+    "tests/test_measurement_monte_carlo.m", ...
     "tests/test_tensile_study.m", ...
-    "tests/test_study_reporting.m"], ...
+    "tests/test_study_reporting.m", ...
+    "tests/test_compression_study.m"], ...
     "IncludeSubfolders", true);
 
 disp(table(results))
@@ -98,14 +100,17 @@ assert(all([results.Passed]), "Repository tests failed.")
 Repository checks:
 
 ```bash
-git grep -n -E 'inputMeasure|outputStressMeasure'
+git grep -n -E '\.(inputMeasure|outputStressMeasure)[[:space:]]*=' -- \
+  src examples studies docs tests \
+  ':!tests/test_fitting_context.m'
+
 git diff --check
 git status -sb
 git status --ignored -s
 git ls-files --others --exclude-standard
 ```
 
-The context-field grep must be empty.
+The assignment grep must be empty. The removed names remain intentionally inside model guards and `test_fitting_context.m`, where their rejection is tested.
 
 ## Current conventions
 
