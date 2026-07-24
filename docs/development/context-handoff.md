@@ -26,14 +26,13 @@ Do not modify `main`, merge branches, or open a pull request unless explicitly r
 
 The maintained repository contains tensile and compression workflows, constitutive fitting, diagnostics, measurement-uncertainty propagation, population analysis, group comparison, plotting, exports, and automated tests.
 
-The maintenance branch completed a direct breaking cleanup of terminology, examples, tests, and disconnected public functions. The user repeatedly reported that the complete MATLAB test suite passed after each functional cleanup block, including the latest plotting cleanup.
+The maintenance branch completed a direct breaking cleanup of terminology, examples, tests, and disconnected public functions. The user repeatedly reported that the complete MATLAB test suite passed after each functional cleanup block, including the final public-API cleanup.
 
 The current phase is limited to:
 
-1. final stale-reference audit;
-2. repository-level diff and whitespace checks;
-3. real-data validation of the tensile workflow;
-4. pull-request preparation only when explicitly requested.
+1. repository-level diff and whitespace checks;
+2. real-data validation of the tensile workflow;
+3. pull-request preparation only when explicitly requested.
 
 Prefer simple changes and uniform public names. Breaking cleanup is acceptable when explicitly chosen; repair affected callers and tests directly instead of retaining wrappers or compatibility aliases.
 
@@ -144,27 +143,22 @@ peakSummary
 peakMetrics
 ```
 
-The standalone `plotPeakMetrics` function was removed because no maintained workflow, report, example, or test consumed it.
-
-Superseded geometry- and failure-named alternatives were removed. All callers, tests, examples, exports, and documentation must use the canonical contracts.
+All callers, tests, examples, exports, and documentation must use the canonical contracts above.
 
 ## Completed maintenance work
 
-- Renamed geometry Monte Carlo fitting contracts to measurement Monte Carlo.
-- Renamed fracture-oriented descriptive metrics to peak and post-peak metrics.
-- Removed compatibility aliases, migration-only tests, and obsolete fracture APIs.
+- Standardized measurement-uncertainty and peak-analysis terminology.
+- Removed compatibility aliases, migration-only tests, and superseded APIs.
 - Consolidated granular Ecoflex and fitting examples into maintained end-to-end workflows.
 - Separated example templates from runnable scripts.
 - Removed examples and tests from the global startup path.
-- Reorganized `test_pipeline_refinements.m` into subsystem-specific tests.
-- Removed obsolete `fitMultipleModels` and unused `bootstrapMedianCI` APIs.
-- Removed disconnected plotting functions that had no maintained consumers.
-- Removed the isolated `mechanics.validation.compareCurves` utility and its misplaced tests.
+- Reorganized mixed tests into subsystem-specific files.
+- Removed duplicated comparison helpers, unused statistical helpers, disconnected plotting functions, and an isolated validation utility.
 - Documented configuration hierarchy and public diagnostic contracts.
+- Completed the stale-reference audit; only canonical public names remain in maintained documentation.
 
 ## Remaining review
 
-- Run a final grep for removed terminology and deleted API names.
 - Run repository checks and inspect the complete branch diff.
 - Validate the tensile workflow with representative real data when available.
 - Open a pull request only after explicit user instruction.
