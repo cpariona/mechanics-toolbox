@@ -23,7 +23,6 @@ config.fitting.fitConfig = mechanics.config.fittingConfig();
 config.fitting.selectionConfig = mechanics.config.modelSelectionConfig();
 config.fitting.measurementMonteCarlo = ...
     mechanics.config.measurementMonteCarloFitConfig();
-config.fitting.geometryMonteCarlo = config.fitting.measurementMonteCarlo;
 
 config.export.enabled = false;
 config.export.outputFolder = "results/compression-study";
