@@ -40,6 +40,114 @@ verifyEqual(testCase, aggregate.centralStatistic, "median");
 verifyEqual(testCase, aggregate.meanStress, (103/3) .* strain, "AbsTol", 1e-12);
 end
 
+function testAggregateTangentModulus(testCase)
+strain = linspace(0, 1, 11)';
+specimens(1) = localProcessedSpecimenFromData("one", strain, strain);
+specimens(2) = localProcessedSpecimenFromData("two", strain, strain);
+specimens(1).analysis.tangentModulus = ...
+    localTangentResult(strain, 2 .* ones(size(strain)));
+specimens(2).analysis.tangentModulus = ...
+    localTangentResult(strain, 4 .* ones(size(strain)));
+
+config = mechanics.config.populationAnalysisConfig();
+config.strainGridPointCount = 6;
+config.bootstrap.enabled = false;
+
+aggregate = mechanics.statistics.aggregateTangentModulus( ...
+    specimens, config);
+
+verifyEqual(testCase, aggregate.specimenCount, 2);
+verifyEqual(testCase, aggregate.strain, linspace(0, 1, 6)');
+verifyEqual(testCase, aggregate.modulusMatrix, ...
+    [2 .* ones(6, 1), 4 .* ones(6, 1)]);
+verifyEqual(testCase, aggregate.centralModulus, 3 .* ones(6, 1));
+verifyEqual(testCase, aggregate.specimenCountByPoint, 2 .* ones(6, 1));
+end
+
+function testTangentModulusUsesPlotCurveAndMinimumSupport(testCase)
+strain = linspace(0, 1, 11)';
+specimens(1) = localProcessedSpecimenFromData("one", strain, strain);
+specimens(2) = localProcessedSpecimenFromData("two", strain, strain);
+specimens(3) = localProcessedSpecimenFromData("three", strain, strain);
+
+modulusOne = 2 .* ones(size(strain));
+modulusOne(1:3) = NaN;
+modulusTwo = 4 .* ones(size(strain));
+modulusTwo(1:2) = NaN;
+modulusThree = 8 .* ones(size(strain));
+modulusThree(1:6) = NaN;
+
+specimens(1).analysis.tangentModulus = ...
+    localTangentResult(strain, modulusOne);
+specimens(2).analysis.tangentModulus = ...
+    localTangentResult(strain, modulusTwo);
+specimens(3).analysis.tangentModulus = ...
+    localTangentResult(strain, modulusThree);
+
+config = mechanics.config.populationAnalysisConfig();
+config.minimumSpecimens = 2;
+config.strainGridPointCount = 8;
+config.bootstrap.enabled = false;
+
+aggregate = mechanics.statistics.aggregateTangentModulus( ...
+    specimens, config);
+
+verifyEqual(testCase, aggregate.strainRange, [0.3, 1], ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, aggregate.specimenCountByPoint(1), 2);
+verifyEqual(testCase, aggregate.centralModulus(1), 3, "AbsTol", 1e-12);
+verifyEqual(testCase, aggregate.specimenCountByPoint(end), 3);
+verifyEqual(testCase, aggregate.centralModulus(end), 14/3, ...
+    "AbsTol", 1e-12);
+end
+
+function testTangentModulusMedianBootstrapIsDeterministic(testCase)
+strain = linspace(0, 1, 11)';
+values = [2, 4, 20];
+for index = 1:numel(values)
+    specimens(index) = localProcessedSpecimenFromData( ...
+        "specimen-" + index, strain, strain); %#ok<AGROW>
+    specimens(index).analysis.tangentModulus = ...
+        localTangentResult(strain, values(index) .* ones(size(strain))); %#ok<AGROW>
+end
+
+config = mechanics.config.populationAnalysisConfig();
+config.centralStatistic = "median";
+config.strainGridPointCount = 5;
+config.bootstrap.iterations = 100;
+config.bootstrap.randomSeed = 7;
+
+first = mechanics.statistics.aggregateTangentModulus(specimens, config);
+second = mechanics.statistics.aggregateTangentModulus(specimens, config);
+
+verifyEqual(testCase, first.centralModulus, 4 .* ones(5, 1));
+verifyEqual(testCase, first.confidenceLower, second.confidenceLower);
+verifyEqual(testCase, first.confidenceUpper, second.confidenceUpper);
+end
+
+function testTangentModulusExplicitRangeRequiresSupport(testCase)
+strain = linspace(0, 1, 11)';
+specimens(1) = localProcessedSpecimenFromData("one", strain, strain);
+specimens(2) = localProcessedSpecimenFromData("two", strain, strain);
+modulusOne = ones(size(strain));
+modulusOne(1:3) = NaN;
+modulusTwo = 2 .* ones(size(strain));
+modulusTwo(1:2) = NaN;
+specimens(1).analysis.tangentModulus = ...
+    localTangentResult(strain, modulusOne);
+specimens(2).analysis.tangentModulus = ...
+    localTangentResult(strain, modulusTwo);
+
+config = mechanics.config.populationAnalysisConfig();
+config.strainRangeMode = "explicit";
+config.explicitStrainRange = [0.1, 0.9];
+config.bootstrap.enabled = false;
+
+verifyError(testCase, ...
+    @() mechanics.statistics.aggregateTangentModulus(specimens, config), ...
+    "mechanics:statistics:TangentModulusRangeOutsideSupport");
+end
+
 function testBootstrapMeanInterval(testCase)
 config.enabled = true;
 config.iterations = 200;
@@ -100,6 +208,7 @@ population = mechanics.workflow.analyzeSpecimenPopulation( ...
 
 verifyEqual(testCase, population.specimenCount, 2);
 verifyEqual(testCase, population.curves.meanStress(end), 3);
+verifyEqual(testCase, population.tangentModulus.meanModulus(end), 3);
 verifyEqual(testCase, height(population.metrics), 3);
 end
 
@@ -127,6 +236,16 @@ population.curves.standardDeviation = [0; 0.1];
 population.curves.standardError = [0; 0.05];
 population.curves.confidenceLower = [0; 1.8];
 population.curves.confidenceUpper = [0; 2.2];
+population.tangentModulus.strain = [0; 1];
+population.tangentModulus.meanModulus = [1; 2];
+population.tangentModulus.medianModulus = [1; 2];
+population.tangentModulus.centralModulus = [1; 2];
+population.tangentModulus.centralStatistic = "mean";
+population.tangentModulus.standardDeviation = [0; 0.1];
+population.tangentModulus.standardError = [0; 0.05];
+population.tangentModulus.confidenceLower = [0.8; 1.8];
+population.tangentModulus.confidenceUpper = [1.2; 2.2];
+population.tangentModulus.specimenCountByPoint = [2; 2];
 population.metrics = table("MaximumStress", 2, ...
     'VariableNames', {'Metric', 'SampleCount'});
 population.modelParameters.values = table();
@@ -136,6 +255,7 @@ files = mechanics.io.exportPopulationAnalysis( ...
     population, folder);
 
 verifyTrue(testCase, isfile(files.curve));
+verifyTrue(testCase, isfile(files.tangentModulus));
 verifyTrue(testCase, isfile(files.metrics));
 verifyTrue(testCase, isfile(files.population));
 end
@@ -149,6 +269,15 @@ function specimen = localProcessedSpecimenFromData(id, strain, stress)
 specimen.id = string(id);
 specimen.processed.strain = strain;
 specimen.processed.stress = stress;
+specimen.analysis.tangentModulus = ...
+    localTangentResult(strain, stress ./ max(strain, eps));
+end
+
+function tangent = localTangentResult(strain, values)
+tangent.strain = strain;
+tangent.tangentModulus = values;
+tangent.tangentModulusForPlot = values;
+tangent.summaryStrainRange = [min(strain), max(strain)];
 end
 
 function record = localRecord(id, slope)

@@ -131,7 +131,9 @@ if config.includeTangentModulus
     plotted = false;
     firstProcessedIndex = find([records.status] == "processed", 1, "first");
     for index = 1:numel(records)
-        if records(index).status ~= "processed"
+        if records(index).status ~= "processed" || ...
+                ~isfield(records(index).specimen, "analysis") || ...
+                ~isfield(records(index).specimen.analysis, "tangentModulus")
             continue;
         end
         modulus = records(index).specimen.analysis.tangentModulus;
@@ -158,6 +160,47 @@ if config.includeTangentModulus
             "Resolution", config.figureResolution);
         outputFiles.tangentModulus = string(filename);
     end
+    localClose(figureHandle, config);
+end
+
+if config.includeTangentModulus && ...
+        isfield(study, "population") && ...
+        isfield(study.population, "tangentModulus") && ...
+        isfield(study.population, "tangentModulusStatus") && ...
+        string(study.population.tangentModulusStatus) == "completed"
+    tangent = study.population.tangentModulus;
+    figureHandle = figure("Visible", "off", "Color", "w");
+    axesHandle = axes(figureHandle);
+    hold(axesHandle, "on");
+
+    for index = 1:size(tangent.modulusMatrix, 2)
+        plot(axesHandle, tangent.strain, tangent.modulusMatrix(:, index), ...
+            "LineWidth", 0.8, "HandleVisibility", "off");
+    end
+
+    if all(isfinite(tangent.confidenceLower)) && ...
+            all(isfinite(tangent.confidenceUpper))
+        fill(axesHandle, ...
+            [tangent.strain; flipud(tangent.strain)], ...
+            [tangent.confidenceLower; flipud(tangent.confidenceUpper)], ...
+            [0.85 0.85 0.85], "EdgeColor", "none", ...
+            "DisplayName", "Bootstrap confidence interval");
+    end
+
+    plot(axesHandle, tangent.strain, tangent.centralModulus, ...
+        "LineWidth", 1.8, "DisplayName", ...
+        char(tangent.centralStatistic + " tangent modulus"));
+    xlabel(axesHandle, strainLabel);
+    ylabel(axesHandle, modulusLabel);
+    title(axesHandle, studyTitle + " — population tangent modulus", ...
+        "Interpreter", "none");
+    grid(axesHandle, "on");
+    box(axesHandle, "on");
+    legend(axesHandle, "Location", "best");
+    filename = fullfile(folder, "population_tangent_modulus." + format);
+    exportgraphics(figureHandle, filename, ...
+        "Resolution", config.figureResolution);
+    outputFiles.populationTangentModulus = string(filename);
     localClose(figureHandle, config);
 end
 

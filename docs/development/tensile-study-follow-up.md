@@ -1,6 +1,6 @@
 # Tensile-study follow-up scope
 
-This document records the next bounded development scope after the executable tensile study driver is established and validated.
+This document records the bounded development scope after the executable tensile study driver was established and validated.
 
 ## Baseline status
 
@@ -10,21 +10,25 @@ The preceding study-driver scope is complete. The user reported that:
 - the complete real tensile experiment driver runs successfully;
 - no active assignments remain for the removed fitting-context fields.
 
-Begin the work below from an updated `main` after the phase-1 pull request is merged. Do not continue on the merged phase-1 branch.
+The phase-2 work began from updated `main` on:
+
+```text
+feature/tensile-population-tangent-modulus
+```
 
 ## Viability audit
 
 The current architecture can support the planned additions without replacing the core tensile workflow:
 
-- the existing population analysis already defines a common strain grid, interpolation, central statistics, and bootstrap intervals for stress-strain curves;
-- every processed specimen already stores its complete tangent-modulus curve and a plot-oriented version with leading unstable values suppressed;
-- batch model comparison already preserves successful model fits for each specimen;
-- selected-parameter population analysis already separates parameters by model family and parameter name;
-- group inference and integrated constitutive reporting already consume selected-parameter population results.
+- population analysis defines a common strain grid, interpolation, central statistics, and bootstrap intervals;
+- every processed tensile specimen stores its complete tangent-modulus curve and a plot-oriented version with leading unstable values suppressed;
+- batch model comparison preserves successful model fits for each specimen;
+- selected-parameter population analysis separates parameters by model family and parameter name;
+- group inference and integrated constitutive reporting consume selected-parameter population results.
 
-The remaining work is therefore additive, except for input-contract unification.
+The remaining work is additive, except for input-contract unification.
 
-## Recommended implementation order
+## Implementation order
 
 Use separate, bounded commits and split the work into more than one branch when necessary:
 
@@ -34,11 +38,13 @@ Use separate, bounded commits and split the work into more than one branch when 
 4. input-contract unification for workbook, file-list, pre-extracted dataset, and manifest inputs;
 5. final repository cleanup after all functional work is validated.
 
-The input-contract migration is architectural and may be deferred to its own branch if it expands beyond a small adapter layer.
+The input-contract migration is architectural and should remain separate if it expands beyond a small adapter layer.
 
 ## Population tangent modulus
 
-Add a population tangent-modulus result analogous to the current population stress-strain result:
+Implementation status: functionally complete and validated on `feature/tensile-population-tangent-modulus`.
+
+The result contract is:
 
 ```text
 study.population.tangentModulus.strain
@@ -46,18 +52,32 @@ study.population.tangentModulus.modulusMatrix
 study.population.tangentModulus.centralModulus
 study.population.tangentModulus.confidenceLower
 study.population.tangentModulus.confidenceUpper
+study.population.tangentModulus.specimenCountByPoint
 study.population.tangentModulus.centralStatistic
+study.population.tangentModulusStatus
 ```
 
-Implementation should:
+Implemented behavior:
 
-1. use a common strain interval supported by the required number of specimens;
-2. interpolate `tangentModulusForPlot`, not recompute derivatives during plotting;
-3. reuse the configured population central statistic and bootstrap settings;
-4. preserve individual interpolated curves for diagnostics;
-5. export `population_tangent_modulus` through the tensile-study report.
+1. uses a continuous strain interval supported by at least the configured `minimumSpecimens`;
+2. interpolates `tangentModulusForPlot` and does not recompute derivatives;
+3. reuses the population central statistic and bootstrap settings;
+4. preserves individual interpolated curves for diagnostics;
+5. exports `population_tangent_modulus.csv`;
+6. exports a population tangent-modulus figure through the maintained tensile-study figure exporter;
+7. leaves stress population and group-comparison workflows operational when tangent-modulus data are unavailable.
 
-This is a moderate, self-contained extension of population analysis and is the recommended first phase-2 objective.
+The strict statistics entrypoint still rejects malformed or insufficient tangent-modulus inputs when called directly. Optional availability is handled by `analyzeSpecimenPopulation`, not by weakening `aggregateTangentModulus`.
+
+Representative real-data validation completed on 24 July 2026 using `studies/tension/run_tensile_experiment.m`:
+
+- four specimens were processed after one configured exclusion;
+- population analysis completed without quality or processing failures;
+- the tangent-modulus population used 201 strain-grid points;
+- the valid strain interval was approximately 0.06699 to 6.67366 engineering strain;
+- pointwise support ranged from two to four specimens;
+- the central modulus and both bootstrap limits were finite at every grid point;
+- the complete MATLAB test suite passed after regression repair for group comparison.
 
 ## Selected-parameter figures
 
@@ -140,18 +160,27 @@ All should converge to one extracted-dataset contract and one downstream tensile
 
 Until that migration is complete, the study driver must keep batch-manifest execution disabled and explicit. Do not add a superficial switch that returns incompatible result shapes under the same variable name.
 
-## Validation required
+## Validation status
 
-The follow-up work should include:
+Population tangent-modulus validation completed:
 
-- focused tests for interpolation bounds and missing tangent-modulus support;
-- deterministic bootstrap tests;
+- interpolation and minimum-support tests;
+- deterministic mean and median bootstrap tests;
+- missing tangent-modulus compatibility with group comparison;
+- population export tests;
+- tensile-study figure and Markdown report tests;
+- complete MATLAB suite execution;
+- representative real-data execution through `studies/tension/run_tensile_experiment.m`;
+- inspection of the populated tangent-modulus result and generated study artifacts.
+
+Repository diff and whitespace checks remain part of branch-closing review before pull-request preparation.
+
+Future blocks still require:
+
 - parameter-family separation tests;
 - analytical tests for derived initial shear modulus;
 - consensus-model tests covering ties, insufficient eligibility, and parsimony;
-- regression tests proving each supported input form produces the same downstream study contract;
-- complete-suite execution after each bounded functional block;
-- representative real-data execution through `studies/tension/run_tensile_experiment.m`.
+- regression tests proving each supported input form produces the same downstream study contract.
 
 ## Cleanup after functional completion
 
