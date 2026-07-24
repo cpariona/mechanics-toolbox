@@ -91,6 +91,8 @@ end
 population.parameterTable = parameterTable;
 population.overallSummary = overallSummary;
 population.groupSummary = groupSummary;
+population.initialShearModulus = ...
+    mechanics.statistics.deriveInitialShearModulus(parameterTable, config);
 population.extractionErrors = errorTable;
 population.parameterObservationCount = height(parameterTable);
 population.specimenCount = numel(unique(parameterTable.SpecimenId));
