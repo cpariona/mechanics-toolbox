@@ -28,6 +28,15 @@ provenance.sourceFiles = sourceFiles;
 provenance.sourceFileNames = sourceFileName;
 provenance.sourceFileBytes = sourceFileBytes;
 provenance.sourceFileModifiedAt = sourceFileModifiedAt;
+
+% Preserve the original single-source fields for downstream consumers.
+provenance.sourceFile = "";
+provenance.sourceFileName = "";
+if ~isempty(sourceFiles)
+    provenance.sourceFile = sourceFiles(1);
+    provenance.sourceFileName = sourceFileName(1);
+end
+
 provenance.matlabVersion = string(version);
 provenance.matlabRelease = string(version("-release"));
 provenance.platform = string(computer);
