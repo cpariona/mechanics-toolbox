@@ -6,6 +6,11 @@ arguments
     context (1,1) struct = struct()
 end
 
+if isfield(context, "outputStressMeasure")
+    error("mechanics:models:RemovedStressMeasureField", ...
+        "Use context.stressMeasure instead of context.outputStressMeasure.");
+end
+
 stressMeasure = "nominal";
 if isfield(context, "stressMeasure")
     stressMeasure = lower(string(context.stressMeasure));
