@@ -27,7 +27,8 @@ analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
 
 ```text
 src/+mechanics/   Maintained package implementation
-examples/         Runnable user workflows
+studies/          Executable configurations for real experiments
+examples/         Runnable API demonstrations
 tests/            Automated regression tests
 docs/             User, reference, and development documentation
 startup.m         Adds maintained folders to the MATLAB path
@@ -78,6 +79,14 @@ study.provenance
 study.config
 study.outputFiles
 ```
+
+A complete experiment-oriented driver is maintained at:
+
+```text
+studies/tension/run_tensile_experiment.m
+```
+
+It centralizes extraction, preprocessing, fitting, population analysis, reporting, and optional constitutive workflows without duplicating reusable implementation.
 
 ## Complete compression population study
 
