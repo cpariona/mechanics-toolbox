@@ -3,19 +3,17 @@ startup;
 
 run_ecoflex_segmented_analysis
 
-peakConfig = mechanics.config.fractureAnalysisConfig();
+peakConfig = mechanics.config.peakAnalysisConfig();
 peakConfig.integrateAbsoluteDisplacement = false;
 peakConfig.minimumObservations = 3;
 
-analysis = mechanics.workflow.addFractureMetrics( ...
-    analysis, peakConfig);
+analysis = mechanics.workflow.addPeakMetrics(analysis, peakConfig);
 
-disp(analysis.fractureSummary);
+disp(analysis.peakSummary);
 
-mechanics.plotting.plotFractureMetrics( ...
-    analysis.fractureSummary);
+mechanics.plotting.plotPeakMetrics(analysis.peakSummary);
 
-files = mechanics.io.exportFractureAnalysis( ...
+files = mechanics.io.exportPeakAnalysis( ...
     analysis, "results/ecoflex-0050/peak-analysis");
 
 disp(files);
