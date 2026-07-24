@@ -38,6 +38,31 @@ verifyEqual(testCase, result.modelName, "");
 verifyEqual(testCase, height(result.parameterTable), 0);
 end
 
+function testConsensusPlotIsCreated(testCase)
+batch = localBatch([100 90 80; 102 92 82; 98 88 78], true(3,3));
+config = mechanics.config.studyConsensusModelConfig();
+config.bootstrap.enabled = false;
+result = mechanics.workflow.selectStudyConsensusModel(batch, config);
+figureHandle = mechanics.plotting.plotStudyConsensusModel(result);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(figureHandle));
+end
+
+function testConsensusExportCreatesFiles(testCase)
+batch = localBatch([100 90 80; 102 92 82; 98 88 78], true(3,3));
+config = mechanics.config.studyConsensusModelConfig();
+config.bootstrap.enabled = false;
+result = mechanics.workflow.selectStudyConsensusModel(batch, config);
+folder = string(tempname);
+cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
+files = mechanics.io.exportStudyConsensusModel(result, folder);
+verifyTrue(testCase, isfile(files.metrics));
+verifyTrue(testCase, isfile(files.parameters));
+verifyTrue(testCase, isfile(files.parameterSummary));
+verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.data));
+end
+
 function batch = localBatch(bicMatrix, eligibleMatrix)
 models = ["neo-hookean";"mooney-rivlin";"yeoh"];
 parameterCounts = [1;2;3];
@@ -73,5 +98,11 @@ for specimenIndex = 1:specimenCount
     comparison.summary = summary;
     comparison.analyses = analyses;
     batch.comparisons{specimenIndex} = comparison;
+end
+end
+
+function localRemove(folder)
+if isfolder(folder)
+    rmdir(folder,'s');
 end
 end
