@@ -60,8 +60,8 @@ end
 function filename = localCompressionFile(mu, initialLength, initialArea)
 loadingDisplacement = linspace(0, 5, 31)';
 compressionStrain = loadingDisplacement ./ initialLength;
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 nominalStress = mechanics.models.evaluateModel( ...
     "neo-hookean", -compressionStrain, mu, context);
 loadingForce = -nominalStress .* initialArea;
