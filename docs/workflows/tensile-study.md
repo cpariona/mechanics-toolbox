@@ -116,9 +116,41 @@ and contains parameter samples, percentile limits, medians, and successful-refit
 ```matlab
 config.population.config.centralStatistic = "mean";   % or "median"
 config.population.config.strainGridPointCount = 201;
+config.population.config.minimumSpecimens = 2;
 ```
 
 The common grid is an interpolation grid, not experimental resolution.
+
+The population workflow produces both the stress response and, when enough processed specimens contain tangent-modulus analysis, a tangent-modulus population result:
+
+```text
+study.population.curves
+study.population.tangentModulus
+study.population.tangentModulusStatus
+```
+
+The tangent-modulus population result:
+
+- interpolates each specimen's existing `tangentModulusForPlot` curve;
+- does not recompute derivatives;
+- selects a continuous strain interval supported by at least `minimumSpecimens`;
+- preserves the interpolated specimen curves in `modulusMatrix`;
+- records the effective support in `specimenCountByPoint`;
+- reuses the configured central statistic and bootstrap settings.
+
+Main fields are:
+
+```text
+study.population.tangentModulus.strain
+study.population.tangentModulus.modulusMatrix
+study.population.tangentModulus.centralModulus
+study.population.tangentModulus.confidenceLower
+study.population.tangentModulus.confidenceUpper
+study.population.tangentModulus.specimenCountByPoint
+study.population.tangentModulus.centralStatistic
+```
+
+If fewer than `minimumSpecimens` expose tangent-modulus curves, the remaining population analyses still run and `tangentModulusStatus` is `"unavailable"`.
 
 ## Units
 
@@ -146,4 +178,4 @@ reportConfig.outputFolder = "results/my-study/report";
 files = mechanics.io.exportTensileStudyReport(study, reportConfig);
 ```
 
-Standard figures include individual stress-strain curves, the population response, peak metrics, tangent modulus, and zero-reference diagnostics. Peak metrics retain descriptive peak, post-peak, and energy quantities without automatic rupture classification.
+Standard figures include individual stress-strain curves, the population response, peak metrics, specimen tangent-modulus curves, the population tangent-modulus response when available, and zero-reference diagnostics. Population tangent-modulus values are also exported to `population_tangent_modulus.csv`. Peak metrics retain descriptive peak, post-peak, and energy quantities without automatic rupture classification.
