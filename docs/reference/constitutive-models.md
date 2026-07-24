@@ -33,16 +33,18 @@ The current-area vector must use the same observation count as force and displac
 
 ## Constitutive deformation and stress measures
 
-`context.inputMeasure` accepts:
+`context.deformationMeasure` accepts:
 
 - `"engineering-strain"`, with `lambda = 1 + strain`;
 - `"true-strain"`, with `lambda = exp(strain)`;
 - `"stretch"`.
 
-`context.outputStressMeasure` accepts:
+`context.stressMeasure` accepts:
 
 - `"nominal"`, equivalent to uniaxial first Piola-Kirchhoff stress;
 - `"cauchy"`.
+
+The fitting context must match the processed curve representation. The default tensile-study configuration uses engineering strain and nominal stress for both processing and fitting.
 
 ## Neo-Hookean
 
