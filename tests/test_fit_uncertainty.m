@@ -70,8 +70,8 @@ end
 
 function fitResult = localFitResult()
 strain = linspace(0, 0.5, 41)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 
 trueStress = mechanics.models.evaluateModel( ...
     "neo-hookean", strain, 12, context);
