@@ -14,7 +14,9 @@ This package contains the supported implementation. Public workflows should use 
 examples/
 ```
 
-Examples demonstrate supported APIs. They may use synthetic inputs or require user-supplied experimental workbooks. They are not part of the automated test suite. Examples should represent maintained workflows and must not depend on removed configuration fields or deprecated result columns.
+Examples demonstrate supported APIs. They may use synthetic inputs or require user-supplied experimental workbooks. They are not part of the automated test suite. Examples should represent maintained workflows and must not depend on removed configuration fields or result columns.
+
+Keep an example only when it demonstrates a distinct supported entrypoint, configuration pattern, or output. Remove experiment-specific scripts, transitional migration examples, and examples fully duplicated by a clearer end-to-end workflow.
 
 ## Regression tests
 
@@ -22,7 +24,7 @@ Examples demonstrate supported APIs. They may use synthetic inputs or require us
 tests/
 ```
 
-Test files are named by behavior or subsystem. Tests are maintained source files, not generated output, and should remain versioned even when they cover compatibility behavior.
+Test files are named by behavior or subsystem. Tests are maintained source files, not generated output. Temporary migration tests should be removed after the canonical API has functional coverage; tests should not preserve removed aliases or obsolete contracts.
 
 ## Documentation
 
