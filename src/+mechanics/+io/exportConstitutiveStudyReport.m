@@ -7,6 +7,7 @@ arguments
     config (1,1) struct = mechanics.config.constitutiveStudyReportConfig()
 end
 
+inference = localNormalizeInference(inference);
 folder = string(config.outputFolder);
 if ~isfolder(folder)
     mkdir(folder);
@@ -82,6 +83,21 @@ fprintf(fileId, "%s", [ ...
 
 files = figureFiles;
 files.report = string(reportFile);
+end
+
+function inference = localNormalizeInference(inference)
+if ~isfield(inference, "comparisonCount")
+    inference.comparisonCount = 0;
+end
+if ~isfield(inference, "successfulComparisonCount")
+    inference.successfulComparisonCount = 0;
+end
+if ~isfield(inference, "significantComparisonCount")
+    inference.significantComparisonCount = 0;
+end
+if ~isfield(inference, "comparisonTable")
+    inference.comparisonTable = table();
+end
 end
 
 function localWriteTable(fileId, input)

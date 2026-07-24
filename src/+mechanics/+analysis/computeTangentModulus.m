@@ -60,11 +60,16 @@ if ~any(summaryMask)
         "No processed observations fall inside summaryStrainRange.");
 end
 
+plotStartStrain = localPlotStartStrain(strain, config);
+tangentModulusForPlot = tangentModulus;
+tangentModulusForPlot(strain < plotStartStrain) = NaN;
+
 result.strain = strain;
 result.sourceStress = stress;
 result.smoothedStress = smoothedStress;
 result.tangentModulus = tangentModulus;
-result.tangentModulusForPlot = tangentModulus;
+result.tangentModulusForPlot = tangentModulusForPlot;
+result.modulusPlotStartStrain = plotStartStrain;
 result.medianModulus = median(tangentModulus(summaryMask), "omitnan");
 result.meanModulus = mean(tangentModulus(summaryMask), "omitnan");
 result.summaryStrainRange = summaryRange;
@@ -72,6 +77,28 @@ result.summaryMask = summaryMask;
 result.windowIndices = [find(summaryMask, 1, "first"), ...
     find(summaryMask, 1, "last")];
 result.config = config;
+end
+
+function startStrain = localPlotStartStrain(strain, config)
+startStrain = NaN;
+if isfield(config, "modulusPlotStartStrain")
+    startStrain = config.modulusPlotStartStrain;
+end
+
+if isempty(startStrain) || (isscalar(startStrain) && isnan(startStrain))
+    fraction = 0.01;
+    if isfield(config, "modulusPlotAutomaticStartFraction")
+        fraction = config.modulusPlotAutomaticStartFraction;
+    end
+    if ~isscalar(fraction) || ~isfinite(fraction) || fraction < 0 || fraction >= 1
+        error("mechanics:analysis:InvalidModulusPlotStartFraction", ...
+            "modulusPlotAutomaticStartFraction must lie in [0, 1).");
+    end
+    startStrain = min(strain) + fraction .* (max(strain) - min(strain));
+elseif ~isscalar(startStrain) || ~isfinite(startStrain)
+    error("mechanics:analysis:InvalidModulusPlotStartStrain", ...
+        "modulusPlotStartStrain must be NaN or a finite scalar.");
+end
 end
 
 function derivative = localPolynomialDerivative(strain, stress, width, order, minimumPoints)

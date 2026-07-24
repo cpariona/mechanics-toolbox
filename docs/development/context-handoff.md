@@ -8,72 +8,90 @@ Use this document when continuing repository work in a new chat.
 cpariona/mechanics-toolbox
 ```
 
-Current maintenance branch:
+The tensile study-driver work was completed on:
 
 ```text
-maintenance/api-doc-consistency
+feature/tensile-study-driver-phase1
 ```
 
-The previous implementation branch, `feature/mechanics-pipeline-refinement`, was merged into `main` through PR #16. Its merge commit is:
-
-```text
-4a55b6f476a112a3c8c1b4d5b70c21317121805e
-```
+After its pull request is merged, continue from an updated `main`. Do not continue development on the merged branch.
 
 Do not modify `main`, merge branches, or open a pull request unless explicitly requested.
 
-## Current state
+## Validated current state
 
-The maintained repository contains tensile and compression workflows, constitutive fitting, diagnostics, measurement-uncertainty propagation, population analysis, group comparison, plotting, exports, and automated tests.
+The repository contains tensile and compression workflows, constitutive fitting, diagnostics, measurement-uncertainty propagation, population analysis, group comparison, plotting, exports, and automated tests.
 
-The maintenance branch completed a direct breaking cleanup of terminology, examples, tests, and disconnected public functions. The user repeatedly reported that the complete MATLAB test suite passed after each functional cleanup block, including the final public-API cleanup.
+The completed tensile study-driver scope includes:
 
-The current phase is limited to:
+- fitting context fields standardized as `deformationMeasure` and `stressMeasure`;
+- retained defaults of `"engineering-strain"` and `"nominal"`;
+- explicit rejection of the removed context field names instead of compatibility aliases;
+- complete tangent-modulus calculation preserved in `tangentModulus`;
+- plot-only leading-region suppression implemented through `tangentModulusForPlot`;
+- automatic or manually configured plot start strain;
+- executable real-experiment configurations placed under `studies/`;
+- `studies/tension/run_tensile_experiment.m` centralizing the core tensile workflow and optional constitutive workflows;
+- batch-manifest execution kept disabled pending result-contract unification.
 
-1. repository-level diff and whitespace checks;
-2. real-data validation of the tensile workflow;
-3. pull-request preparation only when explicitly requested.
+The user reported the following validation on the final functional state:
 
-Prefer simple changes and uniform public names. Breaking cleanup is acceptable when explicitly chosen; repair affected callers and tests directly instead of retaining wrappers or compatibility aliases.
+- the complete MATLAB test suite passed;
+- the complete real tensile experiment driver executed successfully;
+- the grep for active assignments to the removed context fields returned no results.
+
+## Next objective
+
+The next technical objective is the deferred tensile-study extension described in:
+
+```text
+docs/development/tensile-study-follow-up.md
+```
+
+The intended order is:
+
+1. implement the bounded tensile-study extensions;
+2. validate them with focused tests, the complete suite, and representative real data;
+3. perform a final cleanup and consistency audit after the extensions are stable.
+
+Do not combine the final cleanup with the first implementation commits. Cleanup should follow functional validation so that unused contracts and duplicated paths can be identified from the completed design.
 
 ## Read first
 
-Read only these files initially, in order:
+Read these files in order:
 
 1. `README.md`
 2. `docs/README.md`
 3. `docs/development/context-handoff.md`
 4. `docs/development/repository-structure.md`
-5. `docs/development/testing.md`
-6. `docs/workflows/tensile-study.md`
-7. `docs/reference/geometry-uncertainty.md`
+5. `docs/workflows/tensile-study.md`
+6. `docs/development/tensile-study-follow-up.md`
+7. `studies/README.md`
+8. `studies/tension/run_tensile_experiment.m`
 
-Read additional implementation files only when needed for a concrete maintenance finding.
+Use `docs/development/next-chat-prompt.md` as the prepared migration prompt.
+
+Read additional implementation files only when required for a concrete design or maintenance finding.
 
 ## Verify the repository before working
 
+After the phase-1 pull request has been merged:
+
 ```bash
 git fetch origin --prune
-git switch maintenance/api-doc-consistency
+git switch main
+git pull --ff-only origin main
 git status -sb
 git rev-parse HEAD
-git rev-parse origin/maintenance/api-doc-consistency
 git rev-parse origin/main
 git log -5 --oneline --decorate
 ```
 
-Report the local and remote SHAs, synchronization state, working-tree status, and recent relevant commits. Do not discard local changes automatically.
+Confirm that local `main` matches `origin/main`. Do not discard local or untracked files automatically.
 
-## Validation commands
+Before implementation, create a new branch from the verified `main`. Choose the branch name only after selecting the first bounded phase-2 objective.
 
-Focused MATLAB test:
-
-```matlab
-startup
-results = runtests("tests/test_name.m", "IncludeSubfolders", true);
-disp(table(results))
-assert(all([results.Passed]), "Focused tests failed.")
-```
+## Validation baseline
 
 Complete suite:
 
@@ -94,77 +112,60 @@ assert(all([results.Passed]), "Repository tests failed.")
 Repository checks:
 
 ```bash
+git grep -n -E '\.(inputMeasure|outputStressMeasure)[[:space:]]*=' -- \
+  src examples studies docs tests \
+  ':!tests/test_fitting_context.m'
+
 git diff --check
 git status -sb
 git status --ignored -s
 git ls-files --others --exclude-standard
 ```
 
-Local experimental data and generated results are ignored under `data/` and `results/`. Do not delete them without confirming that anything needed has been preserved.
+The assignment grep must remain empty. The removed names may appear only in guards and tests that verify their rejection.
 
 ## Current conventions
 
 - Maintained implementation belongs under `src/+mechanics/`.
-- Runnable user examples belong under `examples/`.
+- Executable real-experiment configurations belong under `studies/`.
+- Runnable API demonstrations belong under `examples/`.
 - Example input templates belong under `examples/templates/`.
 - Automated tests belong under `tests/`.
 - Documentation belongs under `docs/`.
 - Root MATLAB entrypoints are limited to `startup.m` and `run_all_tests.m`.
-- `startup.m` adds only the repository root and `src`; examples and tests are not placed on the global path.
-- Preserve raw experimental data separately from processed results.
-- Prefer descriptive and uniform public names.
-- Avoid `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
-- Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
-- `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
-- Peak and post-peak analysis is descriptive and must not claim automatic rupture classification.
-- Keep a public plotting or validation utility only when it is consumed by a maintained workflow, report, runnable example, or documented public use case.
+- `startup.m` adds only the repository root and `src`; studies, examples, and tests are not placed on the global path.
+- Study drivers call maintained public APIs and may contain experiment-specific paths and settings, but not reusable implementation.
+- Preserve raw experimental data and generated results under ignored paths.
+- Do not retain wrappers or aliases solely for compatibility after an intentional breaking rename.
+- Peak and post-peak analysis remains descriptive and must not claim automatic rupture classification.
+- Prefer bounded, composable changes over expanding the core workflow indiscriminately.
 
-## Standardized names
+## Deferred tensile-study work
 
-Measurement Monte Carlo uses:
+The next development scope is:
 
-```text
-measurementMonteCarlo
-measurementMonteCarloFitConfig
-measurementMonteCarloFitUncertainty
-measurementMonteCarloFit
-```
+1. population tangent-modulus interpolation and bootstrap summaries;
+2. native selected-parameter plots grouped by model and parameter;
+3. derived initial shear-modulus plots across specimens;
+4. a study-level consensus model using eligibility, median BIC, stability, and parsimony;
+5. unification of workbook, file-list, pre-extracted dataset, and batch-manifest inputs under one tensile-study result contract.
 
-Peak analysis uses:
+The input-contract migration is the most architectural item. Audit it before implementation and keep it separate if it would make the first phase-2 branch too broad.
 
-```text
-peakAnalysis
-peakAnalysisConfig
-computePeakMetrics
-addPeakMetrics
-summarizePeakMetrics
-exportPeakAnalysis
-peakSummary
-peakMetrics
-```
+## Cleanup after phase 2
 
-All callers, tests, examples, exports, and documentation must use the canonical contracts above.
+After the functional additions are merged and validated, perform a separate cleanup audit covering:
 
-## Completed maintenance work
+- duplicated or superseded workflows;
+- public functions with no maintained consumers;
+- configuration fields that no longer affect execution;
+- plotting and export overlap;
+- study-driver duplication;
+- stale documentation, examples, and tests;
+- naming and result-contract consistency.
 
-- Standardized measurement-uncertainty and peak-analysis terminology.
-- Removed compatibility aliases, migration-only tests, and superseded APIs.
-- Consolidated granular Ecoflex and fitting examples into maintained end-to-end workflows.
-- Separated example templates from runnable scripts.
-- Removed examples and tests from the global startup path.
-- Reorganized mixed tests into subsystem-specific files.
-- Removed duplicated comparison helpers, unused statistical helpers, disconnected plotting functions, and an isolated validation utility.
-- Documented configuration hierarchy and public diagnostic contracts.
-- Completed the stale-reference audit; only canonical public names remain in maintained documentation.
-
-## Remaining review
-
-- Run repository checks and inspect the complete branch diff.
-- Validate the tensile workflow with representative real data when available.
-- Open a pull request only after explicit user instruction.
-
-Apply cleanup in small commits and rerun focused tests after each functional change. Run the complete suite before merge.
+Do not remove APIs solely from consumer counts. Inspect dynamic use, documented public contracts, report entrypoints, and test intent before deletion.
 
 ## Closing a work session
 
-Before moving to another chat, record the working-tree state, latest commit SHA, tests executed, persistent-state changes, and the next concrete objective.
+Record the branch state, latest commit SHA, tests executed, persistent-state changes, unresolved findings, and the next concrete objective.

@@ -54,8 +54,8 @@ end
 
 function specimens = localSpecimens()
 strain = linspace(0, 0.5, 51)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 parameters = [12, 15, 18];
 groups = ["A", "A", "B"];
 for index = 1:3

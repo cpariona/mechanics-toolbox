@@ -5,12 +5,17 @@ arguments
     context (1,1) struct = struct()
 end
 
-inputMeasure = "engineering-strain";
 if isfield(context, "inputMeasure")
-    inputMeasure = lower(string(context.inputMeasure));
+    error("mechanics:models:RemovedDeformationMeasureField", ...
+        "Use context.deformationMeasure instead of context.inputMeasure.");
 end
 
-switch inputMeasure
+deformationMeasure = "engineering-strain";
+if isfield(context, "deformationMeasure")
+    deformationMeasure = lower(string(context.deformationMeasure));
+end
+
+switch deformationMeasure
     case {"engineering-strain", "engineering", "strain"}
         lambda = 1 + deformation;
     case {"true-strain", "log-strain", "logarithmic-strain"}
@@ -18,8 +23,8 @@ switch inputMeasure
     case "stretch"
         lambda = deformation;
     otherwise
-        error("mechanics:models:UnknownInputMeasure", ...
-            "Unknown deformation input measure: %s", inputMeasure);
+        error("mechanics:models:UnknownDeformationMeasure", ...
+            "Unknown deformation measure: %s", deformationMeasure);
 end
 
 if any(~isfinite(lambda(:))) || any(lambda(:) <= 0)

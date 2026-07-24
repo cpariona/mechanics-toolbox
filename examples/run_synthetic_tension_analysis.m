@@ -1,4 +1,4 @@
-%RUN_SYNTHETIC_TENSION_ANALYSIS Demonstrate the Phase 1 public API.
+%RUN_SYNTHETIC_TENSION_ANALYSIS Demonstrate the public tension API.
 config = mechanics.config.tensionConfig();
 config.preprocessing.smoothing.enabled = false;
 rawCurve.displacement = linspace(0, 10, 201)';

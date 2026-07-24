@@ -76,8 +76,8 @@ end
 
 function [x, y, context] = localNeoHookeanData()
 x = linspace(0, 0.8, 81)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 y = mechanics.models.evaluateModel( ...
     "neo-hookean", x, 12, context);
 end

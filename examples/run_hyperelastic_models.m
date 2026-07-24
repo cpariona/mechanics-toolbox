@@ -2,8 +2,8 @@
 startup;
 
 engineeringStrain = linspace(0, 1, 301)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 
 neoHookeanStress = mechanics.models.evaluateModel( ...
     "neo-hookean", engineeringStrain, 0.10, context);

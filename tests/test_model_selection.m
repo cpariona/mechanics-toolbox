@@ -8,8 +8,8 @@ end
 
 function testStableNeoHookeanSelection(testCase)
 strain = linspace(0, 0.8, 121)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 stress = mechanics.models.evaluateModel("neo-hookean", strain, 0.15, context);
 
 fitConfig = mechanics.config.fittingConfig();
@@ -29,8 +29,8 @@ end
 
 function testWindowRecordsAreCreated(testCase)
 strain = linspace(0, 0.6, 101)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 stress = mechanics.models.evaluateModel("neo-hookean", strain, 0.2, context);
 
 selectionConfig = mechanics.config.modelSelectionConfig();

@@ -18,9 +18,25 @@ Configuration functions under `mechanics.config` are organized by level:
 
 A workflow configuration may contain lower-level configuration structs. It does not replace them. For example, `compressionConfig` controls one processed compression curve, while `compressionStudyConfig` coordinates file input, cycle selection, processing, fitting, and export for a complete study.
 
-Retain a configuration function only when it is consumed by maintained implementation, a supported example, or a behavioral test. A test that only instantiates a configuration is not sufficient evidence by itself.
+Retain a configuration function only when it is consumed by maintained implementation, a supported example, an executable study driver, or a behavioral test. A test that only instantiates a configuration is not sufficient evidence by itself.
 
-## User workflows
+## Executable study drivers
+
+```text
+studies/
+```
+
+Study drivers configure and execute real experimental campaigns. They may define input paths, exclusions, measurement assumptions, fitting settings, optional analyses, output folders, and report configuration.
+
+They are not library implementation and are not simplified demonstrations. Study drivers must call maintained public APIs rather than duplicate reusable processing logic. Organize them by test family or campaign, for example:
+
+```text
+studies/tension/run_tensile_experiment.m
+```
+
+Experiment-specific raw data and generated results remain under ignored `data/` and `results/` paths.
+
+## User examples
 
 ```text
 examples/
@@ -70,4 +86,4 @@ startup.m
 run_all_tests.m
 ```
 
-Implementation belongs under `src/+mechanics`; runnable demonstrations belong under `examples`; tests belong under `tests`. Experiment-specific scripts and unnamespaced processing helpers should not be added at repository root.
+Implementation belongs under `src/+mechanics`; executable experiment configurations belong under `studies`; runnable demonstrations belong under `examples`; tests belong under `tests`. Experiment-specific scripts and unnamespaced processing helpers should not be added at repository root.

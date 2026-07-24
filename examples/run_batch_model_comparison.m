@@ -1,8 +1,8 @@
 %RUN_BATCH_MODEL_COMPARISON Compare candidate models across specimens.
 startup;
 strain = linspace(0, 0.6, 61)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 parameters = [12, 14, 16, 18];
 groups = ["Control", "Control", "Treatment", "Treatment"];
 for index = 1:numel(parameters)

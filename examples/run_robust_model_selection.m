@@ -4,8 +4,8 @@ startup;
 rng(4, "twister");
 
 strain = linspace(0, 1.0, 180)';
-context.inputMeasure = "engineering-strain";
-context.outputStressMeasure = "nominal";
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
 
 trueParameters = [0.08, 0.025];
 cleanStress = mechanics.models.evaluateModel( ...

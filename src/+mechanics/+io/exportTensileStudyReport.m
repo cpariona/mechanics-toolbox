@@ -5,6 +5,10 @@ arguments
     config (1,1) struct = mechanics.config.studyReportConfig()
 end
 
+if strlength(strtrim(string(config.studyTitle))) == 0
+    config.studyTitle = "auto";
+end
+
 folder = string(config.outputFolder);
 if ~isfolder(folder)
     mkdir(folder);

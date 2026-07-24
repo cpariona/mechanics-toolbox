@@ -31,6 +31,11 @@ config.analysis.derivativeSmoothing.method = "sgolay";
 config.analysis.derivativeSmoothing.windowStrain = 0.02;
 config.analysis.derivativeSmoothing.polynomialOrder = 3;
 
+% Plot-only trimming. NaN uses the configured fraction of the strain span;
+% a finite value specifies the minimum strain shown in modulus figures.
+config.analysis.modulusPlotStartStrain = NaN;
+config.analysis.modulusPlotAutomaticStartFraction = 0.01;
+
 config.uncertainty.geometry.enabled = false;
 config.uncertainty.geometry.initialLengthStd = NaN;
 config.uncertainty.geometry.initialAreaStd = NaN;

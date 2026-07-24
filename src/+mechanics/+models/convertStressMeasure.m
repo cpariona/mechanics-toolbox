@@ -6,18 +6,23 @@ arguments
     context (1,1) struct = struct()
 end
 
-outputMeasure = "nominal";
 if isfield(context, "outputStressMeasure")
-    outputMeasure = lower(string(context.outputStressMeasure));
+    error("mechanics:models:RemovedStressMeasureField", ...
+        "Use context.stressMeasure instead of context.outputStressMeasure.");
 end
 
-switch outputMeasure
+stressMeasure = "nominal";
+if isfield(context, "stressMeasure")
+    stressMeasure = lower(string(context.stressMeasure));
+end
+
+switch stressMeasure
     case {"nominal", "engineering", "first-piola"}
         stress = nominalStress;
     case {"cauchy", "true"}
         stress = lambda .* nominalStress;
     otherwise
         error("mechanics:models:UnknownStressMeasure", ...
-            "Unknown output stress measure: %s", outputMeasure);
+            "Unknown stress measure: %s", stressMeasure);
 end
 end
