@@ -1,0 +1,3 @@
+File,SpecimenId,InitialLength,InitialArea,Include,Sheet,ForceScale,DisplacementScale,TimeScale,ForceColumn,DisplacementColumn,TimeColumn,TestType
+path/to/specimen_01.xlsx,specimen-01,25,12,true,1,1,1,1,Force_N,Displacement_mm,Time_s,tension
+path/to/specimen_02.xlsx,specimen-02,25,12,true,1,1,1,1,Force_N,Displacement_mm,Time_s,tension
