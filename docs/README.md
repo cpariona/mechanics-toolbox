@@ -4,7 +4,7 @@ The documentation is organized by task.
 
 ## Workflows
 
-- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis and reporting.
+- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis, executable study driver, and reporting.
 - [`workflows/compression-study.md`](workflows/compression-study.md): last-cycle compression selection and specimen processing.
 - [`workflows/constitutive-analysis.md`](workflows/constitutive-analysis.md): fitting, diagnostics, model comparison, parameter summaries, group inference, and reporting.
 
@@ -25,5 +25,6 @@ The documentation is organized by task.
 - [`development/context-handoff.md`](development/context-handoff.md): concise protocol for continuing repository work in a new chat.
 - [`development/repository-structure.md`](development/repository-structure.md): maintained source layout and contribution boundaries.
 - [`development/testing.md`](development/testing.md): focused tests and complete release validation.
+- [`development/tensile-study-follow-up.md`](development/tensile-study-follow-up.md): viability audit and deferred tensile-study extensions.
 
 Development chronology is retained in Git history and merged pull requests.
