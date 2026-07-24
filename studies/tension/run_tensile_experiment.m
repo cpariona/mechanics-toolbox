@@ -9,8 +9,7 @@ clear
 clc
 close all
 
-studyDriverFolder = fileparts(mfilename("fullpath"));
-repositoryFolder = fileparts(fileparts(studyDriverFolder));
+repositoryFolder = 'D:\Escritorio\mechanics-toolbox';
 cd(repositoryFolder)
 startup
 
