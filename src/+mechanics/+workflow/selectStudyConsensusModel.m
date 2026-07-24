@@ -69,6 +69,12 @@ eligibleFraction = eligibleCount ./ max(specimenCount,1);
 accepted = successfulFraction >= config.minimumSuccessfulFraction & ...
     eligibleFraction >= config.minimumEligibleFraction & isfinite(medianBIC);
 
+deltaBIC = nan(modelCount,1);
+if any(accepted)
+    bestAcceptedBIC = min(medianBIC(accepted));
+    deltaBIC(accepted) = medianBIC(accepted) - bestAcceptedBIC;
+end
+
 selectedIndex = NaN;
 reason = "No model satisfied the consensus eligibility thresholds.";
 if any(accepted)
@@ -76,20 +82,33 @@ if any(accepted)
     bestBIC = min(medianBIC(accepted));
     tied = acceptedIndices(medianBIC(accepted) <= ...
         bestBIC + config.bicTieTolerance);
-    tiedParameterCount = parameterCount(tied);
-    minimumParameterCount = min(tiedParameterCount);
-    parsimonious = tied(tiedParameterCount == minimumParameterCount);
-    [~, localIndex] = min(medianBIC(parsimonious));
-    selectedIndex = parsimonious(localIndex);
-    reason = "Selected by median BIC with parsimony within the tie tolerance.";
+
+    if numel(tied) == 1
+        selectedIndex = tied;
+        reason = "Selected by lowest median BIC.";
+    else
+        tiedParameterCount = parameterCount(tied);
+        minimumParameterCount = min(tiedParameterCount);
+        parsimonious = tied(tiedParameterCount == minimumParameterCount);
+        if numel(parsimonious) == 1
+            selectedIndex = parsimonious;
+            reason = ...
+                "Selected by parsimony among models within the median-BIC tie tolerance.";
+        else
+            [~, localIndex] = min(medianBIC(parsimonious));
+            selectedIndex = parsimonious(localIndex);
+            reason = ...
+                "Selected by lowest median BIC after applying tie tolerance and parsimony.";
+        end
+    end
 end
 
 metricSummary = table(modelNames, successfulCount, successfulFraction, ...
     eligibleCount, eligibleFraction, parameterCount, medianNormalizedRMSE, ...
-    medianBIC, accepted, ...
+    medianBIC, deltaBIC, accepted, ...
     'VariableNames', {'ModelName','SuccessfulFitCount', ...
     'SuccessfulFitFraction','EligibleFitCount','EligibleFitFraction', ...
-    'ParameterCount','MedianNormalizedRMSE','MedianBIC','Accepted'});
+    'ParameterCount','MedianNormalizedRMSE','MedianBIC','DeltaBIC','Accepted'});
 
 parameterTable = localParameterTable(batch, modelNames, selectedIndex, config);
 parameterSummary = localParameterSummary(parameterTable, config);
