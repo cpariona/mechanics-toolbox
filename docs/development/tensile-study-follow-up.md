@@ -42,7 +42,7 @@ The input-contract migration is architectural and should remain separate if it e
 
 ## Population tangent modulus
 
-Implementation status: functionally implemented on `feature/tensile-population-tangent-modulus`; focused automated tests pass. Complete-suite and representative real-data validation remain required before merge.
+Implementation status: functionally complete and validated on `feature/tensile-population-tangent-modulus`.
 
 The result contract is:
 
@@ -68,6 +68,16 @@ Implemented behavior:
 7. leaves stress population and group-comparison workflows operational when tangent-modulus data are unavailable.
 
 The strict statistics entrypoint still rejects malformed or insufficient tangent-modulus inputs when called directly. Optional availability is handled by `analyzeSpecimenPopulation`, not by weakening `aggregateTangentModulus`.
+
+Representative real-data validation completed on 24 July 2026 using `studies/tension/run_tensile_experiment.m`:
+
+- four specimens were processed after one configured exclusion;
+- population analysis completed without quality or processing failures;
+- the tangent-modulus population used 201 strain-grid points;
+- the valid strain interval was approximately 0.06699 to 6.67366 engineering strain;
+- pointwise support ranged from two to four specimens;
+- the central modulus and both bootstrap limits were finite at every grid point;
+- the complete MATLAB test suite passed after regression repair for group comparison.
 
 ## Selected-parameter figures
 
@@ -150,22 +160,20 @@ All should converge to one extracted-dataset contract and one downstream tensile
 
 Until that migration is complete, the study driver must keep batch-manifest execution disabled and explicit. Do not add a superficial switch that returns incompatible result shapes under the same variable name.
 
-## Validation required
+## Validation status
 
-Population tangent-modulus focused validation completed:
+Population tangent-modulus validation completed:
 
 - interpolation and minimum-support tests;
 - deterministic mean and median bootstrap tests;
 - missing tangent-modulus compatibility with group comparison;
 - population export tests;
-- tensile-study figure and Markdown report tests.
-
-Still required before merging this branch:
-
+- tensile-study figure and Markdown report tests;
 - complete MATLAB suite execution;
 - representative real-data execution through `studies/tension/run_tensile_experiment.m`;
-- inspection of `study.population.tangentModulus` and generated report artifacts;
-- repository diff and whitespace checks.
+- inspection of the populated tangent-modulus result and generated study artifacts.
+
+Repository diff and whitespace checks remain part of branch-closing review before pull-request preparation.
 
 Future blocks still require:
 
