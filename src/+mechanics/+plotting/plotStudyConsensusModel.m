@@ -16,23 +16,47 @@ end
 
 layout = tiledlayout(figureHandle,1,2, ...
     'TileSpacing','compact','Padding','compact');
+modelLabels = categorical(summary.ModelName, summary.ModelName);
 
 axesBic = nexttile(layout);
-bar(axesBic, categorical(summary.ModelName), summary.MedianBIC);
-ylabel(axesBic,'Median BIC');
+barHandle = bar(axesBic, modelLabels, summary.DeltaBIC);
+barHandle.FaceColor = 'flat';
+if consensus.hasConsensusModel
+    selectedMask = summary.ModelName == consensus.modelName;
+    barHandle.CData = repmat([0.35 0.35 0.35], height(summary), 1);
+    barHandle.CData(selectedMask,:) = [0.15 0.55 0.20];
+end
+for index = 1:height(summary)
+    if isfinite(summary.DeltaBIC(index))
+        text(axesBic, index, summary.DeltaBIC(index), ...
+            sprintf('  %.3g', summary.DeltaBIC(index)), ...
+            'HorizontalAlignment','left', ...
+            'VerticalAlignment','middle', ...
+            'Rotation',90);
+    end
+end
+ylabel(axesBic,'\DeltaBIC from best accepted model');
 title(axesBic,'Model evidence');
+xtickangle(axesBic,25);
 grid(axesBic,'on');
 box(axesBic,'on');
 
 axesEligibility = nexttile(layout);
 hold(axesEligibility,'on');
-bar(axesEligibility, categorical(summary.ModelName), ...
-    summary.EligibleFitFraction, 'DisplayName','Eligible');
+bar(axesEligibility, modelLabels, summary.EligibleFitFraction, ...
+    'DisplayName','Eligible fit fraction');
 yline(axesEligibility, consensus.config.minimumEligibleFraction, '--', ...
-    'Minimum eligible fraction', 'DisplayName','Threshold');
+    'HandleVisibility','off');
+text(axesEligibility, height(summary) + 0.42, ...
+    consensus.config.minimumEligibleFraction + 0.015, ...
+    'Minimum eligible fraction', ...
+    'HorizontalAlignment','right', ...
+    'VerticalAlignment','bottom');
 ylabel(axesEligibility,'Eligible fit fraction');
-ylim(axesEligibility,[0 1]);
+ylim(axesEligibility,[0 1.05]);
+xlim(axesEligibility,[0.5 height(summary)+0.5]);
 title(axesEligibility,'Cross-specimen eligibility');
+xtickangle(axesEligibility,25);
 grid(axesEligibility,'on');
 box(axesEligibility,'on');
 
