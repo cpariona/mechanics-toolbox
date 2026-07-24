@@ -76,6 +76,15 @@ axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
 verifyEqual(testCase, numel(axesHandles), 1);
 end
 
+function testBatchComparisonDefaultsAreLightweight(testCase)
+config = mechanics.config.batchModelComparisonConfig();
+diagnostics = config.comparisonConfig.fitDiagnosticsConfig;
+verifyFalse(testCase, diagnostics.runBootstrap);
+verifyFalse(testCase, diagnostics.runIdentifiability);
+verifyFalse(testCase, diagnostics.runWindowStability);
+verifyFalse(testCase, diagnostics.runResidualDiagnostics);
+end
+
 function testExportCreatesFiles(testCase)
 batch = localBatch();
 population = mechanics.workflow.summarizeSelectedParameters(batch);
@@ -134,12 +143,6 @@ for index = 1:3
     specimens(index).context = context; %#ok<AGROW>
 end
 config = mechanics.config.batchModelComparisonConfig();
-workflow = config.comparisonConfig.fitDiagnosticsConfig;
-workflow.runBootstrap = false;
-workflow.runIdentifiability = false;
-workflow.runWindowStability = false;
-workflow.runResidualDiagnostics = false;
-config.comparisonConfig.fitDiagnosticsConfig = workflow;
 batch = mechanics.workflow.compareModelsAcrossSpecimens( ...
     specimens, "neo-hookean", mechanics.config.fittingConfig(), config);
 end
