@@ -35,7 +35,7 @@ The current phase is intentionally limited to:
 3. documentation review;
 4. real-data validation of the tensile workflow.
 
-Prefer simple changes. Preserve compatibility and avoid new abstractions unless they solve a demonstrated problem.
+Prefer simple changes and uniform public names. Breaking cleanup is acceptable when explicitly chosen; repair affected callers and tests directly instead of retaining wrappers or compatibility aliases.
 
 ## Read first
 
@@ -116,18 +116,22 @@ Local experimental data and generated results are ignored under `data/` and `res
 - Preserve raw experimental data separately from processed results.
 - Prefer descriptive and uniform public names.
 - Avoid `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
-- Preserve established public contracts through aliases when a clearer canonical name is introduced.
+- Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
 - `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
 - Peak and post-peak analysis is descriptive and must not claim automatic fracture classification.
 
 ## Current maintenance findings
 
-The following naming inconsistency is confirmed:
+Measurement Monte Carlo terminology is standardized across tension and compression:
 
-- tensile configuration uses `measurementMonteCarlo`;
-- compression configuration and public helper names use `geometryMonteCarlo` even though the calculation can also perturb force and displacement.
+```text
+measurementMonteCarlo
+measurementMonteCarloFitConfig
+measurementMonteCarloFitUncertainty
+measurementMonteCarloFit
+```
 
-The preferred canonical terminology is `measurementMonteCarlo`. Existing geometry-named entrypoints should remain available as compatibility aliases until a deliberate breaking release.
+Geometry-named alternatives were removed. All callers, tests, exports, and documentation must use the measurement-named contract.
 
 ## Pending review
 
@@ -137,7 +141,7 @@ Continue the review without broad refactoring:
 - unused public functions or configuration options;
 - stale terminology in source, tests, exports, and documentation;
 - consistency between documented and accepted option names;
-- test organization without removing coverage;
+- test organization and duplicated coverage;
 - real-data execution of the tensile workflow.
 
 Apply cleanup in small commits and rerun focused tests after each functional change. Run the complete suite before merge.
