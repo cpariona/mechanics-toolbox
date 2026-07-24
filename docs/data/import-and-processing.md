@@ -9,7 +9,14 @@ config = mechanics.config.excelImportConfig();
 specimen = mechanics.io.readSpecimenTable(filename, config);
 ```
 
-The importer resolves configured aliases for force, displacement, and optional time columns. Unit conversion is explicit through scale factors; units are not inferred automatically from headers.
+The importer resolves configured aliases for force, displacement, optional time, and optional current-area columns. Unit conversion is explicit through scale factors; units are not inferred automatically from headers.
+
+For measured current area:
+
+```matlab
+config.currentAreaColumns = ["CurrentArea", "Area_mm2"];
+config.currentAreaScale = 1;
+```
 
 The normalized specimen contract preserves raw values:
 
@@ -19,15 +26,22 @@ specimen.source
 specimen.raw.force
 specimen.raw.displacement
 specimen.raw.time
+specimen.raw.currentArea
 specimen.raw.originalTable
 specimen.processingHistory
 ```
 
+`raw.currentArea` is optional. When used, it must contain one positive area value per force-displacement observation after scaling.
+
 Mechanical processing creates derived fields without overwriting `specimen.raw`:
 
 ```matlab
+config = mechanics.config.tensionConfig();
+config.mechanics.stressMeasure = "true";
+config.mechanics.areaEvolution = "measured-area";
+
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
-    specimen, geometry, mechanics.config.tensionConfig());
+    specimen, geometry, config);
 ```
 
 ## Workbook extraction
@@ -81,3 +95,5 @@ mechanics.io.exportSpecimenResults(specimen, outputFolder);
 mechanics.io.exportBatchSummary(batch, outputFolder);
 mechanics.io.exportDatasetAnalysis(analysis, outputFolder);
 ```
+
+Specimen curve exports include displacement, force, strain, stress, current area, area scale, tangent modulus, and geometry-uncertainty columns when those quantities are available.

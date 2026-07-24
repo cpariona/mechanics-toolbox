@@ -59,6 +59,14 @@ for index = 1:numel(sourceSpecimens)
                     config.fitting.context, ...
                     config.fitting.fitConfig, ...
                     config.fitting.selectionConfig);
+
+            if localMonteCarloEnabled(config.fitting)
+                selectedFit = localSelectedFit(processedSpecimen.modelSelection);
+                processedSpecimen.measurementMonteCarloFit = ...
+                    mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+                        processedSpecimen, selectedFit, ...
+                        config.fitting.measurementMonteCarlo);
+            end
         end
 
         if config.export.enabled
@@ -107,8 +115,44 @@ if ~isfield(geometry, "initialArea") || ...
         "Specimen %s does not define a positive initialArea.", ...
         char(string(specimen.id)));
 end
+
+if isfield(specimen, "processingOverrides")
+    overrides = specimen.processingOverrides;
+    if isfield(overrides, "zeroReferenceMethod")
+        processingConfig.preprocessing.zeroReference.method = ...
+            string(overrides.zeroReferenceMethod);
+    end
+    if isfield(overrides, "preloadForce")
+        processingConfig.preprocessing.zeroReference.preloadForce = ...
+            overrides.preloadForce;
+    end
+end
+
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, geometry, processingConfig);
+end
+
+function enabled = localMonteCarloEnabled(fittingConfig)
+enabled = isfield(fittingConfig, "measurementMonteCarlo") && ...
+    isfield(fittingConfig.measurementMonteCarlo, "enabled") && ...
+    logical(fittingConfig.measurementMonteCarlo.enabled);
+end
+
+function fitResult = localSelectedFit(modelSelection)
+if ~modelSelection.selection.hasEligibleModel
+    error("mechanics:fitting:NoEligibleModelForMonteCarlo", ...
+        "Measurement Monte Carlo requires an eligible selected model.");
+end
+bestModel = modelSelection.selection.bestModel;
+records = modelSelection.records;
+mask = [records.succeeded] & string({records.modelName}) == bestModel;
+selected = records(mask);
+if isempty(selected)
+    error("mechanics:fitting:MissingSelectedFit", ...
+        "The selected model does not contain a successful fit record.");
+end
+[~, index] = max([selected.windowFraction]);
+fitResult = selected(index).fitResult;
 end
 
 function value = localSafeName(value)

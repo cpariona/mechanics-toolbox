@@ -1,7 +1,7 @@
 # mechanics-toolbox
 
 MATLAB toolbox for reproducible processing, constitutive fitting, statistical
-analysis, and fracture characterization of uniaxial mechanical-test data.
+analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
 
 ## Maintained scope
 
@@ -15,10 +15,12 @@ analysis, and fracture characterization of uniaxial mechanical-test data.
 - fit uncertainty, identifiability, residual, and stability diagnostics;
 - reliability-aware model comparison and selection;
 - dataset quality assessment;
-- pre-fracture curve segmentation;
-- tensile fracture metrics;
+- pre-peak curve segmentation;
+- peak, post-peak, and energy descriptors without rupture classification;
 - replicate population statistics and bootstrap intervals;
 - group comparison and selected-parameter inference;
+- tensile and compression study workflows;
+- measurement-aware Monte Carlo refitting;
 - end-to-end study execution, figures, and reporting.
 
 ## Repository layout
@@ -34,6 +36,9 @@ run_all_tests.m   Runs the complete repository test suite
 
 Root-level processing functions are not maintained. Public code should use the
 package API under `src/+mechanics`.
+
+Local experimental workbooks belong under `data/raw/` and generated outputs
+under `results/`. Both locations are ignored by Git and must not be committed.
 
 ## Setup
 
@@ -72,6 +77,19 @@ study.population
 study.provenance
 study.config
 study.outputFiles
+```
+
+## Complete compression population study
+
+```matlab
+config = mechanics.config.compressionPopulationConfig();
+config.defaultInitialLength = 25;
+config.studyConfig.fitting.enabled = true;
+config.export.enabled = true;
+config.export.outputFolder = "results/compression-population";
+
+study = mechanics.workflow.runCompressionPopulationStudy( ...
+    "compression_manifest.csv", config);
 ```
 
 ## Constitutive study workflow

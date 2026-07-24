@@ -15,7 +15,6 @@ result = mechanics.segmentation.segmentTensileCurve(raw,config);
 verifyEqual(testCase,result.peakIndex,4);
 verifyEqual(testCase,result.analysisEndIndex,4);
 verifyEqual(testCase,result.analysisRaw.force,[0;1;2;3]);
-verifyTrue(testCase,result.fractureDetected);
 verifyEqual(testCase,result.postPeakDropFraction,1);
 end
 
@@ -30,7 +29,7 @@ verifyEqual(testCase,result.analysisEndIndex,9);
 verifyEqual(testCase,result.analysisRaw.force(end),8);
 end
 
-function testPostFractureReversalDoesNotFailQuality(testCase)
+function testPostPeakReversalDoesNotFailQuality(testCase)
 dataset.specimens=localSpecimen();
 config=mechanics.config.datasetAnalysisConfig();
 config.segmentation.minimumObservations=3;
@@ -40,7 +39,6 @@ analysis=mechanics.workflow.analyzeExtractedDataset(dataset,config);
 verifyEqual(testCase,analysis.summary.Status,"processed");
 verifyEqual(testCase,analysis.summary.DisplacementReversalFraction,0);
 verifyEqual(testCase,analysis.summary.AnalysisEndIndex,6);
-verifyTrue(testCase,analysis.summary.FractureDetected);
 verifyEqual(testCase,numel(analysis.records(1).specimen.raw.force),9);
 verifyEqual(testCase,numel(analysis.records(1).specimen.analysisRaw.force),6);
 end

@@ -14,7 +14,7 @@ This package contains the supported implementation. Public workflows should use 
 examples/
 ```
 
-Examples demonstrate supported APIs. They may use synthetic inputs or require user-supplied experimental workbooks. They are not part of the automated test suite.
+Examples demonstrate supported APIs. They may use synthetic inputs or require user-supplied experimental workbooks. They are not part of the automated test suite. Examples should represent maintained workflows and must not depend on removed configuration fields or deprecated result columns.
 
 ## Regression tests
 
@@ -22,7 +22,7 @@ Examples demonstrate supported APIs. They may use synthetic inputs or require us
 tests/
 ```
 
-Test files are named by behavior or subsystem.
+Test files are named by behavior or subsystem. Tests are maintained source files, not generated output, and should remain versioned even when they cover compatibility behavior.
 
 ## Documentation
 
@@ -31,6 +31,15 @@ docs/
 ```
 
 Documentation is organized by workflow, data handling, technical reference, and repository development.
+
+## Local data and generated output
+
+```text
+data/raw/
+results/
+```
+
+These paths are intentionally ignored by Git. They may exist in a local working copy, but experimental workbooks, MAT files, generated tables, reports, and figures must not be committed. Raw data that must be retained should be archived outside the repository or in an explicitly managed data store.
 
 ## Root entrypoints
 
