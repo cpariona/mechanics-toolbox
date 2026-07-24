@@ -22,6 +22,7 @@ The documentation is organized by task.
 
 ## Development
 
+- [`development/context-handoff.md`](development/context-handoff.md): concise protocol for continuing repository work in a new chat.
 - [`development/repository-structure.md`](development/repository-structure.md): maintained source layout and contribution boundaries.
 - [`development/testing.md`](development/testing.md): focused tests and complete release validation.
 
