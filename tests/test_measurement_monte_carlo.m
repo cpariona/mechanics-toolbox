@@ -13,14 +13,14 @@ verifyEqual(testCase, unit, "mm2");
 verifyEqual(testCase, conversion.factor, 100);
 end
 
-function testGeometryMonteCarloRefitsParameters(testCase)
+function testMeasurementMonteCarloRefitsParameters(testCase)
 [specimen, fit] = localTensionFit();
-config = mechanics.config.geometryMonteCarloFitConfig();
+config = mechanics.config.measurementMonteCarloFitConfig();
 config.sampleCount = 20;
 config.initialLengthStd = 0.1;
 config.initialAreaStd = 0.1;
 config.refitNumberOfStarts = 1;
-result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+result = mechanics.fitting.measurementMonteCarloFitUncertainty( ...
     specimen, fit, config);
 verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
 verifySize(testCase, result.parameterSamples, [20, 1]);
@@ -29,16 +29,30 @@ end
 
 function testForceAndDisplacementMonteCarlo(testCase)
 [specimen, fit] = localTensionFit();
-config = mechanics.config.geometryMonteCarloFitConfig();
+config = mechanics.config.measurementMonteCarloFitConfig();
 config.sampleCount = 20;
 config.forceStd = 0.01;
 config.displacementStd = 0.005;
 config.refitNumberOfStarts = 1;
-result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+result = mechanics.fitting.measurementMonteCarloFitUncertainty( ...
     specimen, fit, config);
 verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
 verifyGreaterThan(testCase, ...
     std(result.parameterSamples(result.successMask, 1)), 0);
+end
+
+function testGeometryNamedAliasesRemainCompatible(testCase)
+canonical = mechanics.config.measurementMonteCarloFitConfig();
+compatibility = mechanics.config.geometryMonteCarloFitConfig();
+verifyEqual(testCase, compatibility, canonical);
+
+[specimen, fit] = localTensionFit();
+compatibility.sampleCount = 10;
+compatibility.initialAreaStd = 0.1;
+compatibility.refitNumberOfStarts = 1;
+result = mechanics.fitting.geometryMonteCarloFitUncertainty( ...
+    specimen, fit, compatibility);
+verifyGreaterThanOrEqual(testCase, result.successfulFraction, 0.8);
 end
 
 function [specimen, fit] = localTensionFit()
