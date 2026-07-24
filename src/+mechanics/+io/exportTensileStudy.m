@@ -20,11 +20,9 @@ if exportConfig.saveTables
     writetable(studySummary, outputFiles.studySummary);
     writetable(study.analysis.summary, outputFiles.datasetSummary);
 
-    if isfield(study.analysis, "fractureSummary")
-        outputFiles.fractureSummary = ...
-            fullfile(folder, "fracture_summary.csv");
-        writetable(study.analysis.fractureSummary, ...
-            outputFiles.fractureSummary);
+    if isfield(study.analysis, "peakSummary")
+        outputFiles.peakSummary = fullfile(folder, "peak_summary.csv");
+        writetable(study.analysis.peakSummary, outputFiles.peakSummary);
     end
 
     provenanceTable = struct2table(study.provenance, "AsArray", true);
