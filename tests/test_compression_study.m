@@ -6,6 +6,14 @@ function setupOnce(~)
 startup;
 end
 
+function testCompressionConfigUsesMeasurementMonteCarloName(testCase)
+config = mechanics.config.compressionStudyConfig();
+verifyTrue(testCase, isfield(config.fitting, "measurementMonteCarlo"));
+verifyTrue(testCase, isfield(config.fitting, "geometryMonteCarlo"));
+verifyEqual(testCase, config.fitting.measurementMonteCarlo, ...
+    config.fitting.geometryMonteCarlo);
+end
+
 function testLastCompleteLoadingCycleIsSelected(testCase)
 [displacement, force] = localThreeCycles();
 raw.displacement = displacement;
