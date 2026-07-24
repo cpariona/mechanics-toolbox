@@ -63,7 +63,7 @@ if config.fitting.enabled
     specimen.modelSelection.compressionSignTransform = ...
         "positive compression converted to negative engineering strain and nominal stress";
 
-    monteCarloConfig = localMeasurementMonteCarloConfig(config.fitting);
+    monteCarloConfig = config.fitting.measurementMonteCarlo;
     if monteCarloConfig.enabled && ...
             specimen.modelSelection.selection.hasEligibleModel
         selectedRecord = localSelectedFitRecord(specimen.modelSelection);
@@ -75,7 +75,6 @@ if config.fitting.enabled
         specimen.measurementMonteCarloFit = ...
             mechanics.fitting.measurementMonteCarloFitUncertainty( ...
                 fitSpecimen, selectedRecord.fitResult, monteCarloConfig);
-        specimen.geometryMonteCarloFit = specimen.measurementMonteCarloFit;
     end
 end
 
@@ -88,19 +87,6 @@ study.createdAt = datetime("now");
 
 if config.export.enabled
     study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
-end
-end
-
-function config = localMeasurementMonteCarloConfig(fittingConfig)
-if isfield(fittingConfig, "measurementMonteCarlo")
-    config = fittingConfig.measurementMonteCarlo;
-else
-    config = mechanics.config.measurementMonteCarloFitConfig();
-end
-
-if isfield(fittingConfig, "geometryMonteCarlo") && ...
-        fittingConfig.geometryMonteCarlo.enabled && ~config.enabled
-    config = fittingConfig.geometryMonteCarlo;
 end
 end
 
