@@ -5,6 +5,11 @@ arguments
     context (1,1) struct = struct()
 end
 
+if isfield(context, "inputMeasure")
+    error("mechanics:models:RemovedDeformationMeasureField", ...
+        "Use context.deformationMeasure instead of context.inputMeasure.");
+end
+
 deformationMeasure = "engineering-strain";
 if isfield(context, "deformationMeasure")
     deformationMeasure = lower(string(context.deformationMeasure));
