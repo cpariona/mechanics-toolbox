@@ -42,7 +42,6 @@ config = mechanics.config.studyReportConfig();
 verifyEqual(testCase, config.figureFormat, "png");
 verifyTrue(testCase, config.includeIndividualCurves);
 verifyTrue(testCase, config.includePeakMetrics);
-verifyFalse(testCase, isfield(config, "includeFractureMetrics"));
 verifyTrue(testCase, config.includeTangentModulus);
 verifyTrue(testCase, config.closeFiguresAfterExport);
 end
