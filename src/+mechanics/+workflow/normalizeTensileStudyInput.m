@@ -14,6 +14,10 @@ switch inputType
 
     case "workbook"
         filename = string(inputValue);
+        if ~isfile(filename)
+            error("mechanics:workflow:StudyFileNotFound", ...
+                "Input workbook does not exist: %s", filename);
+        end
         dataset = mechanics.extraction.extractWorkbook(filename, config.extraction);
         sourceFiles = filename;
 
@@ -22,6 +26,11 @@ switch inputType
         if isempty(filenames)
             error("mechanics:workflow:EmptyStudyFileList", ...
                 "The tensile-study file list cannot be empty.");
+        end
+        missing = filenames(~isfile(filenames));
+        if ~isempty(missing)
+            error("mechanics:workflow:StudyFileNotFound", ...
+                "Input workbook does not exist: %s", missing(1));
         end
         specimens = struct([]);
         for index = 1:numel(filenames)
