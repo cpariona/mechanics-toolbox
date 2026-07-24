@@ -56,7 +56,7 @@ function testParameterPlotSeparatesModelParameterCombinations(testCase)
 population = localMixedPopulation();
 figureHandle = mechanics.plotting.plotSelectedParameterPopulation(population);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
-axesHandles = findall(figureHandle, 'Type', 'axes');
+axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
 verifyEqual(testCase, numel(axesHandles), 3);
 verifyTrue(testCase, isgraphics(figureHandle));
 end
@@ -66,7 +66,7 @@ population = localMixedPopulation();
 figureHandle = mechanics.plotting.plotInitialShearModulusPopulation(population);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 verifyTrue(testCase, isgraphics(figureHandle));
-axesHandles = findall(figureHandle, 'Type', 'axes');
+axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
 verifyEqual(testCase, numel(axesHandles), 1);
 end
 
