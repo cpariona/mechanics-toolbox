@@ -26,14 +26,14 @@ Do not modify `main`, merge branches, or open a pull request unless explicitly r
 
 The maintained repository contains tensile and compression workflows, constitutive fitting, diagnostics, measurement-uncertainty propagation, population analysis, group comparison, plotting, exports, and automated tests.
 
-The complete MATLAB test suite passed before PR #16 was merged. Maintenance changes must be validated again before merge.
+The maintenance branch completed a direct breaking cleanup of terminology, examples, tests, and disconnected public functions. The user repeatedly reported that the complete MATLAB test suite passed after each functional cleanup block, including the latest plotting cleanup.
 
 The current phase is limited to:
 
-1. repository organization and cleanup;
-2. terminology and public-API consistency;
-3. documentation review;
-4. real-data validation of the tensile workflow.
+1. final public-API and stale-reference audit;
+2. repository-level diff and whitespace checks;
+3. real-data validation of the tensile workflow;
+4. pull-request preparation only when explicitly requested.
 
 Prefer simple changes and uniform public names. Breaking cleanup is acceptable when explicitly chosen; repair affected callers and tests directly instead of retaining wrappers or compatibility aliases.
 
@@ -79,10 +79,17 @@ assert(all([results.Passed]), "Focused tests failed.")
 Complete suite:
 
 ```matlab
+restoredefaultpath
+clear classes
+clear functions
 clear
 clc
 close all
+
+cd("D:\\Escritorio\\mechanics-toolbox")
+startup
 results = run_all_tests();
+assert(all([results.Passed]), "Repository tests failed.")
 ```
 
 Repository checks:
@@ -100,15 +107,18 @@ Local experimental data and generated results are ignored under `data/` and `res
 
 - Maintained implementation belongs under `src/+mechanics/`.
 - Runnable user examples belong under `examples/`.
+- Example input templates belong under `examples/templates/`.
 - Automated tests belong under `tests/`.
 - Documentation belongs under `docs/`.
 - Root MATLAB entrypoints are limited to `startup.m` and `run_all_tests.m`.
+- `startup.m` adds only the repository root and `src`; examples and tests are not placed on the global path.
 - Preserve raw experimental data separately from processed results.
 - Prefer descriptive and uniform public names.
 - Avoid `legacy`, `historical`, `old`, or similar terminology in maintained APIs and documentation.
 - Do not retain wrappers or aliases solely for compatibility when a deliberate breaking cleanup has been selected.
 - `processingHistory` means the processing trace applied to a specimen and should not be renamed casually.
 - Peak and post-peak analysis is descriptive and must not claim automatic rupture classification.
+- Keep a public plotting function only when it is consumed by a maintained workflow, report, or runnable example.
 
 ## Standardized names
 
@@ -130,21 +140,34 @@ computePeakMetrics
 addPeakMetrics
 summarizePeakMetrics
 exportPeakAnalysis
-plotPeakMetrics
 peakSummary
 peakMetrics
 ```
 
+The standalone `plotPeakMetrics` function was removed because no maintained workflow, report, example, or test consumed it.
+
 Superseded geometry- and failure-named alternatives were removed. All callers, tests, examples, exports, and documentation must use the canonical contracts.
 
-## Pending review
+## Completed maintenance work
 
-- obsolete or duplicated examples;
-- unused public functions or configuration options;
-- stale terminology in source, tests, exports, and documentation;
-- consistency between documented and accepted option names;
-- test organization and duplicated coverage;
-- real-data execution of the tensile workflow.
+- Renamed geometry Monte Carlo fitting contracts to measurement Monte Carlo.
+- Renamed fracture-oriented descriptive metrics to peak and post-peak metrics.
+- Removed compatibility aliases, migration-only tests, and obsolete fracture APIs.
+- Consolidated granular Ecoflex and fitting examples into maintained end-to-end workflows.
+- Separated example templates from runnable scripts.
+- Removed examples and tests from the global startup path.
+- Reorganized `test_pipeline_refinements.m` into subsystem-specific tests.
+- Removed obsolete `fitMultipleModels` and unused `bootstrapMedianCI` APIs.
+- Removed disconnected plotting functions that had no maintained consumers.
+- Documented configuration hierarchy and public diagnostic contracts.
+
+## Remaining review
+
+- Resolve `mechanics.validation.compareCurves`, which currently appears isolated from maintained workflows and examples.
+- Run a final grep for removed terminology and deleted API names.
+- Run repository checks and inspect the complete branch diff.
+- Validate the tensile workflow with representative real data when available.
+- Open a pull request only after explicit user instruction.
 
 Apply cleanup in small commits and rerun focused tests after each functional change. Run the complete suite before merge.
 
