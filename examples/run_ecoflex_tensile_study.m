@@ -25,7 +25,7 @@ study = mechanics.workflow.runTensileStudy(filename, config);
 
 disp(mechanics.workflow.summarizeTensileStudy(study));
 disp(study.analysis.summary);
-disp(study.analysis.fractureSummary);
+disp(study.analysis.peakSummary);
 
 if study.populationStatus == "completed"
     disp(study.population.metrics);
