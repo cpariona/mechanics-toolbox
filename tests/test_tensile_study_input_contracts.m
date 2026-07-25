@@ -124,9 +124,9 @@ config.export.enabled = false;
 end
 
 function localVerifyEquivalentStudy(testCase, first, second)
-verifyEqual(testCase, first.analysis.summary.Status, "processed", ...
+assertEqual(testCase, first.analysis.summary.Status, "processed", ...
     localFailureMessage(first));
-verifyEqual(testCase, second.analysis.summary.Status, "processed", ...
+assertEqual(testCase, second.analysis.summary.Status, "processed", ...
     localFailureMessage(second));
 verifyEqual(testCase, first.analysis.summary.Status, second.analysis.summary.Status);
 verifyEqual(testCase, first.analysis.summary.SpecimenId, second.analysis.summary.SpecimenId);
@@ -154,6 +154,13 @@ dataset.specimens.raw.displacement = 10 .* strain;
 dataset.specimens.geometry.initialLength = 10;
 dataset.specimens.geometry.initialArea = 1;
 dataset.specimens.source.filename = "";
+dataset.specimens.processingHistory = localHistoryEntry();
+end
+
+function entry = localHistoryEntry()
+entry.timestamp = datetime("now");
+entry.step = "synthetic-import";
+entry.description = "Created synthetic specimen for input-contract tests.";
 end
 
 function dataset = localCustomExtractor(filename, ~)
