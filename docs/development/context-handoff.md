@@ -14,7 +14,13 @@ Do not modify `main`, merge branches, or open a pull request unless explicitly r
 
 The repository contains maintained tensile and compression workflows, constitutive fitting, diagnostics, uncertainty propagation, population analysis, group comparison, study-level model consensus, plotting, exports, and automated tests.
 
-The tensile workflow supports:
+For one tensile study, use:
+
+```matlab
+study = mechanics.workflow.runTensileStudy(inputValue, config);
+```
+
+Supported inputs are:
 
 ```text
 single workbook
@@ -23,71 +29,60 @@ batch manifest
 pre-extracted dataset
 ```
 
-All four inputs converge through `mechanics.workflow.normalizeTensileStudyInput` before the common downstream analysis. `mechanics.workflow.runTensileStudy` is the preferred end-to-end tensile entrypoint.
+All inputs converge through `mechanics.workflow.normalizeTensileStudyInput` before common downstream analysis.
 
-Completed and validated tensile functionality includes:
+For comparison between completed studies, use:
 
-- standardized fitting context fields `deformationMeasure` and `stressMeasure`;
-- complete and plot-oriented tangent-modulus curves;
-- population stress-strain and tangent-modulus analysis;
-- specimen-level model comparison;
-- selected-parameter and initial-shear-modulus summaries;
-- study-level consensus model selection;
-- experimental group comparison and selected-parameter group inference;
-- integrated tables, figures, MAT outputs, and Markdown reports;
-- workbook, file-list, manifest, and dataset input equivalence.
-
-Validation completed through focused tests, the complete MATLAB suite, the maintained real tensile experiment, generated-output inspection, and real workbook versus normalized-dataset equivalence.
-
-## Current maintenance objective
-
-The cleanup-only branch updates persistent documentation, removes transitional artifacts, and records the remaining architectural migration.
-
-The next functional objective is to compare completed tensile studies, normally one study per material or experimental condition. A representative campaign is:
-
-```text
-runTensileStudy(ECOFLEX 00-20 workbook) -> study0020
-runTensileStudy(ECOFLEX 00-50 workbook) -> study0050
-compareTensileStudies([study0020, study0050], labels, config)
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    studies, groupLabels, config);
 ```
 
-The planned comparison workflow must reuse existing population and group-analysis capabilities and must not rerun specimen processing unnecessarily.
+The comparison workflow validates compatible stress and strain measures, validates processed units, namespaces specimen identifiers, preserves original identifiers, and reuses the maintained group-analysis workflow without reprocessing specimens.
+
+## Removed legacy pipeline
+
+The following row-oriented batch-processing files were removed after `compareTensileStudies` passed focused tests:
+
+```text
+processBatchManifest.m
+summarizeBatchResults.m
+batchProcessingConfig.m
+exportBatchSummary.m
+test_batch_processing.m
+```
+
+Manifest input remains supported by `runTensileStudy`. Keep:
+
+```text
+validateBatchManifest.m
+readBatchManifest.m
+specimen_manifest_template.csv
+```
+
+Manifest validation coverage now belongs to `tests/test_tensile_study_input_contracts.m`.
+
+## Current objective
+
+The current branch is:
+
+```text
+feature/tensile-study-comparison
+```
+
+The initial comparison contract covers population stress-strain curves and scalar mechanical metrics. Remaining optional extensions are selected constitutive parameters, initial shear modulus, consensus-model comparison, dedicated export/reporting, and validation with two real material workbooks.
 
 Read:
 
 ```text
-docs/development/tensile-study-follow-up.md
 docs/development/final-cleanup-audit.md
+docs/reference/population-and-group-analysis.md
+docs/reference/tensile-input-contracts.md
 ```
 
-before proposing removals or consolidation.
-
-## Maintained workflow boundaries
-
-- `runTensileStudy` is the preferred end-to-end tensile workflow.
-- `processBatchManifest` is a temporary legacy row processor and is scheduled for removal after `compareTensileStudies` is implemented and validated.
-- Do not rename `processBatchManifest` into the comparison workflow; they represent different responsibilities.
-- Group comparison between completed studies should preserve the original study results and compose existing group-analysis functions.
-- Experimental group labels must be explicit.
-- Study drivers belong under `studies/` and must call maintained public APIs rather than duplicate implementation.
-- Generated data and experimental workbooks remain under ignored paths.
-
-## Planned removal sequence
-
-After `compareTensileStudies` is available and validated:
-
-1. migrate maintained comparison examples and documentation;
-2. remove `processBatchManifest`;
-3. remove `batchProcessingConfig` if it has no remaining consumer;
-4. remove `exportBatchSummary` if it has no remaining consumer;
-5. delete or migrate tests that protect only the removed legacy contract;
-6. retain `validateBatchManifest` and its tests only while manifest input remains supported by `runTensileStudy`.
-
-Do not perform this deletion before the replacement exists.
+before extending the comparison contract.
 
 ## Read first
-
-Read these files in order:
 
 1. `README.md`
 2. `docs/README.md`
@@ -100,7 +95,7 @@ Read these files in order:
 9. `studies/README.md`
 10. `studies/tension/run_tensile_experiment.m`
 
-Read additional implementation files only when required for a concrete maintenance finding.
+Read additional implementation files only when required for a concrete finding.
 
 ## Verify the repository before working
 
@@ -141,14 +136,13 @@ git status --ignored -s
 git ls-files --others --exclude-standard
 ```
 
-## Cleanup rules
+## Maintenance rules
 
-- Do not remove APIs based only on consumer counts.
-- Inspect documented contracts, dynamic use, maintained studies, examples, and test intent.
-- Do not create compatibility aliases for intentional renames.
-- Prefer internal consolidation over new public wrappers.
+- Prefer composition of maintained results over reprocessing or refitting.
+- Preserve input study results unchanged during comparison.
+- Do not create compatibility aliases for removed APIs.
+- Keep study drivers under `studies/`, reusable implementation under `src/+mechanics/`, and automated tests under `tests/`.
 - Preserve descriptive peak and post-peak interpretation; do not claim automatic rupture classification.
-- Keep functional changes separate from broad cleanup when validation risk increases.
 
 ## Closing a work session
 
