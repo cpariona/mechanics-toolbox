@@ -20,9 +20,42 @@ This audit follows completion and validation of the tensile-study phase-2 functi
 
 It is not a group-comparison pipeline and is not the recommended entrypoint for new end-to-end tensile studies.
 
+The preferred future migration is not to expand this function under its current name. Instead:
+
+1. introduce a comparison workflow that accepts completed `runTensileStudy` results;
+2. reuse maintained group and population functions;
+3. preserve each study result unchanged;
+4. return a comparison result with explicit group labels;
+5. rename the old row processor only as part of a documented migration, for example to `processSpecimenManifest`;
+6. deprecate the old name only after consumers and tests are migrated.
+
+A candidate future API is:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    studies, groupLabels, config);
+```
+
 ### Documentation status
 
 The phase-2 follow-up document now records completed functionality rather than future plans. The tensile input contract is indexed from `docs/README.md`, and group comparison is documented as a downstream analysis responsibility.
+
+The transitional real-data input-equivalence script was removed after merge. Automated equivalence tests remain because they protect the canonical workbook, manifest, and dataset contracts.
+
+## Test audit
+
+No behavioral test was removed from `test_batch_processing.m` because the public legacy entrypoint remains supported. Its tests establish distinct behavior that is not fully covered elsewhere:
+
+- manifest defaults and validation;
+- text conversion for `Include`;
+- processing multiple rows;
+- recording row-level failures;
+- preserving skipped rows;
+- exporting the batch summary.
+
+The input-contract equivalence tests also remain. They are no longer migration-only tests; they are regression tests for supported public input forms.
+
+Tests should be removed only together with the corresponding public contract or when a strictly stronger test covers the same behavior without preserving obsolete semantics.
 
 ## Duplication findings
 
