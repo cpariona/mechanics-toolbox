@@ -59,6 +59,56 @@ end
 
 function testRunTensileStudyPreservesDownstreamContract(testCase)
 dataset = localDataset("S1");
+config = localStudyConfig();
+study = mechanics.workflow.runTensileStudy(dataset, config);
+required = {'dataset','analysis','population','populationStatus','provenance', ...
+    'config','createdAt','input','sourceFiles'};
+verifyTrue(testCase, all(isfield(study,required)));
+verifyEqual(testCase, study.input.type, "dataset");
+verifyEqual(testCase, height(study.analysis.summary), 1);
+end
+
+function testWorkbookAndDatasetProduceEquivalentStudy(testCase)
+folder = string(tempname);
+mkdir(folder);
+cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
+filename = fullfile(folder,"S1.xlsx");
+fclose(fopen(filename,"w"));
+config = localStudyConfig();
+config.extraction.customExtractor = @localCustomExtractor;
+
+workbookStudy = mechanics.workflow.runTensileStudy(filename, config);
+datasetStudy = mechanics.workflow.runTensileStudy(localDataset("S1"), config);
+
+localVerifyEquivalentStudy(testCase, workbookStudy, datasetStudy);
+verifyEqual(testCase, workbookStudy.input.type, "workbook");
+verifyEqual(testCase, datasetStudy.input.type, "dataset");
+end
+
+function testManifestAndDatasetProduceEquivalentStudy(testCase)
+folder = string(tempname);
+mkdir(folder);
+cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
+filename = fullfile(folder,"specimen.csv");
+dataset = localDataset("M1");
+writetable(table(dataset.specimens.raw.force, ...
+    dataset.specimens.raw.displacement, ...
+    'VariableNames',{'Force','Displacement'}), filename);
+manifest = table(filename,"M1",10,1,true,1,"Force","Displacement", ...
+    'VariableNames',{'File','SpecimenId','InitialLength','InitialArea', ...
+    'Include','Sheet','ForceColumn','DisplacementColumn'});
+config = localStudyConfig();
+config.input.type = "manifest";
+manifestStudy = mechanics.workflow.runTensileStudy(manifest, config);
+
+config.input.type = "dataset";
+datasetStudy = mechanics.workflow.runTensileStudy(dataset, config);
+
+localVerifyEquivalentStudy(testCase, manifestStudy, datasetStudy);
+verifyEqual(testCase, manifestStudy.input.type, "manifest");
+end
+
+function config = localStudyConfig()
 config = mechanics.config.tensileStudyConfig();
 config.datasetAnalysis.segmentation.minimumObservations = 5;
 config.datasetAnalysis.quality.rejectFailedQuality = false;
@@ -66,12 +116,19 @@ config.datasetAnalysis.fitting.enabled = false;
 config.peakAnalysis.enabled = false;
 config.population.enabled = false;
 config.export.enabled = false;
-study = mechanics.workflow.runTensileStudy(dataset, config);
-required = {'dataset','analysis','population','populationStatus','provenance', ...
-    'config','createdAt','input','sourceFiles'};
-verifyTrue(testCase, all(isfield(study,required)));
-verifyEqual(testCase, study.input.type, "dataset");
-verifyEqual(testCase, height(study.analysis.summary), 1);
+end
+
+function localVerifyEquivalentStudy(testCase, first, second)
+verifyEqual(testCase, first.analysis.summary.Status, second.analysis.summary.Status);
+verifyEqual(testCase, first.analysis.summary.SpecimenId, second.analysis.summary.SpecimenId);
+verifyEqual(testCase, first.analysis.summary.MaximumStrain, ...
+    second.analysis.summary.MaximumStrain, 'AbsTol', 1e-12);
+verifyEqual(testCase, first.analysis.summary.MaximumStress, ...
+    second.analysis.summary.MaximumStress, 'AbsTol', 1e-12);
+verifyEqual(testCase, first.analysis.records(1).specimen.processed.strain, ...
+    second.analysis.records(1).specimen.processed.strain, 'AbsTol', 1e-12);
+verifyEqual(testCase, first.analysis.records(1).specimen.processed.stress, ...
+    second.analysis.records(1).specimen.processed.stress, 'AbsTol', 1e-12);
 end
 
 function dataset = localDataset(specimenId)
