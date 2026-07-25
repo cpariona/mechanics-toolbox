@@ -35,6 +35,8 @@ specimen.geometry.initialArea
 specimen.source
 ```
 
+`processingHistory` is optional for pre-extracted datasets. The uniaxial workflow initializes it when absent.
+
 The downstream stages remain unchanged:
 
 ```text
@@ -177,3 +179,11 @@ population result contract
 ```
 
 Regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results.
+
+A maintained real-data validation is available at:
+
+```text
+studies/tension/validate_tensile_input_equivalence.m
+```
+
+It extracts the maintained ECOFLEX workbook, runs the workbook and normalized-dataset paths with the same configuration, and checks specimen statuses, summary metrics, processed curves, and population response.
