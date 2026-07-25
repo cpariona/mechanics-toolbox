@@ -16,7 +16,6 @@ This folder contains manual, user-facing scripts that demonstrate supported tool
 - `run_ecoflex_tensile_study.m`: complete workbook-to-report tensile workflow.
 - `run_experimental_specimen.m`: import and process one generic specimen.
 - `run_zwick_d412_extraction.m`: vendor-specific workbook extraction.
-- `run_batch_processing.m`: process a specimen manifest.
 
 ### Constitutive workflows
 
