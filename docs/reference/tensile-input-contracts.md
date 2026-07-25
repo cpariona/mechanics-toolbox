@@ -166,6 +166,30 @@ inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
 
 The manifest is therefore an ingestion description, not a statistical design or comparison request.
 
+## Planned study-comparison workflow
+
+A future orchestration layer may accept multiple completed `runTensileStudy` results, such as one ECOFLEX 00-20 study and one ECOFLEX 00-50 study, and compose the already-maintained population and group-comparison functions.
+
+The preferred design is a new name and result contract, for example:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
+```
+
+This workflow should:
+
+1. validate compatible stress, strain, units, and population settings;
+2. preserve each original study result unchanged;
+3. combine specimen-level analysis only for comparison;
+4. reuse `assignSpecimenGroups` and `analyzeGroupComparison`;
+5. optionally compose selected-parameter and consensus-model comparisons;
+6. return a study-comparison result rather than a row-processing batch result.
+
+`processBatchManifest` should not be repurposed under its current name because its inputs and outputs describe specimen-row processing, not comparison between completed studies. A later migration may rename it to a more explicit legacy name such as `processSpecimenManifest`, followed by deprecation after consumers are migrated.
+
 ## Pre-extracted dataset
 
 ```matlab
@@ -211,12 +235,4 @@ peak metrics
 population result contract
 ```
 
-Regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results.
-
-A maintained real-data validation is available at:
-
-```text
-studies/tension/validate_tensile_input_equivalence.m
-```
-
-It extracts the maintained ECOFLEX workbook, runs the workbook and normalized-dataset paths with the same configuration, and checks specimen statuses, summary metrics, processed curves, and population response.
+Automated regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results. The transitional real-data validation script used during migration was removed after the contract was merged and covered by maintained tests.
