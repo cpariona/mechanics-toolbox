@@ -131,7 +131,35 @@ A maintained executable example is available at:
 studies/tension/run_tensile_manifest_example.m
 ```
 
-The older `processBatchManifest` entrypoint remains available for its original batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
+The older `processBatchManifest` entrypoint remains available for its original row-oriented batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
+
+`processBatchManifest` does not compare experimental groups. It processes each manifest row independently and returns row-level records and a processing summary.
+
+## Experimental groups are downstream metadata
+
+Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed into one study or compatible downstream batch result. Group labels are then assigned explicitly to the specimen identifiers and passed to the maintained group-analysis workflows.
+
+Conceptually:
+
+```matlab
+study = mechanics.workflow.runTensileStudy(manifestTable, config);
+
+% Assign one label per processed specimen using the maintained group API.
+grouped = mechanics.workflow.assignGroups( ...
+    study.analysis, groupAssignments);
+
+comparison = mechanics.workflow.compareGroups( ...
+    grouped, groupComparisonConfig);
+```
+
+The exact downstream function depends on the quantity being compared:
+
+- population stress-strain response;
+- peak or tangent-modulus metrics;
+- selected constitutive parameters;
+- derived initial shear modulus.
+
+The manifest is therefore an ingestion description, not a statistical design or comparison request.
 
 ## Pre-extracted dataset
 
@@ -154,7 +182,7 @@ study.input.specimenCount
 study.sourceFiles
 ```
 
-Provenance supports both historical single-source fields and new mult-source fields:
+Provenance supports both historical single-source fields and new multi-source fields:
 
 ```text
 study.provenance.sourceFile
