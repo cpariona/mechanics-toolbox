@@ -41,7 +41,17 @@ Validation completed through focused tests, the complete MATLAB suite, the maint
 
 ## Current maintenance objective
 
-The functional phase is complete. Remaining work is bounded repository cleanup and broader real-data validation.
+The cleanup-only branch updates persistent documentation, removes transitional artifacts, and records the remaining architectural migration.
+
+The next functional objective is to compare completed tensile studies, normally one study per material or experimental condition. A representative campaign is:
+
+```text
+runTensileStudy(ECOFLEX 00-20 workbook) -> study0020
+runTensileStudy(ECOFLEX 00-50 workbook) -> study0050
+compareTensileStudies([study0020, study0050], labels, config)
+```
+
+The planned comparison workflow must reuse existing population and group-analysis capabilities and must not rerun specimen processing unnecessarily.
 
 Read:
 
@@ -55,11 +65,25 @@ before proposing removals or consolidation.
 ## Maintained workflow boundaries
 
 - `runTensileStudy` is the preferred end-to-end tensile workflow.
-- `processBatchManifest` is a legacy row-oriented processor retained for skipped-row records, per-row failure capture, optional specimen export, and mixed tension/compression support.
-- `processBatchManifest` does not perform population analysis or experimental group comparison.
-- Experimental group labels are assigned after processing and consumed by group-analysis workflows.
+- `processBatchManifest` is a temporary legacy row processor and is scheduled for removal after `compareTensileStudies` is implemented and validated.
+- Do not rename `processBatchManifest` into the comparison workflow; they represent different responsibilities.
+- Group comparison between completed studies should preserve the original study results and compose existing group-analysis functions.
+- Experimental group labels must be explicit.
 - Study drivers belong under `studies/` and must call maintained public APIs rather than duplicate implementation.
 - Generated data and experimental workbooks remain under ignored paths.
+
+## Planned removal sequence
+
+After `compareTensileStudies` is available and validated:
+
+1. migrate maintained comparison examples and documentation;
+2. remove `processBatchManifest`;
+3. remove `batchProcessingConfig` if it has no remaining consumer;
+4. remove `exportBatchSummary` if it has no remaining consumer;
+5. delete or migrate tests that protect only the removed legacy contract;
+6. retain `validateBatchManifest` and its tests only while manifest input remains supported by `runTensileStudy`.
+
+Do not perform this deletion before the replacement exists.
 
 ## Read first
 
