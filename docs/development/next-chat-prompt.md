@@ -1,6 +1,6 @@
 # Next-chat prompt
 
-Copy the prompt below into a new chat when continuing repository maintenance.
+Copy the prompt below into a new chat when continuing repository development.
 
 ---
 
@@ -10,7 +10,27 @@ Quiero continuar el trabajo técnico en el repositorio:
 
 La funcionalidad planificada para el estudio de tensión ya fue implementada y validada. El repositorio incluye población de esfuerzo y módulo tangente, comparación constitutiva por espécimen, parámetros seleccionados, módulo cortante inicial derivado, consenso de modelo, comparación de grupos y contratos de entrada unificados para workbook, lista de archivos, manifest y dataset preextraído.
 
-El objetivo actual es mantenimiento final y validación más amplia con datos reales. No quiero que elimines APIs ni hagas cambios amplios antes de verificar el repositorio y justificar cada hallazgo.
+El patrón experimental que quiero priorizar es un workbook por material o condición, con varias probetas dentro de cada workbook. Por ejemplo:
+
+- un workbook de ECOFLEX 00-20 con cinco probetas;
+- un workbook de ECOFLEX 00-50 con cinco probetas.
+
+Cada workbook debe procesarse mediante `runTensileStudy`. Después quiero comparar los resultados completos de ambos estudios sin reprocesar las probetas.
+
+## Objetivo técnico pendiente
+
+Diseñar e implementar un workflow mantenido, tentativamente:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
+```
+
+Este workflow debe reutilizar la comparación poblacional y de grupos ya implementada, preservar los estudios originales y validar compatibilidad de medidas, unidades y resultados requeridos.
+
+`processBatchManifest` es un procesador legacy por filas. Debe eliminarse después de que `compareTensileStudies` exista, sus casos útiles hayan sido migrados y la nueva ruta haya sido validada. No lo renombres para convertirlo en la función de comparación.
 
 ## Antes de proponer cambios
 
@@ -22,37 +42,32 @@ El objetivo actual es mantenimiento final y validación más amplia con datos re
    - `docs/development/context-handoff.md`
    - `docs/development/repository-structure.md`
    - `docs/development/final-cleanup-audit.md`
-   - `docs/development/tensile-study-follow-up.md`
    - `docs/workflows/tensile-study.md`
    - `docs/reference/tensile-input-contracts.md`
    - `docs/reference/population-and-group-analysis.md`
-4. Revisa únicamente archivos adicionales necesarios para confirmar problemas concretos.
+   - `docs/workflows/constitutive-analysis.md`
+4. Revisa únicamente los contratos adicionales necesarios para diseñar la comparación entre estudios.
 
-## Estado que debes confirmar
+## Resultado esperado antes de modificar
 
-- `runTensileStudy` es el entrypoint end-to-end mantenido para tensión.
-- Workbook, file list, manifest y dataset convergen al mismo contrato downstream.
-- `processBatchManifest` es un procesador legacy por filas y no compara grupos.
-- Los grupos experimentales se asignan después del procesamiento.
-- La suite completa y el estudio real representativo pasaron en la fase anterior.
-
-## Resultado esperado
-
-- resume el estado actual;
-- identifica duplicación concreta y configuraciones sin consumidores efectivos;
-- distingue limpieza segura de cambios que requieren migración;
-- no elimines `processBatchManifest` solo por solapamiento con manifests en `runTensileStudy`;
-- propone un máximo de tres tareas siguientes, ordenadas por prioridad;
-- crea una rama solo después de delimitar el primer alcance;
+- resume los contratos de `runTensileStudy` relevantes para comparación;
+- identifica qué partes de `assignSpecimenGroups`, `analyzeGroupComparison`, `summarizeSelectedParameters` y `compareSelectedParametersBetweenGroups` pueden reutilizarse;
+- define las verificaciones de compatibilidad entre estudios;
+- propone un contrato pequeño para `compareTensileStudies`;
+- delimita qué resultados entran en la primera versión y cuáles quedan opcionales;
+- identifica exactamente qué archivos, configuraciones, exportadores y tests podrán eliminarse junto con `processBatchManifest`;
+- crea una rama solo después de delimitar el alcance;
 - no abras PR ni hagas merge sin autorización.
 
-## Validación
+## Criterios de diseño
 
-Durante cualquier cambio:
-
-- ejecuta tests focalizados;
-- ejecuta `run_all_tests()` antes del PR;
-- ejecuta `studies/tension/run_tensile_experiment.m` cuando cambie comportamiento funcional;
-- revisa `git diff --check` y el estado del repositorio.
+- no reproceses datos crudos ni repitas fitting si los resultados compatibles ya existen;
+- preserva los estudios de entrada sin modificarlos;
+- exige etiquetas de grupo explícitas;
+- reutiliza funciones existentes antes de crear nuevas capas;
+- separa comparación de respuestas mecánicas, parámetros constitutivos y modelos de consenso cuando sus contratos difieran;
+- no conserves aliases de compatibilidad cuando se elimine `processBatchManifest`;
+- elimina en la misma migración los tests exclusivos de contratos retirados;
+- ejecuta tests focalizados, `run_all_tests()` y una validación real con dos workbooks antes del PR.
 
 ---
