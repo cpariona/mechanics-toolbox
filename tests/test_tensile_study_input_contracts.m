@@ -67,6 +67,8 @@ verifyTrue(testCase, all(isfield(study,required)));
 verifyEqual(testCase, study.input.type, "dataset");
 verifyEqual(testCase, height(study.analysis.summary), 1);
 verifyEqual(testCase, study.analysis.summary.Status, "processed");
+verifyTrue(testCase, isfield(study.analysis.records(1).specimen, ...
+    "processingHistory"));
 end
 
 function testWorkbookAndDatasetProduceEquivalentStudy(testCase)
@@ -154,13 +156,6 @@ dataset.specimens.raw.displacement = 10 .* strain;
 dataset.specimens.geometry.initialLength = 10;
 dataset.specimens.geometry.initialArea = 1;
 dataset.specimens.source.filename = "";
-dataset.specimens.processingHistory = localHistoryEntry();
-end
-
-function entry = localHistoryEntry()
-entry.timestamp = datetime("now");
-entry.step = "synthetic-import";
-entry.description = "Created synthetic specimen for input-contract tests.";
 end
 
 function dataset = localCustomExtractor(filename, ~)
