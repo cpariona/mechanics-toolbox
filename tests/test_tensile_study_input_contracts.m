@@ -66,6 +66,7 @@ required = {'dataset','analysis','population','populationStatus','provenance', .
 verifyTrue(testCase, all(isfield(study,required)));
 verifyEqual(testCase, study.input.type, "dataset");
 verifyEqual(testCase, height(study.analysis.summary), 1);
+verifyEqual(testCase, study.analysis.summary.Status, "processed");
 end
 
 function testWorkbookAndDatasetProduceEquivalentStudy(testCase)
@@ -110,8 +111,12 @@ end
 
 function config = localStudyConfig()
 config = mechanics.config.tensileStudyConfig();
-config.datasetAnalysis.segmentation.minimumObservations = 5;
+config.datasetAnalysis.segmentation.enabled = false;
+config.datasetAnalysis.quality.minimumObservations = 5;
 config.datasetAnalysis.quality.rejectFailedQuality = false;
+config.datasetAnalysis.processingConfig.analysis.modulusMethod = "gradient";
+config.datasetAnalysis.processingConfig.analysis.derivativeSmoothing.enabled = false;
+config.datasetAnalysis.processingConfig.analysis.summaryStrainRange = [0, 0.5];
 config.datasetAnalysis.fitting.enabled = false;
 config.peakAnalysis.enabled = false;
 config.population.enabled = false;
@@ -119,6 +124,10 @@ config.export.enabled = false;
 end
 
 function localVerifyEquivalentStudy(testCase, first, second)
+verifyEqual(testCase, first.analysis.summary.Status, "processed", ...
+    localFailureMessage(first));
+verifyEqual(testCase, second.analysis.summary.Status, "processed", ...
+    localFailureMessage(second));
 verifyEqual(testCase, first.analysis.summary.Status, second.analysis.summary.Status);
 verifyEqual(testCase, first.analysis.summary.SpecimenId, second.analysis.summary.SpecimenId);
 verifyEqual(testCase, first.analysis.summary.MaximumStrain, ...
@@ -131,8 +140,14 @@ verifyEqual(testCase, first.analysis.records(1).specimen.processed.stress, ...
     second.analysis.records(1).specimen.processed.stress, 'AbsTol', 1e-12);
 end
 
+function message = localFailureMessage(study)
+record = study.analysis.records(1);
+message = sprintf('Study failed with %s: %s', ...
+    char(record.errorIdentifier), char(record.errorMessage));
+end
+
 function dataset = localDataset(specimenId)
-strain = linspace(0,0.5,30)';
+strain = linspace(0,0.5,101)';
 dataset.specimens.id = string(specimenId);
 dataset.specimens.raw.force = 2 .* strain + 0.2 .* strain.^2;
 dataset.specimens.raw.displacement = 10 .* strain;
