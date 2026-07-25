@@ -137,27 +137,32 @@ The older `processBatchManifest` entrypoint remains available for its original r
 
 ## Experimental groups are downstream metadata
 
-Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed into one study or compatible downstream batch result. Group labels are then assigned explicitly to the specimen identifiers and passed to the maintained group-analysis workflows.
+Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed into one study or compatible downstream batch result. Group labels are then assigned explicitly to specimen identifiers and passed to group-analysis workflows.
 
-Conceptually:
+For population stress-strain and scalar mechanical metrics:
 
 ```matlab
-study = mechanics.workflow.runTensileStudy(manifestTable, config);
+assignments = table(specimenIds, groupLabels, ...
+    'VariableNames', {'SpecimenId','Group'});
 
-% Assign one label per processed specimen using the maintained group API.
-grouped = mechanics.workflow.assignGroups( ...
-    study.analysis, groupAssignments);
+grouped = mechanics.workflow.assignSpecimenGroups( ...
+    study.analysis, assignments);
 
-comparison = mechanics.workflow.compareGroups( ...
-    grouped, groupComparisonConfig);
+comparisonConfig = mechanics.config.groupComparisonConfig();
+comparison = mechanics.workflow.analyzeGroupComparison( ...
+    grouped, ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    comparisonConfig);
 ```
 
-The exact downstream function depends on the quantity being compared:
+For selected constitutive parameters, group labels should be preserved in the specimen-level model-comparison inputs. Then use:
 
-- population stress-strain response;
-- peak or tangent-modulus metrics;
-- selected constitutive parameters;
-- derived initial shear modulus.
+```matlab
+population = mechanics.workflow.summarizeSelectedParameters( ...
+    parameterBatch, mechanics.config.selectedParameterPopulationConfig());
+
+inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
+    population, mechanics.config.groupParameterInferenceConfig());
+```
 
 The manifest is therefore an ingestion description, not a statistical design or comparison request.
 
