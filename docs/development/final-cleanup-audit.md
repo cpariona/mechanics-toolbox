@@ -8,33 +8,42 @@ This audit follows completion and validation of the tensile-study phase-2 functi
 
 `mechanics.workflow.runTensileStudy` is the maintained end-to-end tensile entrypoint. Workbook, file-list, manifest, and pre-extracted dataset inputs converge to one downstream study contract.
 
-### Legacy manifest processor retained
+### Legacy manifest processor scheduled for removal
 
-`mechanics.workflow.processBatchManifest` is retained for now because it has distinct behavior:
+`mechanics.workflow.processBatchManifest` remains temporarily available, but it is no longer part of the intended long-term architecture.
 
-- row-oriented status records;
+Its current row-oriented behavior includes:
+
 - explicit skipped rows;
 - independent failure capture per manifest row;
 - optional per-specimen fitting and export;
 - mixed tension and compression processing through `TestType`.
 
-It is not a group-comparison pipeline and is not the recommended entrypoint for new end-to-end tensile studies.
+The user's maintained experimental pattern is normally one workbook per material or experimental condition, with several specimens inside each workbook. For that pattern, row-oriented manifest processing is not the desired abstraction. Each material or condition should be processed independently with `runTensileStudy`, and comparison should consume completed study results.
 
-The preferred future migration is not to expand this function under its current name. Instead:
+The required migration is:
 
-1. introduce a comparison workflow that accepts completed `runTensileStudy` results;
-2. reuse maintained group and population functions;
-3. preserve each study result unchanged;
-4. return a comparison result with explicit group labels;
-5. rename the old row processor only as part of a documented migration, for example to `processSpecimenManifest`;
-6. deprecate the old name only after consumers and tests are migrated.
+1. introduce `mechanics.workflow.compareTensileStudies` for completed `runTensileStudy` results;
+2. validate compatible stress measure, strain measure, units, and required result fields;
+3. preserve each input study unchanged;
+4. reuse maintained population and group-comparison functions;
+5. support explicit labels such as `"ECOFLEX 00-20"` and `"ECOFLEX 00-50"`;
+6. optionally compose selected-parameter and consensus-model comparisons without refitting when compatible results are already present;
+7. migrate any remaining maintained use cases from `processBatchManifest`;
+8. remove `processBatchManifest`, `batchProcessingConfig`, `exportBatchSummary`, and tests that exist only for that legacy contract.
 
-A candidate future API is:
+A candidate API is:
 
 ```matlab
 comparison = mechanics.workflow.compareTensileStudies( ...
-    studies, groupLabels, config);
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
 ```
+
+Do not rename `processBatchManifest` into the comparison workflow. Processing manifest rows and comparing completed studies are different responsibilities.
+
+The legacy API must not be removed in this cleanup-only branch because the replacement does not yet exist. Its removal belongs in the future functional branch that implements and validates `compareTensileStudies`.
 
 ### Documentation status
 
@@ -44,7 +53,7 @@ The transitional real-data input-equivalence script was removed after merge. Aut
 
 ## Test audit
 
-No behavioral test was removed from `test_batch_processing.m` because the public legacy entrypoint remains supported. Its tests establish distinct behavior that is not fully covered elsewhere:
+No behavioral test was removed from `test_batch_processing.m` in this branch because the public legacy entrypoint still exists. Its tests establish behavior that must remain stable until the migration branch removes the API:
 
 - manifest defaults and validation;
 - text conversion for `Include`;
@@ -53,7 +62,9 @@ No behavioral test was removed from `test_batch_processing.m` because the public
 - preserving skipped rows;
 - exporting the batch summary.
 
-The input-contract equivalence tests also remain. They are no longer migration-only tests; they are regression tests for supported public input forms.
+When `processBatchManifest` is removed, delete or migrate these tests in the same change. Tests for `validateBatchManifest` should remain only if manifests continue to be supported by `runTensileStudy`.
+
+The input-contract equivalence tests also remain. They are not migration-only tests; they are regressions for supported public input forms.
 
 Tests should be removed only together with the corresponding public contract or when a strictly stronger test covers the same behavior without preserving obsolete semantics.
 
@@ -61,7 +72,7 @@ Tests should be removed only together with the corresponding public contract or 
 
 ### Manifest import configuration
 
-`processBatchManifest` and `normalizeTensileStudyInput` both translate manifest columns into specimen import configuration. This duplication is real, but consolidation is deferred because the two entrypoints currently have different result contracts and supported behaviors. A shared internal helper would be reasonable only if it can preserve both contracts without becoming a new public API.
+`processBatchManifest` and `normalizeTensileStudyInput` both translate manifest columns into specimen import configuration. Do not consolidate this duplication before the legacy API is removed. The preferred endpoint is deletion of the duplicate path, not a shared helper that prolongs both contracts.
 
 ### Plotting and export
 
@@ -84,11 +95,9 @@ Consumer counts alone are insufficient evidence for removal.
 
 ## Public API removal boundary
 
-Do not remove an entrypoint solely because a newer workflow overlaps with it. Removal requires either:
+Do not remove an entrypoint solely because a newer workflow overlaps with it. Removal requires a validated replacement and migration of maintained consumers and tests.
 
-- full migration of its distinct behavior;
-- a documented deprecation period; or
-- evidence that the behavior is obsolete and unused.
+For `processBatchManifest`, that replacement is explicitly planned as `compareTensileStudies`; deletion should occur in the same functional sequence once the new workflow passes focused tests, the complete suite, and representative two-study validation.
 
 ## Validation required before merge
 
