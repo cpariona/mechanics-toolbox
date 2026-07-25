@@ -125,28 +125,22 @@ config.input.type = "manifest";
 study = mechanics.workflow.runTensileStudy(manifestTable, config);
 ```
 
-A maintained executable example is available at:
-
-```text
-studies/tension/run_tensile_manifest_example.m
-```
-
-The older `processBatchManifest` entrypoint remains available for its original row-oriented batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
+The older `processBatchManifest` entrypoint remains available temporarily for its original row-oriented batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
 
 `processBatchManifest` does not compare experimental groups. It processes each manifest row independently and returns row-level records and a processing summary.
 
 ## Experimental groups are downstream metadata
 
-Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed into one study or compatible downstream batch result. Group labels are then assigned explicitly to specimen identifiers and passed to group-analysis workflows.
+Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed as two complete tensile studies. Group comparison should then consume those completed results rather than re-importing or reprocessing the raw files.
 
-For population stress-strain and scalar mechanical metrics:
+For population stress-strain and scalar mechanical metrics, the maintained lower-level composition is:
 
 ```matlab
 assignments = table(specimenIds, groupLabels, ...
     'VariableNames', {'SpecimenId','Group'});
 
 grouped = mechanics.workflow.assignSpecimenGroups( ...
-    study.analysis, assignments);
+    analysis, assignments);
 
 comparisonConfig = mechanics.config.groupComparisonConfig();
 comparison = mechanics.workflow.analyzeGroupComparison( ...
@@ -168,9 +162,9 @@ The manifest is therefore an ingestion description, not a statistical design or 
 
 ## Planned study-comparison workflow
 
-A future orchestration layer may accept multiple completed `runTensileStudy` results, such as one ECOFLEX 00-20 study and one ECOFLEX 00-50 study, and compose the already-maintained population and group-comparison functions.
+A future orchestration layer should accept multiple completed `runTensileStudy` results, such as one ECOFLEX 00-20 study and one ECOFLEX 00-50 study, and compose the already-maintained population and group-comparison functions.
 
-The preferred design is a new name and result contract, for example:
+The preferred design is:
 
 ```matlab
 comparison = mechanics.workflow.compareTensileStudies( ...
@@ -181,14 +175,14 @@ comparison = mechanics.workflow.compareTensileStudies( ...
 
 This workflow should:
 
-1. validate compatible stress, strain, units, and population settings;
+1. validate compatible stress, strain, units, and relevant analysis settings;
 2. preserve each original study result unchanged;
 3. combine specimen-level analysis only for comparison;
 4. reuse `assignSpecimenGroups` and `analyzeGroupComparison`;
 5. optionally compose selected-parameter and consensus-model comparisons;
 6. return a study-comparison result rather than a row-processing batch result.
 
-`processBatchManifest` should not be repurposed under its current name because its inputs and outputs describe specimen-row processing, not comparison between completed studies. A later migration may rename it to a more explicit legacy name such as `processSpecimenManifest`, followed by deprecation after consumers are migrated.
+After `compareTensileStudies` is implemented and validated, `processBatchManifest` should be removed rather than renamed. Its exclusive configuration, exporter, example, and tests should be removed in the same migration when they no longer have independent consumers.
 
 ## Pre-extracted dataset
 
