@@ -1,5 +1,11 @@
 function batch = processBatchManifest(manifestInput, config)
-%PROCESSBATCHMANIFEST Import and process specimens defined by a manifest.
+%PROCESSBATCHMANIFEST Process manifest rows independently.
+%   This legacy batch entrypoint imports, processes, optionally fits, and
+%   optionally exports each included manifest row. It returns row-oriented
+%   records and a processing summary. It does not perform population
+%   aggregation, experimental group comparison, consensus-model selection,
+%   or end-to-end tensile-study reporting. New tensile studies should prefer
+%   mechanics.workflow.runTensileStudy with config.input.type = "manifest".
 arguments
     manifestInput
     config (1,1) struct = mechanics.config.batchProcessingConfig()

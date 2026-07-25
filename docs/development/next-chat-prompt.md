@@ -1,6 +1,6 @@
 # Next-chat prompt
 
-Copy the prompt below into a new chat after the phase-1 pull request has been merged.
+Copy the prompt below into a new chat when continuing repository development.
 
 ---
 
@@ -8,82 +8,66 @@ Quiero continuar el trabajo técnico en el repositorio:
 
 `cpariona/mechanics-toolbox`
 
-La fase anterior incorporó un study driver ejecutable para ensayos de tensión, estandarizó el contexto constitutivo y separó el recorte visual del módulo tangente de su cálculo completo. Ese trabajo ya fue validado mediante:
+La funcionalidad planificada para el estudio de tensión ya fue implementada y validada. El repositorio incluye población de esfuerzo y módulo tangente, comparación constitutiva por espécimen, parámetros seleccionados, módulo cortante inicial derivado, consenso de modelo, comparación de grupos y contratos de entrada unificados para workbook, lista de archivos, manifest y dataset preextraído.
 
-- la suite completa de MATLAB;
-- la ejecución del estudio real de tensión;
-- la comprobación de que no quedan asignaciones activas a `inputMeasure` ni `outputStressMeasure`.
+El patrón experimental que quiero priorizar es un workbook por material o condición, con varias probetas dentro de cada workbook. Por ejemplo:
 
-El siguiente objetivo general es desarrollar la fase 2 del estudio de tensión y realizar una limpieza posterior, pero todavía no quiero que modifiques archivos ni crees una rama hasta completar la verificación y seleccionar un alcance concreto.
+- un workbook de ECOFLEX 00-20 con cinco probetas;
+- un workbook de ECOFLEX 00-50 con cinco probetas.
+
+Cada workbook debe procesarse mediante `runTensileStudy`. Después quiero comparar los resultados completos de ambos estudios sin reprocesar las probetas.
+
+## Objetivo técnico pendiente
+
+Diseñar e implementar un workflow mantenido, tentativamente:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
+```
+
+Este workflow debe reutilizar la comparación poblacional y de grupos ya implementada, preservar los estudios originales y validar compatibilidad de medidas, unidades y resultados requeridos.
+
+`processBatchManifest` es un procesador legacy por filas. Debe eliminarse después de que `compareTensileStudies` exista, sus casos útiles hayan sido migrados y la nueva ruta haya sido validada. No lo renombres para convertirlo en la función de comparación.
 
 ## Antes de proponer cambios
 
-1. Verifica el estado real del repositorio:
+1. Ejecuta `git fetch origin --prune` y confirma que `main` coincide exactamente con `origin/main`.
+2. Reporta SHA local, SHA remota, `git status -sb` y los últimos commits relevantes.
+3. Lee, en este orden:
+   - `README.md`
+   - `docs/README.md`
+   - `docs/development/context-handoff.md`
+   - `docs/development/repository-structure.md`
+   - `docs/development/final-cleanup-audit.md`
+   - `docs/workflows/tensile-study.md`
+   - `docs/reference/tensile-input-contracts.md`
+   - `docs/reference/population-and-group-analysis.md`
+   - `docs/workflows/constitutive-analysis.md`
+4. Revisa únicamente los contratos adicionales necesarios para diseñar la comparación entre estudios.
 
-- ejecuta `git fetch origin --prune`;
-- confirma que la rama local `main` coincide exactamente con `origin/main`;
-- reporta el SHA local de `main`, el SHA de `origin/main`, `git status -sb` y los últimos cinco commits relevantes;
-- no descartes archivos locales ni no rastreados.
+## Resultado esperado antes de modificar
 
-2. Lee, en este orden:
+- resume los contratos de `runTensileStudy` relevantes para comparación;
+- identifica qué partes de `assignSpecimenGroups`, `analyzeGroupComparison`, `summarizeSelectedParameters` y `compareSelectedParametersBetweenGroups` pueden reutilizarse;
+- define las verificaciones de compatibilidad entre estudios;
+- propone un contrato pequeño para `compareTensileStudies`;
+- delimita qué resultados entran en la primera versión y cuáles quedan opcionales;
+- identifica exactamente qué archivos, configuraciones, exportadores y tests podrán eliminarse junto con `processBatchManifest`;
+- crea una rama solo después de delimitar el alcance;
+- no abras PR ni hagas merge sin autorización.
 
-- `README.md`
-- `docs/README.md`
-- `docs/development/context-handoff.md`
-- `docs/development/repository-structure.md`
-- `docs/workflows/tensile-study.md`
-- `docs/development/tensile-study-follow-up.md`
-- `studies/README.md`
-- `studies/tension/run_tensile_experiment.m`
+## Criterios de diseño
 
-3. Lee únicamente los contratos y archivos de implementación adicionales necesarios para evaluar la fase 2. No recorras todo el repositorio sin una razón concreta.
-
-4. Confirma que el estado persistente coincide con el repositorio real, especialmente:
-
-- `context.deformationMeasure` y `context.stressMeasure` son los nombres vigentes;
-- los valores predeterminados siguen siendo `"engineering-strain"` y `"nominal"`;
-- `tangentModulus` conserva el cálculo completo;
-- `tangentModulusForPlot` solo elimina la región inicial para visualización;
-- los study drivers reales pertenecen a `studies/`;
-- `processBatchManifest` todavía no comparte el contrato de resultado de `runTensileStudy`.
-
-## Fase 2 pendiente
-
-Evalúa estos bloques:
-
-1. población de módulo tangente mediante malla común, interpolación y bootstrap;
-2. figuras de parámetros nativos separadas por modelo y parámetro;
-3. figura del módulo cortante inicial derivado por espécimen;
-4. modelo de consenso del estudio basado en elegibilidad, BIC mediano, estabilidad y parsimonia;
-5. unificación de workbook, lista de archivos, dataset preextraído y manifest bajo un único contrato de estudio de tensión.
-
-La unificación de entradas es el bloque más arquitectónico y puede quedar en una rama independiente.
-
-## Resultado esperado de esta primera conversación
-
-Sin modificar archivos todavía:
-
-- resume el estado actual del estudio de tensión;
-- verifica la viabilidad de cada bloque pendiente contra la implementación real;
-- identifica dependencias, duplicaciones y riesgos;
-- propone un orden de implementación;
-- recomienda un máximo de tres objetivos siguientes, ordenados por prioridad;
-- delimita el primer objetivo en una rama y alcance pequeños;
-- separa claramente implementación funcional y limpieza posterior.
-
-No abras un PR ni hagas merge. Espera mi decisión antes de crear la nueva rama.
-
-## Criterios de trabajo
-
-- prioriza simplicidad y reutilización de contratos existentes;
-- no añadas wrappers ni aliases de compatibilidad;
-- evita incorporar toda la fase 2 al core workflow si puede mantenerse como composición;
-- no crees nuevas funciones de plotting si un entrypoint mantenido puede extenderse;
-- no elimines APIs basándote únicamente en conteos de consumidores;
-- conserva source, studies, examples, tests y docs en sus responsabilidades actuales;
-- ejecuta tests focalizados durante el desarrollo y la suite completa antes de cualquier merge;
-- valida finalmente con `studies/tension/run_tensile_experiment.m` y datos reales representativos.
-
-La limpieza final debe iniciarse después de que la fase 2 esté funcionalmente completa y validada.
+- no reproceses datos crudos ni repitas fitting si los resultados compatibles ya existen;
+- preserva los estudios de entrada sin modificarlos;
+- exige etiquetas de grupo explícitas;
+- reutiliza funciones existentes antes de crear nuevas capas;
+- separa comparación de respuestas mecánicas, parámetros constitutivos y modelos de consenso cuando sus contratos difieran;
+- no conserves aliases de compatibilidad cuando se elimine `processBatchManifest`;
+- elimina en la misma migración los tests exclusivos de contratos retirados;
+- ejecuta tests focalizados, `run_all_tests()` y una validación real con dos workbooks antes del PR.
 
 ---

@@ -125,13 +125,64 @@ config.input.type = "manifest";
 study = mechanics.workflow.runTensileStudy(manifestTable, config);
 ```
 
-A maintained executable example is available at:
+The older `processBatchManifest` entrypoint remains available temporarily for its original row-oriented batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
 
-```text
-studies/tension/run_tensile_manifest_example.m
+`processBatchManifest` does not compare experimental groups. It processes each manifest row independently and returns row-level records and a processing summary.
+
+## Experimental groups are downstream metadata
+
+Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed as two complete tensile studies. Group comparison should then consume those completed results rather than re-importing or reprocessing the raw files.
+
+For population stress-strain and scalar mechanical metrics, the maintained lower-level composition is:
+
+```matlab
+assignments = table(specimenIds, groupLabels, ...
+    'VariableNames', {'SpecimenId','Group'});
+
+grouped = mechanics.workflow.assignSpecimenGroups( ...
+    analysis, assignments);
+
+comparisonConfig = mechanics.config.groupComparisonConfig();
+comparison = mechanics.workflow.analyzeGroupComparison( ...
+    grouped, ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    comparisonConfig);
 ```
 
-The older `processBatchManifest` entrypoint remains available for its original batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
+For selected constitutive parameters, group labels should be preserved in the specimen-level model-comparison inputs. Then use:
+
+```matlab
+population = mechanics.workflow.summarizeSelectedParameters( ...
+    parameterBatch, mechanics.config.selectedParameterPopulationConfig());
+
+inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
+    population, mechanics.config.groupParameterInferenceConfig());
+```
+
+The manifest is therefore an ingestion description, not a statistical design or comparison request.
+
+## Planned study-comparison workflow
+
+A future orchestration layer should accept multiple completed `runTensileStudy` results, such as one ECOFLEX 00-20 study and one ECOFLEX 00-50 study, and compose the already-maintained population and group-comparison functions.
+
+The preferred design is:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
+```
+
+This workflow should:
+
+1. validate compatible stress, strain, units, and relevant analysis settings;
+2. preserve each original study result unchanged;
+3. combine specimen-level analysis only for comparison;
+4. reuse `assignSpecimenGroups` and `analyzeGroupComparison`;
+5. optionally compose selected-parameter and consensus-model comparisons;
+6. return a study-comparison result rather than a row-processing batch result.
+
+After `compareTensileStudies` is implemented and validated, `processBatchManifest` should be removed rather than renamed. Its exclusive configuration, exporter, example, and tests should be removed in the same migration when they no longer have independent consumers.
 
 ## Pre-extracted dataset
 
@@ -154,7 +205,7 @@ study.input.specimenCount
 study.sourceFiles
 ```
 
-Provenance supports both historical single-source fields and new mult-source fields:
+Provenance supports both historical single-source fields and new multi-source fields:
 
 ```text
 study.provenance.sourceFile
@@ -178,12 +229,4 @@ peak metrics
 population result contract
 ```
 
-Regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results.
-
-A maintained real-data validation is available at:
-
-```text
-studies/tension/validate_tensile_input_equivalence.m
-```
-
-It extracts the maintained ECOFLEX workbook, runs the workbook and normalized-dataset paths with the same configuration, and checks specimen statuses, summary metrics, processed curves, and population response.
+Automated regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results. The transitional real-data validation script used during migration was removed after the contract was merged and covered by maintained tests.
