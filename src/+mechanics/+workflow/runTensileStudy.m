@@ -1,16 +1,12 @@
-function study = runTensileStudy(filename, config)
+function study = runTensileStudy(inputValue, config)
 %RUNTENSILESTUDY Execute extraction, specimen analysis, peak metrics, and population.
 arguments
-    filename (1,1) string
+    inputValue
     config (1,1) struct = mechanics.config.tensileStudyConfig()
 end
 
-if ~isfile(filename)
-    error("mechanics:workflow:StudyFileNotFound", ...
-        "Input workbook does not exist: %s", filename);
-end
-
-dataset = mechanics.extraction.extractWorkbook(filename, config.extraction);
+[dataset, inputInfo] = mechanics.workflow.normalizeTensileStudyInput( ...
+    inputValue, config);
 [dataset, exclusion] = localApplySpecimenConfiguration(dataset, config.specimens);
 analysis = mechanics.workflow.analyzeExtractedDataset(dataset, config.datasetAnalysis);
 
@@ -38,7 +34,9 @@ if config.population.enabled
     end
 end
 
-study.sourceFile = filename;
+study.sourceFile = inputInfo.primarySource;
+study.sourceFiles = inputInfo.sourceFiles;
+study.input = inputInfo;
 study.dataset = dataset;
 study.exclusion = exclusion;
 study.analysis = analysis;
@@ -47,7 +45,7 @@ study.populationStatus = populationStatus;
 study.populationErrorIdentifier = populationErrorIdentifier;
 study.populationErrorMessage = populationErrorMessage;
 study.config = config;
-study.provenance = mechanics.workflow.buildStudyProvenance(filename, analysis);
+study.provenance = mechanics.workflow.buildStudyProvenance(inputInfo, analysis);
 study.createdAt = datetime("now");
 
 if config.export.enabled
