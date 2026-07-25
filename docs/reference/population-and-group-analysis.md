@@ -42,4 +42,38 @@ comparison = mechanics.workflow.analyzeGroupComparison( ...
 
 Each group is summarized independently. For exactly two groups, the workflow reports mean stress curves, their difference, bootstrap confidence intervals, and comparisons of maximum strain, maximum stress, and median tangent modulus. More than two groups are supported descriptively.
 
+## Comparing completed tensile studies
+
+Use `compareTensileStudies` when each material or experimental condition has already been processed independently with `runTensileStudy`:
+
+```matlab
+study0020 = mechanics.workflow.runTensileStudy( ...
+    ecoflex0020Workbook, tensileConfig0020);
+study0050 = mechanics.workflow.runTensileStudy( ...
+    ecoflex0050Workbook, tensileConfig0050);
+
+config = mechanics.config.tensileStudyComparisonConfig();
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [study0020, study0050], ...
+    ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
+    config);
+```
+
+This workflow does not re-import files or rerun specimen processing. It validates compatible strain measures, stress measures, and processed units; combines copies of the specimen-level analysis; assigns one explicit group label per study; and delegates population and group statistics to `analyzeGroupComparison`.
+
+Specimen identifiers may repeat across workbooks. The comparison creates internal namespaced identifiers such as `study-1::specimen-1` while preserving the original identifiers in the combined analysis metadata. The input study structs are not modified.
+
+The main result fields are:
+
+```text
+comparison.groupLabels
+comparison.studySummaries
+comparison.compatibility
+comparison.groupComparison
+comparison.config
+comparison.createdAt
+```
+
+The first maintained scope covers population stress-strain curves and scalar mechanical metrics. Constitutive-parameter and consensus-model comparison remain separate downstream extensions.
+
 These population-level comparisons are distinct from inference on selected constitutive parameters, which is documented in the constitutive-analysis workflow.

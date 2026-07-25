@@ -38,6 +38,43 @@ verifyEqual(testCase, numel(listDataset.specimens), 2);
 verifyEqual(testCase, string({listDataset.specimens.id})', ["A";"B"]);
 end
 
+function testManifestDefaults(testCase)
+manifest = table( ...
+    "sample.csv", "sample-01", 10, 2, ...
+    'VariableNames', {'File','SpecimenId','InitialLength','InitialArea'});
+
+manifest = mechanics.workflow.validateBatchManifest(manifest);
+
+verifyTrue(testCase, manifest.Include);
+verifyEqual(testCase, manifest.Sheet, 1);
+verifyEqual(testCase, manifest.ForceScale, 1);
+verifyEqual(testCase, manifest.TestType, "tension");
+end
+
+function testManifestIncludeTextValues(testCase)
+manifest = table( ...
+    ["one.csv"; "two.csv"], ...
+    ["one"; "two"], ...
+    [10; 10], ...
+    [2; 2], ...
+    {"true"; "false"}, ...
+    'VariableNames', { ...
+        'File','SpecimenId','InitialLength','InitialArea','Include'});
+
+manifest = mechanics.workflow.validateBatchManifest(manifest);
+
+verifyEqual(testCase, manifest.Include, [true; false]);
+end
+
+function testMissingManifestColumnRejected(testCase)
+manifest = table("sample.csv", "sample-01", 10, ...
+    'VariableNames', {'File','SpecimenId','InitialLength'});
+
+verifyError(testCase, ...
+    @() mechanics.workflow.validateBatchManifest(manifest), ...
+    "mechanics:workflow:InvalidManifest");
+end
+
 function testManifestConvergesToDataset(testCase)
 folder = string(tempname);
 mkdir(folder);
