@@ -48,8 +48,6 @@ exportTensileStudy
 
 ## Automatic input detection
 
-Default configuration:
-
 ```matlab
 config = mechanics.config.tensileStudyConfig();
 config.input.type = "auto";
@@ -125,64 +123,47 @@ config.input.type = "manifest";
 study = mechanics.workflow.runTensileStudy(manifestTable, config);
 ```
 
-The older `processBatchManifest` entrypoint remains available temporarily for its original row-oriented batch-processing result contract. New end-to-end tensile studies should use `runTensileStudy` when peak metrics, population analysis, study provenance, and standard reporting are required.
+The former row-oriented `processBatchManifest` pipeline was removed. Manifest input is now maintained only through the common `runTensileStudy` result contract.
 
-`processBatchManifest` does not compare experimental groups. It processes each manifest row independently and returns row-level records and a processing summary.
+The manifest is an ingestion description. It is not a statistical design or a request to compare experimental groups.
 
-## Experimental groups are downstream metadata
+## Comparing completed studies
 
-Input normalization does not infer or compare material groups. A campaign containing, for example, five ECOFLEX 00-20 specimens and five ECOFLEX 00-50 specimens should first be processed as two complete tensile studies. Group comparison should then consume those completed results rather than re-importing or reprocessing the raw files.
-
-For population stress-strain and scalar mechanical metrics, the maintained lower-level composition is:
+A campaign with one workbook per material or condition should process each workbook independently and then compare the completed studies:
 
 ```matlab
-assignments = table(specimenIds, groupLabels, ...
-    'VariableNames', {'SpecimenId','Group'});
+study0020 = mechanics.workflow.runTensileStudy( ...
+    ecoflex0020Workbook, config0020);
+study0050 = mechanics.workflow.runTensileStudy( ...
+    ecoflex0050Workbook, config0050);
 
-grouped = mechanics.workflow.assignSpecimenGroups( ...
-    analysis, assignments);
-
-comparisonConfig = mechanics.config.groupComparisonConfig();
-comparison = mechanics.workflow.analyzeGroupComparison( ...
-    grouped, ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
-    comparisonConfig);
-```
-
-For selected constitutive parameters, group labels should be preserved in the specimen-level model-comparison inputs. Then use:
-
-```matlab
-population = mechanics.workflow.summarizeSelectedParameters( ...
-    parameterBatch, mechanics.config.selectedParameterPopulationConfig());
-
-inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-    population, mechanics.config.groupParameterInferenceConfig());
-```
-
-The manifest is therefore an ingestion description, not a statistical design or comparison request.
-
-## Planned study-comparison workflow
-
-A future orchestration layer should accept multiple completed `runTensileStudy` results, such as one ECOFLEX 00-20 study and one ECOFLEX 00-50 study, and compose the already-maintained population and group-comparison functions.
-
-The preferred design is:
-
-```matlab
 comparison = mechanics.workflow.compareTensileStudies( ...
     [study0020, study0050], ...
     ["ECOFLEX 00-20", "ECOFLEX 00-50"], ...
-    config);
+    mechanics.config.tensileStudyComparisonConfig());
 ```
 
-This workflow should:
+The comparison workflow:
 
-1. validate compatible stress, strain, units, and relevant analysis settings;
-2. preserve each original study result unchanged;
-3. combine specimen-level analysis only for comparison;
-4. reuse `assignSpecimenGroups` and `analyzeGroupComparison`;
-5. optionally compose selected-parameter and consensus-model comparisons;
-6. return a study-comparison result rather than a row-processing batch result.
+1. validates completed study contracts;
+2. validates compatible stress and strain measures;
+3. validates processed units;
+4. preserves the original studies unchanged;
+5. creates namespaced comparison identifiers to prevent collisions;
+6. preserves original specimen identifiers separately;
+7. reuses `assignSpecimenGroups` and `analyzeGroupComparison`;
+8. does not re-import or reprocess raw data.
 
-After `compareTensileStudies` is implemented and validated, `processBatchManifest` should be removed rather than renamed. Its exclusive configuration, exporter, example, and tests should be removed in the same migration when they no longer have independent consumers.
+The initial comparison result includes:
+
+```text
+comparison.groupLabels
+comparison.studySummaries
+comparison.compatibility
+comparison.groupComparison
+comparison.config
+comparison.createdAt
+```
 
 ## Pre-extracted dataset
 
@@ -205,7 +186,7 @@ study.input.specimenCount
 study.sourceFiles
 ```
 
-Provenance supports both historical single-source fields and new multi-source fields:
+Provenance supports both historical single-source fields and multi-source fields:
 
 ```text
 study.provenance.sourceFile
@@ -215,7 +196,7 @@ study.provenance.sourceFileNames
 study.provenance.inputType
 ```
 
-For a dataset without physical source files, the source fields are empty strings or empty arrays while analysis provenance remains available.
+For a dataset without physical source files, source fields are empty while analysis provenance remains available.
 
 ## Downstream equivalence
 
@@ -229,4 +210,4 @@ peak metrics
 population result contract
 ```
 
-Automated regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure they converge to equivalent downstream results. The transitional real-data validation script used during migration was removed after the contract was merged and covered by maintained tests.
+Automated regression tests compare workbook, manifest, and pre-extracted dataset paths to ensure equivalent downstream results.
