@@ -8,7 +8,7 @@ end
 
 function testZwickWorkbookIsDetected(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 config = mechanics.config.workbookExtractionConfig();
 
@@ -18,7 +18,7 @@ end
 
 function testZwickSpecimensAndGeometryAreExtracted(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 config = mechanics.config.workbookExtractionConfig();
 config.defaultInitialLength = 25;
@@ -30,6 +30,7 @@ verifyEqual(testCase, numel(dataset.specimens), 2);
 
 verifyEqual(testCase, dataset.specimens(1).id, "sample-01");
 verifyEqual(testCase, dataset.specimens(1).sheetName, "Probeta 21");
+verifyEqual(testCase, dataset.specimens(1).testType, "tension");
 verifyEqual(testCase, dataset.specimens(1).geometry.thickness, 2);
 verifyEqual(testCase, dataset.specimens(1).geometry.width, 6);
 verifyEqual(testCase, dataset.specimens(1).geometry.initialArea, 12);
@@ -43,9 +44,29 @@ verifyEqual(testCase, dataset.specimens(1).source.displacementUnit, "mm");
 verifyEqual(testCase, dataset.specimens(1).source.forceUnit, "N");
 end
 
+function testCompressionGeometryIsExtractedFromHeaders(testCase)
+filename = localCreateCompressionWorkbook();
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
+
+config = mechanics.config.workbookExtractionConfig();
+dataset = mechanics.extraction.extractWorkbook(filename, config);
+
+verifyEqual(testCase, numel(dataset.specimens), 2);
+verifyEqual(testCase, dataset.specimens(1).id, "compression-01");
+verifyEqual(testCase, dataset.specimens(1).sheetName, "Probeta 2");
+verifyEqual(testCase, dataset.specimens(1).testType, "compression");
+verifyEqual(testCase, dataset.specimens(1).geometry.diameter, 28.6, ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, dataset.specimens(1).geometry.initialLength, 11.667, ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, dataset.specimens(1).geometry.initialArea, ...
+    pi .* 28.6.^2 ./ 4, "AbsTol", 1e-12);
+verifyEqual(testCase, dataset.specimens(1).metadata.geometryType, "circular");
+end
+
 function testExtractedDatasetCanBeProcessed(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 config = mechanics.config.workbookExtractionConfig();
 config.defaultInitialLength = 10;
@@ -65,7 +86,7 @@ end
 
 function testMissingInitialLengthIsRejected(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 dataset = mechanics.extraction.extractWorkbook( ...
     filename, mechanics.config.workbookExtractionConfig());
@@ -77,7 +98,7 @@ end
 
 function testCustomExtractorIsSupported(testCase)
 filename = localCreateWorkbook();
-cleanup = onCleanup(@() localDelete(filename));
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
 config = mechanics.config.workbookExtractionConfig();
 config.customExtractor = @localCustomExtractor;
@@ -130,6 +151,39 @@ specimen22 = {
     2, 2.6
 };
 writecell(specimen22, filename, "Sheet", "Probeta 22", "Range", "A1");
+end
+
+function filename = localCreateCompressionWorkbook()
+filename = string(tempname) + ".xlsx";
+
+results = {
+    "", "Fecha/Hora", "Identificación de probeta", ...
+        "Fmax", "Fmin", "tensayo", "d0", "h0";
+    "", "", "", "N", "N", "s", "mm", "mm";
+    "Probeta 2", 46148.5, "compression-01", 150, 0, 100, 28.6, 11.667;
+    "Probeta 4", 46148.6, "compression-02", 140, 0, 100, 28.6, 12.142
+};
+writecell(results, filename, "Sheet", "Resultados", "Range", "A1");
+
+specimen2 = {
+    "Probeta 2", "Probeta 2";
+    "Deformación", "Fuerza estándar";
+    "mm", "N";
+    0, 0;
+    1, 10;
+    2, 20
+};
+writecell(specimen2, filename, "Sheet", "Probeta 2", "Range", "A1");
+
+specimen4 = {
+    "Probeta 4", "Probeta 4";
+    "Deformación", "Fuerza estándar";
+    "mm", "N";
+    0, 0;
+    1, 11;
+    2, 21
+};
+writecell(specimen4, filename, "Sheet", "Probeta 4", "Range", "A1");
 end
 
 function localDelete(filename)
