@@ -1,5 +1,7 @@
 function config = compressionStudyConfig()
 %COMPRESSIONSTUDYCONFIG Configure one multi-specimen compression study.
+config.input.type = "auto";
+config.extraction = mechanics.config.workbookExtractionConfig();
 config.defaultInitialLength = 25;
 config.continueOnError = true;
 config.specimen = mechanics.config.compressionSpecimenConfig();
