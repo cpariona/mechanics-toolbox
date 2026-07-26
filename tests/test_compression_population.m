@@ -13,7 +13,7 @@ config = mechanics.config.compressionStudyConfig();
 config.geometry.initialLength = 25;
 config.geometry.initialArea = 10;
 config.cycle.smoothingFrameLength = 1;
-config.processing.analysis.summaryStrainRange = [0, 0.15];
+config.processing.analysis.summaryStrainRange = [-0.15, 0];
 config.fitting.enabled = true;
 config.fitting.modelNames = "neo-hookean";
 config.fitting.selectionConfig.windowFractions = 1;
@@ -21,6 +21,18 @@ config.fitting.selectionConfig.minimumObservations = 12;
 config.fitting.selectionConfig.requireConvergence = false;
 config.fitting.selectionConfig.maximumRelativeParameterCV = Inf;
 study = mechanics.workflow.runCompressionStudy(filename, config);
+
+processed = study.specimen.processed;
+verifyLessThanOrEqual(testCase, max(processed.force), 0);
+verifyLessThanOrEqual(testCase, max(processed.displacement), 0);
+verifyLessThanOrEqual(testCase, max(processed.strain), 0);
+verifyLessThanOrEqual(testCase, max(processed.stress), 0);
+verifyGreaterThan(testCase, min(processed.stretch), 0);
+verifyLessThanOrEqual(testCase, max(processed.stretch), 1);
+verifyGreaterThanOrEqual(testCase, min(processed.areaScale), 1);
+verifyGreaterThanOrEqual(testCase, study.cycleMetrics.peakForce, 0);
+verifyGreaterThanOrEqual(testCase, study.cycleMetrics.peakDisplacement, 0);
+
 verifyTrue(testCase, study.specimen.modelSelection.selection.hasEligibleModel);
 verifyEqual(testCase, ...
     study.specimen.modelSelection.selection.bestModel, "neo-hookean");
@@ -41,7 +53,7 @@ manifest = table(files, ["A1";"A2";"B1";"B2"], ...
     'VariableNames', {'File','SpecimenId','Group','InitialArea'});
 config = mechanics.config.compressionPopulationConfig();
 config.studyConfig.cycle.smoothingFrameLength = 1;
-config.studyConfig.processing.analysis.summaryStrainRange = [0, 0.15];
+config.studyConfig.processing.analysis.summaryStrainRange = [-0.15, 0];
 config.population.bootstrap.enabled = false;
 config.comparison.config.populationConfig.bootstrap.enabled = false;
 config.comparison.config.bootstrap.enabled = false;
