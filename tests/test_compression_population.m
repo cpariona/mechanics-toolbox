@@ -71,7 +71,7 @@ for index = 1:numel(study.analysis.records)
 end
 end
 
-function testCompressionStudySupportsExclusionAndPreloadOverrides(testCase)
+function testCompressionStudySupportsExclusion(testCase)
 filename = localCompressionWorkbook();
 cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
 
@@ -79,8 +79,7 @@ config = mechanics.config.compressionStudyConfig();
 config.specimen.cycle.smoothingFrameLength = 1;
 config.specimen.processing.analysis.summaryStrainRange = [-0.2, 0];
 config.specimens.excludeIndices = 1;
-config.specimens.exclusionReason = "setup specimen";
-config.specimens.preloadForceOverrides = [NaN; 1.0];
+config.specimens.exclusionReason = "out-of-tolerance geometry";
 config.population.enabled = false;
 
 study = mechanics.workflow.runCompressionStudy(filename, config);
@@ -88,16 +87,14 @@ study = mechanics.workflow.runCompressionStudy(filename, config);
 verifyEqual(testCase, study.exclusion.indices, 1);
 verifyEqual(testCase, study.exclusion.specimenIds, "C1");
 verifyEqual(testCase, study.exclusion.sheetNames, "Probeta 2");
-verifyEqual(testCase, study.exclusion.reason, "setup specimen");
+verifyEqual(testCase, study.exclusion.reason, "out-of-tolerance geometry");
+verifyEqual(testCase, study.exclusion.count, 1);
 verifyEqual(testCase, study.manifest.Include, [false; true]);
 verifyEqual(testCase, string({study.analysis.records.status})', ...
     ["skipped"; "processed"]);
-
-processed = study.analysis.records(2).specimen.processed;
-verifyEqual(testCase, processed.zeroReference.method, "preload-threshold");
-verifyEqual(testCase, processed.zeroReference.force, -1, "AbsTol", 1e-12);
-verifyEqual(testCase, processed.force(1), 0, "AbsTol", 1e-12);
-verifyEqual(testCase, processed.displacement(1), 0, "AbsTol", 1e-12);
+verifyEqual(testCase, ...
+    study.analysis.records(2).specimen.processed.zeroReference.method, ...
+    "first-sample");
 verifyEqual(testCase, study.populationStatus, "disabled");
 end
 
