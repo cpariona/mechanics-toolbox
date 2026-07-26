@@ -9,7 +9,7 @@ end
 function testCompressionNeoHookeanFitting(testCase)
 filename = localCompressionFile(2.5, 25, 10);
 cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
-config = mechanics.config.compressionStudyConfig();
+config = mechanics.config.compressionSpecimenConfig();
 config.geometry.initialLength = 25;
 config.geometry.initialArea = 10;
 config.cycle.smoothingFrameLength = 1;
@@ -20,7 +20,7 @@ config.fitting.selectionConfig.windowFractions = 1;
 config.fitting.selectionConfig.minimumObservations = 12;
 config.fitting.selectionConfig.requireConvergence = false;
 config.fitting.selectionConfig.maximumRelativeParameterCV = Inf;
-study = mechanics.workflow.runCompressionStudy(filename, config);
+study = mechanics.workflow.runCompressionSpecimen(filename, config);
 
 processed = study.specimen.processed;
 verifyLessThanOrEqual(testCase, max(processed.force), 0);
@@ -42,31 +42,49 @@ verifyEqual(testCase, record(end).fitResult.parameters(1), 2.5, ...
     "RelTol", 0.05);
 end
 
-function testCompressionPopulationUsesDefaultLength(testCase)
+function testCompletedCompressionStudiesAreCompared(testCase)
 files = strings(4, 1);
 cleanup = onCleanup(@() localDeleteMany(files)); %#ok<NASGU>
 for index = 1:4
     files(index) = localCompressionFile(2 + 0.5 .* index, 25, 10);
 end
-manifest = table(files, ["A1";"A2";"B1";"B2"], ...
-    ["A";"A";"B";"B"], repmat(10, 4, 1), ...
-    'VariableNames', {'File','SpecimenId','Group','InitialArea'});
-config = mechanics.config.compressionPopulationConfig();
-config.studyConfig.cycle.smoothingFrameLength = 1;
-config.studyConfig.processing.analysis.summaryStrainRange = [-0.15, 0];
-config.population.bootstrap.enabled = false;
-config.comparison.config.populationConfig.bootstrap.enabled = false;
-config.comparison.config.bootstrap.enabled = false;
-config.comparison.config.populationConfig.strainGridPointCount = 21;
-result = mechanics.workflow.runCompressionPopulationStudy(manifest, config);
-verifyEqual(testCase, result.manifest.InitialLength, repmat(25, 4, 1));
-verifyEqual(testCase, string({result.records.status})', ...
-    repmat("processed", 4, 1));
-verifyEqual(testCase, string({result.groups.status})', ...
-    ["processed";"processed"]);
-verifyEqual(testCase, [result.groups.specimenCount]', [2;2]);
-verifyTrue(testCase, isfield(result.comparison, "metricComparison"));
-verifyGreaterThan(testCase, height(result.comparison.metricComparison), 0);
+
+firstManifest = table(files(1:2), ["A1";"A2"], repmat(10, 2, 1), ...
+    'VariableNames', {'File','SpecimenId','InitialArea'});
+secondManifest = table(files(3:4), ["B1";"B2"], repmat(10, 2, 1), ...
+    'VariableNames', {'File','SpecimenId','InitialArea'});
+
+studyConfig = mechanics.config.compressionStudyConfig();
+studyConfig.specimen.cycle.smoothingFrameLength = 1;
+studyConfig.specimen.processing.analysis.summaryStrainRange = [-0.15, 0];
+studyConfig.population.config.bootstrap.enabled = false;
+studyConfig.population.config.strainGridPointCount = 21;
+
+first = mechanics.workflow.runCompressionStudy(firstManifest, studyConfig);
+second = mechanics.workflow.runCompressionStudy(secondManifest, studyConfig);
+verifyEqual(testCase, first.manifest.InitialLength, repmat(25, 2, 1));
+verifyEqual(testCase, string({first.analysis.records.status})', ...
+    repmat("processed", 2, 1));
+verifyEqual(testCase, first.populationStatus, "completed");
+verifyEqual(testCase, second.populationStatus, "completed");
+
+comparisonConfig = mechanics.config.compressionStudyComparisonConfig();
+comparisonConfig.groupComparison.minimumSpecimensPerGroup = 2;
+comparisonConfig.groupComparison.populationConfig.minimumSpecimens = 2;
+comparisonConfig.groupComparison.populationConfig.bootstrap.enabled = false;
+comparisonConfig.groupComparison.populationConfig.strainGridPointCount = 21;
+comparisonConfig.groupComparison.bootstrap.enabled = false;
+comparisonConfig.groupComparison.export.enabled = false;
+comparison = mechanics.workflow.compareCompressionStudies( ...
+    [first, second], ["A", "B"], comparisonConfig);
+
+verifyEqual(testCase, comparison.testType, "compression");
+verifyEqual(testCase, comparison.studySummaries.ProcessedCount, [2; 2]);
+verifyEqual(testCase, comparison.groupComparison.groups(1).specimenCount, 2);
+verifyEqual(testCase, comparison.groupComparison.groups(2).specimenCount, 2);
+verifyGreaterThan(testCase, height(comparison.groupComparison.metricComparison), 0);
+verifyTrue(testCase, comparison.compatibility.measuresMatch);
+verifyTrue(testCase, comparison.compatibility.unitsMatch);
 end
 
 function filename = localCompressionFile(mu, initialLength, initialArea)
