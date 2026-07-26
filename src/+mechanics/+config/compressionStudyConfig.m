@@ -8,7 +8,6 @@ config.specimen = mechanics.config.compressionSpecimenConfig();
 
 config.specimens.excludeIndices = [];
 config.specimens.exclusionReason = "manual exclusion";
-config.specimens.preloadForceOverrides = [];
 
 config.population.enabled = true;
 config.population.continueOnError = true;
