@@ -14,6 +14,18 @@ config.zwick.dataStartRow = 4;
 config.zwick.resultsHeaderRow = 1;
 config.zwick.resultsUnitsRow = 2;
 config.zwick.resultsDataStartRow = 3;
+config.zwick.resultsSheetNameAliases = ["Hoja", "Sheet"];
+config.zwick.specimenIdAliases = [ ...
+    "Identificación de probeta", "Specimen identification", ...
+    "Specimen ID", "SpecimenId"];
+config.zwick.thicknessAliases = ["h", "Thickness", "Espesor"];
+config.zwick.widthAliases = ["b", "Width", "Ancho"];
+config.zwick.diameterAliases = ["d0", "Diameter", "Diámetro"];
+config.zwick.initialLengthAliases = [ ...
+    "h0", "Initial height", "Altura inicial", "Initial length"];
+
+% Retained for compatibility with configurations created before header-based
+% metadata resolution. New extraction uses the aliases above.
 config.zwick.resultsSheetNameColumn = 1;
 config.zwick.specimenIdColumn = 2;
 config.zwick.thicknessColumn = 3;

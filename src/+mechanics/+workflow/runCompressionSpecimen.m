@@ -1,23 +1,13 @@
-function study = runCompressionSpecimen(filename, config)
+function study = runCompressionSpecimen(inputValue, config)
 %RUNCOMPRESSIONSPECIMEN Process one selected compression loading branch.
 arguments
-    filename (1,1) string
+    inputValue
     config (1,1) struct = mechanics.config.compressionSpecimenConfig()
 end
 
-if ~isfile(filename)
-    error("mechanics:workflow:CompressionFileNotFound", ...
-        "Input file does not exist: %s", filename);
-end
-if ~isfinite(config.geometry.initialLength) || ...
-        config.geometry.initialLength <= 0 || ...
-        ~isfinite(config.geometry.initialArea) || ...
-        config.geometry.initialArea <= 0
-    error("mechanics:workflow:InvalidCompressionGeometry", ...
-        "Compression geometry requires positive initialLength and initialArea.");
-end
+[specimen, sourceFile] = localInputSpecimen(inputValue, config.import);
+geometry = localResolveGeometry(specimen, config.geometry);
 
-specimen = mechanics.io.readSpecimenTable(filename, config.import);
 specimen.testType = "compression";
 cycle = mechanics.segmentation.selectCompressionCycle( ...
     specimen.raw, config.cycle);
@@ -37,13 +27,25 @@ fullCycleMagnitude = fullCycleRaw;
 fullCycleMagnitude.force = forceOrientation .* fullCycleRaw.force;
 fullCycleMagnitude.displacement = ...
     displacementOrientation .* fullCycleRaw.displacement;
+fullCycleMagnitude.displacement = fullCycleMagnitude.displacement - ...
+    min(fullCycleMagnitude.displacement);
 cycleMetrics = mechanics.analysis.computeCompressionCycleMetrics( ...
-    fullCycleMagnitude, relativeLoadingEndIndex, config.geometry);
+    fullCycleMagnitude, relativeLoadingEndIndex, geometry);
 
 % The maintained mechanical state uses physical compression signs.
 selectedRaw.force = -forceOrientation .* selectedRaw.force;
 selectedRaw.displacement = ...
     -displacementOrientation .* selectedRaw.displacement;
+
+% Cycle detection can include a few leading machine-jitter observations before
+% monotonic loading begins. Start the analyzed branch at its least-compressed
+% displacement so first-sample zeroing cannot create positive compression strain.
+[selectedRaw, leadingTrimCount] = localTrimLeadingDisplacementReversal( ...
+    selectedRaw, config.cycle.minimumObservations);
+if isfield(cycle, "selectedIndices") && leadingTrimCount > 0
+    cycle.selectedIndices = cycle.selectedIndices(leadingTrimCount + 1:end);
+end
+cycle.leadingTrimCount = leadingTrimCount;
 
 specimen.originalRaw = specimen.raw;
 specimen.fullCycleRaw = fullCycleMagnitude;
@@ -51,7 +53,7 @@ specimen.raw = selectedRaw;
 specimen.cycleSelection = rmfield(cycle, "selectedRaw");
 specimen.cycleMetrics = cycleMetrics;
 specimen = mechanics.workflow.processUniaxialSpecimen( ...
-    specimen, config.geometry, config.processing);
+    specimen, geometry, config.processing);
 
 if config.fitting.enabled
     specimen.modelSelection = mechanics.fitting.fitAcrossWindows( ...
@@ -69,16 +71,77 @@ if config.fitting.enabled
     end
 end
 
-study.sourceFile = filename;
+study.sourceFile = sourceFile;
 study.specimen = specimen;
 study.cycle = specimen.cycleSelection;
 study.cycleMetrics = cycleMetrics;
 study.config = config;
+study.config.geometry = geometry;
 study.createdAt = datetime("now");
 
 if config.export.enabled
     study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
 end
+end
+
+function [specimen, sourceFile] = localInputSpecimen(inputValue, importConfig)
+sourceFile = "";
+if isstruct(inputValue) && isscalar(inputValue) && isfield(inputValue, "raw")
+    specimen = inputValue;
+    if isfield(specimen, "source") && ...
+            isfield(specimen.source, "filename")
+        sourceFile = string(specimen.source.filename);
+    end
+    return;
+end
+
+if ~(ischar(inputValue) || (isstring(inputValue) && isscalar(inputValue)))
+    error("mechanics:workflow:InvalidCompressionSpecimenInput", ...
+        "Compression specimen input must be a filename or extracted specimen.");
+end
+
+sourceFile = string(inputValue);
+if ~isfile(sourceFile)
+    error("mechanics:workflow:CompressionFileNotFound", ...
+        "Input file does not exist: %s", sourceFile);
+end
+specimen = mechanics.io.readSpecimenTable(sourceFile, importConfig);
+end
+
+function geometry = localResolveGeometry(specimen, configuredGeometry)
+geometry = configuredGeometry;
+if (~isfinite(geometry.initialLength) || geometry.initialLength <= 0) && ...
+        isfield(specimen, "geometry") && ...
+        isfield(specimen.geometry, "initialLength")
+    geometry.initialLength = specimen.geometry.initialLength;
+end
+if (~isfinite(geometry.initialArea) || geometry.initialArea <= 0) && ...
+        isfield(specimen, "geometry") && ...
+        isfield(specimen.geometry, "initialArea")
+    geometry.initialArea = specimen.geometry.initialArea;
+end
+if ~isfinite(geometry.initialLength) || geometry.initialLength <= 0 || ...
+        ~isfinite(geometry.initialArea) || geometry.initialArea <= 0
+    error("mechanics:workflow:InvalidCompressionGeometry", ...
+        "Compression geometry requires positive initialLength and initialArea.");
+end
+end
+
+function [output, trimCount] = localTrimLeadingDisplacementReversal(input, minimumObservations)
+displacement = input.displacement(:);
+[~, startIndex] = max(displacement);
+trimCount = startIndex - 1;
+if trimCount == 0
+    output = input;
+    return;
+end
+indices = (startIndex:numel(displacement))';
+if numel(indices) < minimumObservations
+    error("mechanics:workflow:CompressionBranchTooShortAfterTrim", ...
+        ["Removing leading displacement reversal leaves fewer than %d " ...
+        "compression observations."], minimumObservations);
+end
+output = localSubsetRaw(input, indices);
 end
 
 function record = localSelectedFitRecord(modelSelection)

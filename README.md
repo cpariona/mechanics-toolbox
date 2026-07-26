@@ -6,7 +6,7 @@ analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
 ## Maintained scope
 
 - workbook and delimited-file import;
-- vendor-specific Zwick D412 extraction;
+- vendor-specific Zwick extraction for tensile and compression workbooks;
 - preservation of raw experimental data;
 - preprocessing and stress-strain conversion;
 - tangent-modulus estimation;
@@ -100,13 +100,32 @@ specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
     "compression.csv", config);
 ```
 
-Process all specimens belonging to one material or condition through a manifest:
+Process every specimen in a Zwick workbook directly. Circular geometry is read
+from `d0` and `h0` in the `Resultados` sheet:
 
 ```matlab
 config = mechanics.config.compressionStudyConfig();
+config.specimens.excludeIndices = [1; 2];
+config.specimens.exclusionReason = ...
+    "Initial thickness outside ASTM D575 tolerance";
+
 study = mechanics.workflow.runCompressionStudy( ...
-    "compression_manifest.csv", config);
+    "data/raw/compression.xlsx", config);
 ```
+
+Manifest and pre-extracted dataset inputs remain supported when workbook input
+is not appropriate. Specimen exclusions are explicit; dimensional compliance
+is not inferred automatically.
+
+A maintained real-experiment driver is available at:
+
+```text
+studies/compression/run_compression_experiment.m
+```
+
+It implements the ASTM D575 Method A cycle convention used by the current
+experiment: the first two cycles condition the specimen and the third loading
+branch is analyzed. The maintained workflow does not apply a preload threshold.
 
 Compare completed studies without re-importing or reprocessing specimens:
 
