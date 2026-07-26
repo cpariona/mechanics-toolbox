@@ -88,17 +88,31 @@ studies/tension/run_tensile_experiment.m
 
 It centralizes extraction, preprocessing, fitting, population analysis, reporting, and optional constitutive workflows without duplicating reusable implementation.
 
-## Complete compression population study
+## Compression studies
+
+Process one specimen when inspecting or exporting an individual test:
 
 ```matlab
-config = mechanics.config.compressionPopulationConfig();
-config.defaultInitialLength = 25;
-config.studyConfig.fitting.enabled = true;
-config.export.enabled = true;
-config.export.outputFolder = "results/compression-population";
+config = mechanics.config.compressionSpecimenConfig();
+config.geometry.initialLength = 25;
+config.geometry.initialArea = 100;
+specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
+    "compression.csv", config);
+```
 
-study = mechanics.workflow.runCompressionPopulationStudy( ...
+Process all specimens belonging to one material or condition through a manifest:
+
+```matlab
+config = mechanics.config.compressionStudyConfig();
+study = mechanics.workflow.runCompressionStudy( ...
     "compression_manifest.csv", config);
+```
+
+Compare completed studies without re-importing or reprocessing specimens:
+
+```matlab
+comparison = mechanics.workflow.compareCompressionStudies( ...
+    [studyA, studyB], ["Condition A", "Condition B"]);
 ```
 
 ## Constitutive study workflow

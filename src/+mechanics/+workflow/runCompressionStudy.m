@@ -1,128 +1,173 @@
-function study = runCompressionStudy(filename, config)
-%RUNCOMPRESSIONSTUDY Process the selected branch of a compression cycle.
+function study = runCompressionStudy(manifestInput, config)
+%RUNCOMPRESSIONSTUDY Process one compression study from a specimen manifest.
 arguments
-    filename (1,1) string
+    manifestInput
     config (1,1) struct = mechanics.config.compressionStudyConfig()
 end
 
-if ~isfile(filename)
-    error("mechanics:workflow:CompressionFileNotFound", ...
-        "Input file does not exist: %s", filename);
-end
-if ~isfinite(config.geometry.initialLength) || ...
-        config.geometry.initialLength <= 0 || ...
-        ~isfinite(config.geometry.initialArea) || ...
-        config.geometry.initialArea <= 0
-    error("mechanics:workflow:InvalidCompressionGeometry", ...
-        "Compression geometry requires positive initialLength and initialArea.");
-end
+[manifest, sourceFile] = localManifest( ...
+    manifestInput, config.defaultInitialLength);
+records = repmat(localEmptyRecord(), height(manifest), 1);
 
-specimen = mechanics.io.readSpecimenTable(filename, config.import);
-specimen.testType = "compression";
-cycle = mechanics.segmentation.selectCompressionCycle( ...
-    specimen.raw, config.cycle);
+for index = 1:height(manifest)
+    records(index).index = index;
+    records(index).specimenId = manifest.SpecimenId(index);
+    records(index).sheetName = manifest.File(index);
+    if ~manifest.Include(index)
+        records(index).status = "skipped";
+        continue;
+    end
 
-fullCycleIndices = (cycle.cycleStartIndex:cycle.cycleEndIndex)';
-fullCycleRaw = localSubsetRaw(specimen.raw, fullCycleIndices);
-selectedRaw = cycle.selectedRaw;
+    try
+        specimenConfig = config.specimen;
+        specimenConfig.import.specimenId = manifest.SpecimenId(index);
+        specimenConfig.geometry.initialLength = manifest.InitialLength(index);
+        specimenConfig.geometry.initialArea = manifest.InitialArea(index);
+        specimenConfig.export.enabled = false;
 
-signConvention = lower(string(config.signConvention));
-switch signConvention
-    case "positive-compression"
-        fullCycleRaw.force = localPositiveIncrement(fullCycleRaw.force);
-        fullCycleRaw.displacement = localPositiveIncrement(fullCycleRaw.displacement);
-        selectedRaw.force = localPositiveIncrement(selectedRaw.force);
-        selectedRaw.displacement = localPositiveIncrement(selectedRaw.displacement);
-    case "instrument"
-        % Preserve imported signs.
-    otherwise
-        error("mechanics:workflow:UnknownCompressionSignConvention", ...
-            "Unknown compression sign convention: %s", config.signConvention);
-end
-
-relativeLoadingEndIndex = ...
-    cycle.loadingEndIndex - cycle.cycleStartIndex + 1;
-cycleMetrics = mechanics.analysis.computeCompressionCycleMetrics( ...
-    fullCycleRaw, relativeLoadingEndIndex, config.geometry);
-
-specimen.originalRaw = specimen.raw;
-specimen.fullCycleRaw = fullCycleRaw;
-specimen.raw = selectedRaw;
-specimen.cycleSelection = rmfield(cycle, "selectedRaw");
-specimen.cycleMetrics = cycleMetrics;
-specimen = mechanics.workflow.processUniaxialSpecimen( ...
-    specimen, config.geometry, config.processing);
-
-if config.fitting.enabled
-    compressionDeformation = -specimen.processed.strain;
-    compressionStress = -specimen.processed.stress;
-    specimen.modelSelection = mechanics.fitting.fitAcrossWindows( ...
-        config.fitting.modelNames, compressionDeformation, ...
-        compressionStress, config.fitting.context, ...
-        config.fitting.fitConfig, config.fitting.selectionConfig);
-    specimen.modelSelection.compressionSignTransform = ...
-        "positive compression converted to negative engineering strain and nominal stress";
-
-    monteCarloConfig = config.fitting.measurementMonteCarlo;
-    if monteCarloConfig.enabled && ...
-            specimen.modelSelection.selection.hasEligibleModel
-        selectedRecord = localSelectedFitRecord(specimen.modelSelection);
-        fitSpecimen = specimen;
-        fitSpecimen.processed.force = -specimen.processed.force;
-        fitSpecimen.processed.displacement = -specimen.processed.displacement;
-        fitSpecimen.processed.strain = compressionDeformation;
-        fitSpecimen.processed.stress = compressionStress;
-        specimen.measurementMonteCarloFit = ...
-            mechanics.fitting.measurementMonteCarloFitUncertainty( ...
-                fitSpecimen, selectedRecord.fitResult, monteCarloConfig);
+        specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
+            manifest.File(index), specimenConfig);
+        records(index).status = "processed";
+        records(index).specimen = specimenStudy.specimen;
+        records(index).cycle = specimenStudy.cycle;
+        records(index).cycleMetrics = specimenStudy.cycleMetrics;
+    catch ME
+        records(index).status = "failed";
+        records(index).errorIdentifier = string(ME.identifier);
+        records(index).errorMessage = string(ME.message);
+        if ~config.continueOnError
+            rethrow(ME);
+        end
     end
 end
 
-study.sourceFile = filename;
-study.specimen = specimen;
-study.cycle = specimen.cycleSelection;
-study.cycleMetrics = cycleMetrics;
+analysis.records = records;
+analysis.summary = localSummary(records);
+analysis.createdAt = datetime("now");
+
+population = struct();
+populationStatus = "disabled";
+populationErrorIdentifier = "";
+populationErrorMessage = "";
+if config.population.enabled
+    try
+        population = mechanics.workflow.analyzeSpecimenPopulation( ...
+            analysis, config.population.config);
+        populationStatus = "completed";
+    catch ME
+        populationStatus = "failed";
+        populationErrorIdentifier = string(ME.identifier);
+        populationErrorMessage = string(ME.message);
+        if ~config.population.continueOnError
+            rethrow(ME);
+        end
+    end
+end
+
+study.sourceFile = sourceFile;
+study.sourceFiles = unique(manifest.File(manifest.Include), "stable");
+study.manifest = manifest;
+study.analysis = analysis;
+study.population = population;
+study.populationStatus = populationStatus;
+study.populationErrorIdentifier = populationErrorIdentifier;
+study.populationErrorMessage = populationErrorMessage;
 study.config = config;
 study.createdAt = datetime("now");
-
-if config.export.enabled
-    study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
-end
 end
 
-function record = localSelectedFitRecord(modelSelection)
-selection = modelSelection.selection;
-records = modelSelection.records;
-modelMask = string({records.modelName}) == string(selection.bestModel);
-successMask = [records.succeeded];
-candidates = find(modelMask & successMask);
-if isempty(candidates)
-    error("mechanics:workflow:SelectedCompressionFitMissing", ...
-        "The selected compression fit record could not be resolved.");
-end
-[~, localIndex] = max([records(candidates).windowFraction]);
-record = records(candidates(localIndex));
-end
-
-function output = localPositiveIncrement(input)
-input = input(:);
-if input(end) - input(1) < 0
-    output = -input;
+function [manifest, sourceFile] = localManifest(input, defaultLength)
+sourceFile = "";
+if istable(input)
+    manifest = input;
+elseif ischar(input) || (isstring(input) && isscalar(input))
+    sourceFile = string(input);
+    if ~isfile(sourceFile)
+        error("mechanics:workflow:CompressionManifestNotFound", ...
+            "Compression manifest does not exist: %s", sourceFile);
+    end
+    manifest = readtable(sourceFile, "VariableNamingRule", "preserve");
 else
-    output = input;
+    error("mechanics:workflow:InvalidCompressionStudyInput", ...
+        "Compression study input must be a manifest table or filename.");
+end
+
+required = ["File", "SpecimenId", "InitialArea"];
+names = string(manifest.Properties.VariableNames);
+if ~all(ismember(required, names))
+    error("mechanics:workflow:InvalidCompressionStudyManifest", ...
+        "Manifest requires File, SpecimenId, and InitialArea columns.");
+end
+manifest.File = string(manifest.File);
+manifest.SpecimenId = string(manifest.SpecimenId);
+if ~ismember("InitialLength", names)
+    manifest.InitialLength = repmat(defaultLength, height(manifest), 1);
+end
+if ~ismember("Include", names)
+    manifest.Include = true(height(manifest), 1);
+else
+    manifest.Include = logical(manifest.Include);
+end
+if any(strlength(strtrim(manifest.File)) == 0) || ...
+        any(strlength(strtrim(manifest.SpecimenId)) == 0)
+    error("mechanics:workflow:InvalidCompressionStudyManifest", ...
+        "File and SpecimenId values must be nonempty.");
+end
+if numel(unique(manifest.SpecimenId)) ~= height(manifest)
+    error("mechanics:workflow:DuplicateCompressionSpecimenId", ...
+        "SpecimenId values must be unique within one compression study.");
+end
+if any(~isfinite(manifest.InitialLength) | manifest.InitialLength <= 0) || ...
+        any(~isfinite(manifest.InitialArea) | manifest.InitialArea <= 0)
+    error("mechanics:workflow:InvalidCompressionStudyGeometry", ...
+        "InitialLength and InitialArea must be positive finite values.");
 end
 end
 
-function output = localSubsetRaw(raw, indices)
-output.force = raw.force(indices);
-output.displacement = raw.displacement(indices);
-if isfield(raw, "time")
-    output.time = raw.time(indices);
+function summary = localSummary(records)
+count = numel(records);
+Index = (1:count)';
+SpecimenId = string({records.specimenId})';
+Status = string({records.status})';
+ObservationCount = nan(count, 1);
+MaximumStrain = nan(count, 1);
+MaximumStress = nan(count, 1);
+MedianTangentModulus = nan(count, 1);
+SelectedModel = strings(count, 1);
+ErrorIdentifier = string({records.errorIdentifier})';
+ErrorMessage = string({records.errorMessage})';
+
+for index = 1:count
+    if records(index).status ~= "processed"
+        continue;
+    end
+    specimen = records(index).specimen;
+    metrics = records(index).cycleMetrics;
+    ObservationCount(index) = numel(specimen.processed.strain);
+    MaximumStrain(index) = metrics.peakStrain;
+    MaximumStress(index) = metrics.peakStress;
+    MedianTangentModulus(index) = ...
+        specimen.analysis.tangentModulus.medianModulus;
+    if isfield(specimen, "modelSelection") && ...
+            specimen.modelSelection.selection.hasEligibleModel
+        SelectedModel(index) = specimen.modelSelection.selection.bestModel;
+    end
 end
-if isfield(raw, "currentArea")
-    output.currentArea = raw.currentArea(indices);
+
+summary = table(Index, SpecimenId, Status, ObservationCount, ...
+    MaximumStrain, MaximumStress, MedianTangentModulus, SelectedModel, ...
+    ErrorIdentifier, ErrorMessage);
 end
-if isfield(raw, "units")
-    output.units = raw.units;
-end
+
+function record = localEmptyRecord()
+record.index = NaN;
+record.specimenId = "";
+record.sheetName = "";
+record.status = "pending";
+record.specimen = struct();
+record.cycle = struct();
+record.cycleMetrics = struct();
+record.errorIdentifier = "";
+record.errorMessage = "";
+record.group = "";
 end
