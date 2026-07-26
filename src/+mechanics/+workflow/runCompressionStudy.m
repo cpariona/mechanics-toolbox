@@ -26,27 +26,23 @@ fullCycleIndices = (cycle.cycleStartIndex:cycle.cycleEndIndex)';
 fullCycleRaw = localSubsetRaw(specimen.raw, fullCycleIndices);
 selectedRaw = cycle.selectedRaw;
 
-signConvention = lower(string(config.signConvention));
-switch signConvention
-    case "positive-compression"
-        fullCycleRaw.force = localPositiveIncrement(fullCycleRaw.force);
-        fullCycleRaw.displacement = localPositiveIncrement(fullCycleRaw.displacement);
-        selectedRaw.force = localPositiveIncrement(selectedRaw.force);
-        selectedRaw.displacement = localPositiveIncrement(selectedRaw.displacement);
-    case "instrument"
-        % Preserve imported signs.
-    otherwise
-        error("mechanics:workflow:UnknownCompressionSignConvention", ...
-            "Unknown compression sign convention: %s", config.signConvention);
-end
-
 relativeLoadingEndIndex = ...
     cycle.loadingEndIndex - cycle.cycleStartIndex + 1;
+localValidateSignConvention(config.signConvention);
+
+% Conditioning-cycle metrics remain positive presentation magnitudes.
+fullCycleMagnitude = localCompressionMagnitude( ...
+    fullCycleRaw, relativeLoadingEndIndex);
 cycleMetrics = mechanics.analysis.computeCompressionCycleMetrics( ...
-    fullCycleRaw, relativeLoadingEndIndex, config.geometry);
+    fullCycleMagnitude, relativeLoadingEndIndex, config.geometry);
+
+% The maintained mechanical state uses physical compression signs.
+selectedRaw.force = -localCompressionMagnitudeVector(selectedRaw.force);
+selectedRaw.displacement = ...
+    -localCompressionMagnitudeVector(selectedRaw.displacement);
 
 specimen.originalRaw = specimen.raw;
-specimen.fullCycleRaw = fullCycleRaw;
+specimen.fullCycleRaw = fullCycleMagnitude;
 specimen.raw = selectedRaw;
 specimen.cycleSelection = rmfield(cycle, "selectedRaw");
 specimen.cycleMetrics = cycleMetrics;
@@ -54,27 +50,18 @@ specimen = mechanics.workflow.processUniaxialSpecimen( ...
     specimen, config.geometry, config.processing);
 
 if config.fitting.enabled
-    compressionDeformation = -specimen.processed.strain;
-    compressionStress = -specimen.processed.stress;
     specimen.modelSelection = mechanics.fitting.fitAcrossWindows( ...
-        config.fitting.modelNames, compressionDeformation, ...
-        compressionStress, config.fitting.context, ...
+        config.fitting.modelNames, specimen.processed.strain, ...
+        specimen.processed.stress, config.fitting.context, ...
         config.fitting.fitConfig, config.fitting.selectionConfig);
-    specimen.modelSelection.compressionSignTransform = ...
-        "positive compression converted to negative engineering strain and nominal stress";
 
     monteCarloConfig = config.fitting.measurementMonteCarlo;
     if monteCarloConfig.enabled && ...
             specimen.modelSelection.selection.hasEligibleModel
         selectedRecord = localSelectedFitRecord(specimen.modelSelection);
-        fitSpecimen = specimen;
-        fitSpecimen.processed.force = -specimen.processed.force;
-        fitSpecimen.processed.displacement = -specimen.processed.displacement;
-        fitSpecimen.processed.strain = compressionDeformation;
-        fitSpecimen.processed.stress = compressionStress;
         specimen.measurementMonteCarloFit = ...
             mechanics.fitting.measurementMonteCarloFitUncertainty( ...
-                fitSpecimen, selectedRecord.fitResult, monteCarloConfig);
+                specimen, selectedRecord.fitResult, monteCarloConfig);
     end
 end
 
@@ -104,9 +91,29 @@ end
 record = records(candidates(localIndex));
 end
 
-function output = localPositiveIncrement(input)
+function localValidateSignConvention(value)
+value = lower(string(value));
+if ~ismember(value, ["positive-compression", "instrument"])
+    error("mechanics:workflow:UnknownCompressionSignConvention", ...
+        "Unknown compression sign convention: %s", value);
+end
+end
+
+function output = localCompressionMagnitude(raw, loadingEndIndex)
+output = raw;
+output.force = localCompressionMagnitudeVector( ...
+    raw.force, loadingEndIndex);
+output.displacement = localCompressionMagnitudeVector( ...
+    raw.displacement, loadingEndIndex);
+end
+
+function output = localCompressionMagnitudeVector(input, loadingEndIndex)
 input = input(:);
-if input(end) - input(1) < 0
+if nargin < 2
+    loadingEndIndex = numel(input);
+end
+loadingIncrement = input(loadingEndIndex) - input(1);
+if loadingIncrement < 0
     output = -input;
 else
     output = input;
