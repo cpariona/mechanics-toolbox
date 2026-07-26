@@ -54,21 +54,19 @@ for specimenIndex = 1:numel(specimenSheets)
     end
 
     specimen.sheetName = sheetName;
-    specimen.testType = "tension";
+    specimen.testType = metadata.testType;
 
     specimen.raw.displacement = displacement(valid);
     specimen.raw.force = force(valid);
 
-    specimen.geometry.initialLength = config.defaultInitialLength;
+    specimen.geometry.initialLength = metadata.initialLength;
+    if ~isfinite(specimen.geometry.initialLength)
+        specimen.geometry.initialLength = config.defaultInitialLength;
+    end
+    specimen.geometry.initialArea = metadata.initialArea;
     specimen.geometry.thickness = metadata.thickness;
     specimen.geometry.width = metadata.width;
-
-    if isfinite(metadata.thickness) && isfinite(metadata.width)
-        specimen.geometry.initialArea = ...
-            metadata.thickness .* metadata.width;
-    else
-        specimen.geometry.initialArea = NaN;
-    end
+    specimen.geometry.diameter = metadata.diameter;
 
     specimen.source.filename = filename;
     specimen.source.sheet = sheetName;
@@ -85,6 +83,7 @@ for specimenIndex = 1:numel(specimenSheets)
     specimen.metadata.resultsSheet = resultsSheet;
     specimen.metadata.resultsRow = metadata.rowIndex;
     specimen.metadata.originalSheetLabel = metadata.sheetLabel;
+    specimen.metadata.geometryType = metadata.geometryType;
 
     specimen.processingHistory = localHistoryEntry( ...
         "extraction", ...
@@ -120,29 +119,75 @@ if size(cells, 1) < startRow
     return;
 end
 
+headerNames = localHeaderNames(cells, zwickConfig.resultsHeaderRow);
+sheetColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.resultsSheetNameAliases, ...
+    zwickConfig.resultsSheetNameColumn);
+specimenIdColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.specimenIdAliases, ...
+    zwickConfig.specimenIdColumn);
+thicknessColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.thicknessAliases, []);
+widthColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.widthAliases, []);
+diameterColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.diameterAliases, []);
+initialLengthColumn = localResolveMetadataColumn( ...
+    headerNames, zwickConfig.initialLengthAliases, []);
+
 rows = repmat(localEmptyMetadata(), size(cells, 1) - startRow + 1, 1);
 outputIndex = 0;
 
 for rowIndex = startRow:size(cells, 1)
-    sheetLabel = localCellString( ...
-        cells, rowIndex, zwickConfig.resultsSheetNameColumn);
-
+    sheetLabel = localCellString(cells, rowIndex, sheetColumn);
     if strlength(strtrim(sheetLabel)) == 0
         continue;
     end
 
     outputIndex = outputIndex + 1;
-    rows(outputIndex).rowIndex = rowIndex;
-    rows(outputIndex).sheetLabel = sheetLabel;
-    rows(outputIndex).specimenId = localCellString( ...
-        cells, rowIndex, zwickConfig.specimenIdColumn);
-    rows(outputIndex).thickness = localCellNumeric( ...
-        cells, rowIndex, zwickConfig.thicknessColumn);
-    rows(outputIndex).width = localCellNumeric( ...
-        cells, rowIndex, zwickConfig.widthColumn);
+    metadata = localEmptyMetadata();
+    metadata.rowIndex = rowIndex;
+    metadata.sheetLabel = sheetLabel;
+    metadata.specimenId = localCellString( ...
+        cells, rowIndex, specimenIdColumn);
+    metadata.thickness = localCellNumeric( ...
+        cells, rowIndex, thicknessColumn);
+    metadata.width = localCellNumeric( ...
+        cells, rowIndex, widthColumn);
+    metadata.diameter = localCellNumeric( ...
+        cells, rowIndex, diameterColumn);
+    metadata.initialLength = localCellNumeric( ...
+        cells, rowIndex, initialLengthColumn);
+
+    if isfinite(metadata.diameter) && isfinite(metadata.initialLength)
+        metadata.initialArea = pi .* metadata.diameter.^2 ./ 4;
+        metadata.geometryType = "circular";
+        metadata.testType = "compression";
+    elseif isfinite(metadata.thickness) && isfinite(metadata.width)
+        metadata.initialArea = metadata.thickness .* metadata.width;
+        metadata.geometryType = "rectangular";
+        metadata.testType = "tension";
+    end
+
+    rows(outputIndex) = metadata;
 end
 
 rows = rows(1:outputIndex);
+end
+
+function names = localHeaderNames(cells, rowIndex)
+columnCount = size(cells, 2);
+names = strings(1, columnCount);
+for columnIndex = 1:columnCount
+    names(columnIndex) = localCellString(cells, rowIndex, columnIndex);
+end
+end
+
+function columnIndex = localResolveMetadataColumn(names, aliases, fallback)
+columnIndex = localResolveAlias(names, aliases, false);
+if isempty(columnIndex)
+    columnIndex = fallback;
+end
 end
 
 function metadata = localFindMetadata(rows, sheetName)
@@ -196,7 +241,6 @@ numericData = nan( ...
 
 for rowIndex = zwickConfig.dataStartRow:lastDataRow
     outputRow = rowIndex - zwickConfig.dataStartRow + 1;
-
     for columnIndex = 1:columnCount
         numericData(outputRow, columnIndex) = ...
             localNumericValue(cells{rowIndex, columnIndex});
@@ -229,14 +273,13 @@ end
 end
 
 function value = localCellString(cells, rowIndex, columnIndex)
-if rowIndex > size(cells, 1) || columnIndex > size(cells, 2)
+if isempty(columnIndex) || rowIndex > size(cells, 1) || ...
+        columnIndex > size(cells, 2)
     value = "";
     return;
 end
-
 raw = cells{rowIndex, columnIndex};
 isMissingScalar = isscalar(raw) && ismissing(raw);
-
 if isempty(raw) || isMissingScalar
     value = "";
 else
@@ -245,7 +288,8 @@ end
 end
 
 function value = localCellNumeric(cells, rowIndex, columnIndex)
-if rowIndex > size(cells, 1) || columnIndex > size(cells, 2)
+if isempty(columnIndex) || rowIndex > size(cells, 1) || ...
+        columnIndex > size(cells, 2)
     value = NaN;
     return;
 end
@@ -268,8 +312,13 @@ function metadata = localEmptyMetadata()
 metadata.rowIndex = NaN;
 metadata.sheetLabel = "";
 metadata.specimenId = "";
+metadata.testType = "";
+metadata.geometryType = "";
 metadata.thickness = NaN;
 metadata.width = NaN;
+metadata.diameter = NaN;
+metadata.initialLength = NaN;
+metadata.initialArea = NaN;
 end
 
 function specimen = localEmptySpecimen()
