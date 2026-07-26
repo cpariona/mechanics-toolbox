@@ -114,26 +114,14 @@ switch method
         end
 
     case "preload-threshold"
-        threshold = abs(zeroConfig.preloadForce);
+        threshold = zeroConfig.preloadForce;
         sustainedPoints = max(1, round(zeroConfig.sustainedPoints));
-        direction = "increasing";
-        if isfield(zeroConfig, "loadingDirection")
-            direction = lower(string(zeroConfig.loadingDirection));
-        end
-        switch direction
-            case "increasing"
-                reached = force >= threshold;
-            case "decreasing"
-                reached = force <= -threshold;
-            otherwise
-                error("mechanics:preprocessing:UnknownPreloadDirection", ...
-                    "zeroReference.loadingDirection must be 'increasing' or 'decreasing'.");
-        end
-        runStart = conv(double(reached), ones(sustainedPoints, 1), "valid");
+        above = force >= threshold;
+        runStart = conv(double(above), ones(sustainedPoints, 1), "valid");
         referenceIndex = find(runStart == sustainedPoints, 1, "first");
         if isempty(referenceIndex)
             error("mechanics:preprocessing:PreloadNotReached", ...
-                "The force signal never reached the configured preload magnitude %.6g.", ...
+                "The force signal never reached the configured preload threshold %.6g.", ...
                 threshold);
         end
 
