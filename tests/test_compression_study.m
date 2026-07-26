@@ -42,6 +42,29 @@ verifyEqual(testCase, study.cycleMetrics.hysteresisEnergy, 0, "AbsTol", 1e-12);
 verifyEqual(testCase, study.cycleMetrics.hysteresisFraction, 0, "AbsTol", 1e-12);
 end
 
+function testLeadingDisplacementReversalIsTrimmed(testCase)
+loadingDisplacement = [0.003; 0; 0.01; 0.02; 0.04; 0.06; 0.08; 0.10]';
+loadingDisplacement = loadingDisplacement(:);
+unloadingDisplacement = flipud(loadingDisplacement(1:end-1));
+displacement = [loadingDisplacement; unloadingDisplacement];
+force = 5 .* displacement;
+filename = string(tempname) + ".csv";
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
+writetable(table(force, displacement, ...
+    'VariableNames', {'Force','Displacement'}), filename);
+config = mechanics.config.compressionSpecimenConfig();
+config.geometry.initialLength = 1;
+config.geometry.initialArea = 1;
+config.cycle.smoothingFrameLength = 1;
+config.cycle.minimumObservations = 5;
+config.processing.analysis.summaryStrainRange = [-0.1, 0];
+study = mechanics.workflow.runCompressionSpecimen(filename, config);
+verifyEqual(testCase, study.cycle.leadingTrimCount, 1);
+verifyLessThanOrEqual(testCase, max(study.specimen.processed.displacement), 0);
+verifyLessThanOrEqual(testCase, max(study.specimen.processed.strain), 0);
+verifyLessThanOrEqual(testCase, max(study.specimen.processed.stretch), 1);
+end
+
 function testDissipativeCycleProducesPositiveHysteresis(testCase)
 loadingDisplacement = linspace(0, 1, 11)';
 unloadingDisplacement = linspace(1, 0, 11)';
