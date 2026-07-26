@@ -8,7 +8,6 @@ config.preprocessing.endIndex = Inf;
 
 config.preprocessing.zeroReference.method = "first-sample";
 config.preprocessing.zeroReference.preloadForce = 0;
-config.preprocessing.zeroReference.loadingDirection = "increasing";
 config.preprocessing.zeroReference.manualIndex = 1;
 config.preprocessing.zeroReference.sustainedPoints = 3;
 config.preprocessing.zeroReference.trimBeforeReference = true;
