@@ -37,8 +37,10 @@ end
 
 function testMeasureMismatchIsRejected(testCase)
 studies = [localStudy("a", 2), localStudy("b", 4)];
-studies(2).config.datasetAnalysis.processingConfig.mechanics.stressMeasure = ...
-    "true";
+for index = 1:numel(studies(2).analysis.records)
+    studies(2).analysis.records(index).specimen.processed ...
+        .mechanicsConfig.stressMeasure = "true";
+end
 verifyError(testCase, @() mechanics.workflow.compareTensileStudies( ...
     studies, ["first", "second"], localConfig()), ...
     "mechanics:workflow:IncompatibleStudyMeasures");
@@ -85,6 +87,8 @@ specimen.processed.strain = strain;
 specimen.processed.stress = slope .* strain;
 specimen.processed.units.strain = "1";
 specimen.processed.units.stress = "MPa";
+specimen.processed.mechanicsConfig = ...
+    mechanics.config.tensionConfig().mechanics;
 record.index = 1;
 record.specimenId = string(id);
 record.sheetName = string(id);
