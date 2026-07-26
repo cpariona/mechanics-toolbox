@@ -24,12 +24,6 @@ for index = 1:numel(entries)
         specimenConfig.geometry.initialLength = entries(index).initialLength;
         specimenConfig.geometry.initialArea = entries(index).initialArea;
         specimenConfig.export.enabled = false;
-        if isfinite(entries(index).preloadForceOverride)
-            specimenConfig.processing.preprocessing.zeroReference.method = ...
-                "preload-threshold";
-            specimenConfig.processing.preprocessing.zeroReference.preloadForce = ...
-                entries(index).preloadForceOverride;
-        end
 
         if entries(index).hasSpecimen
             specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
@@ -163,20 +157,6 @@ if any(~isfinite(excludeIndices)) || any(excludeIndices < 1) || ...
         "Every excluded specimen index must identify an extracted specimen.");
 end
 
-preloadOverrides = specimenConfig.preloadForceOverrides;
-if isempty(preloadOverrides)
-    preloadOverrides = nan(specimenCount, 1);
-else
-    preloadOverrides = preloadOverrides(:);
-    if numel(preloadOverrides) ~= specimenCount
-        error("mechanics:workflow:PreloadOverrideSizeMismatch", ...
-            "preloadForceOverrides must be empty or contain one value per extracted specimen.");
-    end
-end
-
-for index = 1:specimenCount
-    entries(index).preloadForceOverride = preloadOverrides(index);
-end
 for index = excludeIndices(:)'
     entries(index).include = false;
     manifest.Include(index) = false;
@@ -248,7 +228,6 @@ for index = 1:numel(specimens)
     if isfield(specimen, "source") && isfield(specimen.source, "filename")
         entries(index).filename = string(specimen.source.filename);
     end
-
     if strlength(entries(index).specimenId) == 0
         entries(index).specimenId = entries(index).sheetName;
     end
@@ -388,7 +367,6 @@ entry.sheetName = "";
 entry.initialLength = NaN;
 entry.initialArea = NaN;
 entry.include = true;
-entry.preloadForceOverride = NaN;
 entry.hasSpecimen = false;
 entry.specimen = struct();
 end
