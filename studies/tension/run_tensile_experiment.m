@@ -470,7 +470,7 @@ end
 
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
-runSelectedParameterPopulation = false;
+runSelectedParameterPopulation = true;
 runGroupComparison = false;
 runGroupParameterInference = false;
 runConstitutiveStudyReport = false;
