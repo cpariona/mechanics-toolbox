@@ -54,9 +54,23 @@ config.defaultInitialLength = 25;
 dataset = mechanics.extraction.extractWorkbook(filename, config);
 ```
 
-The maintained registry includes `zwick-d412` and `generic-table`. Extraction returns a normalized dataset whose specimens contain raw signals, source metadata, geometry, and processing history.
+The maintained registry includes `zwick-d412` and `generic-table`. The Zwick
+entry is retained for compatibility, but the adapter now supports both tensile
+and compression workbooks that use `Resultados` plus `Probeta` sheets.
+Extraction returns a normalized dataset whose specimens contain raw signals,
+source metadata, geometry, test type, and processing history.
 
-The Zwick D412 adapter expects a configurable results sheet and specimen sheets. Gauge length must be supplied when it is absent from the workbook.
+Geometry is resolved from result-sheet headers rather than fixed columns:
+
+```text
+Tension:     h + b   -> initialArea = h*b
+Compression: d0 + h0 -> initialArea = pi*d0^2/4, initialLength = h0
+```
+
+For tensile workbooks, gauge length must still be supplied when it is absent
+from the workbook. For compression workbooks, `h0` defines the initial length.
+The extractor reports dimensions but does not decide whether a specimen meets a
+particular standard tolerance.
 
 ## Batch manifests
 
