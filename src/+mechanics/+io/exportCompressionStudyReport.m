@@ -18,21 +18,99 @@ if fileId < 0
 end
 cleanup = onCleanup(@() fclose(fileId)); %#ok<NASGU>
 
+if isfield(study, "analysis") && isfield(study.analysis, "records")
+    localWritePopulationReport(fileId, study, config, figureFiles);
+else
+    localWriteSpecimenReport(fileId, study, figureFiles);
+end
+
+files = figureFiles;
+files.report = string(reportFile);
+end
+
+function localWritePopulationReport(fileId, study, config, figureFiles)
+titleText = localStudyTitle(study, config);
+summary = study.analysis.summary;
+status = string(summary.Status);
+
+fprintf(fileId, "# %s\n\n", char(titleText));
+fprintf(fileId, "Generated: %s\n\n", char(string(study.createdAt)));
+fprintf(fileId, "Source file: `%s`\n\n", char(string(study.sourceFile)));
+
+fprintf(fileId, "## Study summary\n\n");
+fprintf(fileId, "| Metric | Value |\n|---|---:|\n");
+fprintf(fileId, "| Extracted specimens | %d |\n", height(summary));
+fprintf(fileId, "| Excluded | %d |\n", nnz(status == "skipped"));
+fprintf(fileId, "| Processed | %d |\n", nnz(status == "processed"));
+fprintf(fileId, "| Failed | %d |\n", nnz(status == "failed"));
+fprintf(fileId, "| Population status | %s |\n\n", char(study.populationStatus));
+
+if isfield(study, "exclusion") && study.exclusion.count > 0
+    fprintf(fileId, "## Excluded specimens\n\n");
+    fprintf(fileId, "Reason: %s\n\n", char(study.exclusion.reason));
+    fprintf(fileId, "| Extraction index | Specimen | Sheet |\n|---:|---|---|\n");
+    for index = 1:study.exclusion.count
+        fprintf(fileId, "| %d | %s | %s |\n", ...
+            study.exclusion.indices(index), ...
+            char(study.exclusion.specimenIds(index)), ...
+            char(study.exclusion.sheetNames(index)));
+    end
+    fprintf(fileId, "\n");
+end
+
+fprintf(fileId, "## Specimen status\n\n");
+fprintf(fileId, ["| Specimen | Status | Maximum strain | Maximum stress | " ...
+    "Median tangent modulus | Selected model |\n"]);
+fprintf(fileId, "|---|---|---:|---:|---:|---|\n");
+for row = 1:height(summary)
+    fprintf(fileId, "| %s | %s | %.6g | %.6g | %.6g | %s |\n", ...
+        char(summary.SpecimenId(row)), char(summary.Status(row)), ...
+        summary.MaximumStrain(row), summary.MaximumStress(row), ...
+        summary.MedianTangentModulus(row), char(summary.SelectedModel(row)));
+end
+fprintf(fileId, "\n");
+
+if study.populationStatus == "completed"
+    fprintf(fileId, "## Population analysis\n\n");
+    fprintf(fileId, "- Retained specimen count: %d\n", study.population.specimenCount);
+    fprintf(fileId, "- Central statistic: `%s`\n", ...
+        char(string(study.population.curves.centralStatistic)));
+    fprintf(fileId, "- Tangent-modulus population status: `%s`\n\n", ...
+        char(string(study.population.tangentModulusStatus)));
+
+    modelParameters = study.population.modelParameters;
+    if isfield(modelParameters, "summary") && ~isempty(modelParameters.summary)
+        fprintf(fileId, "### Selected-model parameter summary\n\n");
+        localWriteTable(fileId, modelParameters.summary);
+    end
+end
+
+localWriteFigures(fileId, figureFiles);
+
+fprintf(fileId, "## Reproducibility\n\n");
+if isfield(study, "provenance")
+    fprintf(fileId, "- MATLAB release: `%s`\n", ...
+        char(string(study.provenance.matlabRelease)));
+    fprintf(fileId, "- Platform: `%s`\n", char(string(study.provenance.platform)));
+    fprintf(fileId, "- Input type: `%s`\n", char(string(study.provenance.inputType)));
+end
+fprintf(fileId, "- Configuration is stored in `study.config`.\n");
+fprintf(fileId, "- Processed compression variables retain physical negative signs; report figures use positive magnitudes.\n");
+fprintf(fileId, "- The maintained Method A workflow uses the last complete loading cycle and first-sample zeroing.\n");
+end
+
+function localWriteSpecimenReport(fileId, study, figureFiles)
 metrics = study.cycleMetrics;
 [~, sourceName, sourceExtension] = fileparts(string(study.sourceFile));
 fprintf(fileId, "# Compression study report\n\n");
 fprintf(fileId, "Generated: %s\n\n", char(string(study.createdAt)));
 fprintf(fileId, "Source file: `%s%s`\n\n", sourceName, sourceExtension);
-
-fprintf(fileId, "## Cycle selection\n\n");
-fprintf(fileId, "| Metric | Value |\n|---|---:|\n");
+fprintf(fileId, "## Cycle selection\n\n| Metric | Value |\n|---|---:|\n");
 fprintf(fileId, "| Detected complete cycles | %d |\n", study.cycle.cycleCount);
 fprintf(fileId, "| Selected cycle | %d |\n", study.cycle.selectedCycleIndex);
 fprintf(fileId, "| Selected branch | %s |\n", char(study.cycle.branch));
 fprintf(fileId, "| Loading direction | %s |\n\n", char(study.cycle.loadingDirection));
-
-fprintf(fileId, "## Mechanical metrics\n\n");
-fprintf(fileId, "| Metric | Value | Unit |\n|---|---:|---|\n");
+fprintf(fileId, "## Mechanical metrics\n\n| Metric | Value | Unit |\n|---|---:|---|\n");
 fprintf(fileId, "| Peak force | %.6g | %s |\n", metrics.peakForce, metrics.units.force);
 fprintf(fileId, "| Peak displacement | %.6g | %s |\n", metrics.peakDisplacement, metrics.units.displacement);
 fprintf(fileId, "| Peak stress | %.6g | %s |\n", metrics.peakStress, metrics.units.stress);
@@ -43,24 +121,55 @@ fprintf(fileId, "| Hysteresis energy | %.6g | %s |\n", metrics.hysteresisEnergy,
 fprintf(fileId, "| Hysteresis fraction | %.6g | - |\n", metrics.hysteresisFraction);
 fprintf(fileId, "| Median tangent modulus | %.6g | %s |\n\n", ...
     study.specimen.analysis.tangentModulus.medianModulus, metrics.units.stress);
-
-fields = fieldnames(figureFiles);
-if ~isempty(fields)
-    fprintf(fileId, "## Figures\n\n");
-    for index = 1:numel(fields)
-        path = string(figureFiles.(fields{index}));
-        [~, name, extension] = fileparts(path);
-        label = regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2");
-        fprintf(fileId, "### %s\n\n", label);
-        fprintf(fileId, "![%s](%s%s)\n\n", label, name, extension);
-    end
-end
-
+localWriteFigures(fileId, figureFiles);
 fprintf(fileId, "## Interpretation limits\n\n");
 fprintf(fileId, "- Metrics refer to the configured selected cycle.\n");
 fprintf(fileId, "- Hysteresis is computed from force-displacement work over the selected full cycle.\n");
 fprintf(fileId, "- Contact detection and sign convention remain configuration-dependent.\n");
+end
 
-files = figureFiles;
-files.report = string(reportFile);
+function localWriteFigures(fileId, figureFiles)
+fields = fieldnames(figureFiles);
+if isempty(fields)
+    return;
+end
+fprintf(fileId, "## Figures\n\n");
+for index = 1:numel(fields)
+    path = string(figureFiles.(fields{index}));
+    [~, name, extension] = fileparts(path);
+    label = regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2");
+    fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", label, label, name, extension);
+end
+end
+
+function localWriteTable(fileId, inputTable)
+names = string(inputTable.Properties.VariableNames);
+fprintf(fileId, "| %s |\n", char(strjoin(names, " | ")));
+fprintf(fileId, "|%s|\n", char(strjoin(repmat("---", size(names)), "|")));
+for row = 1:height(inputTable)
+    values = strings(1, width(inputTable));
+    for column = 1:width(inputTable)
+        value = inputTable{row, column};
+        if isnumeric(value) || islogical(value)
+            values(column) = string(value);
+        else
+            values(column) = string(inputTable.(names(column))(row));
+        end
+    end
+    fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
+end
+fprintf(fileId, "\n");
+end
+
+function titleText = localStudyTitle(study, config)
+if string(config.studyTitle) ~= "auto"
+    titleText = string(config.studyTitle);
+    return;
+end
+[~, filename] = fileparts(string(study.sourceFile));
+filename = replace(filename, ["_", "-"], " ");
+if strlength(filename) == 0
+    filename = "Compression study";
+end
+titleText = filename + " - compression study report";
 end
