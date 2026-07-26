@@ -6,6 +6,8 @@ arguments
 end
 
 [entries, manifest, inputInfo] = localNormalizeInput(inputValue, config);
+[entries, manifest, exclusion] = localApplySpecimenConfiguration( ...
+    entries, manifest, config.specimens);
 records = repmat(localEmptyRecord(), numel(entries), 1);
 
 for index = 1:numel(entries)
@@ -22,6 +24,12 @@ for index = 1:numel(entries)
         specimenConfig.geometry.initialLength = entries(index).initialLength;
         specimenConfig.geometry.initialArea = entries(index).initialArea;
         specimenConfig.export.enabled = false;
+        if isfinite(entries(index).preloadForceOverride)
+            specimenConfig.processing.preprocessing.zeroReference.method = ...
+                "preload-threshold";
+            specimenConfig.processing.preprocessing.zeroReference.preloadForce = ...
+                entries(index).preloadForceOverride;
+        end
 
         if entries(index).hasSpecimen
             specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
@@ -76,6 +84,7 @@ study.sourceFile = inputInfo.primarySource;
 study.sourceFiles = inputInfo.sourceFiles;
 study.input = inputInfo;
 study.manifest = manifest;
+study.exclusion = exclusion;
 study.analysis = analysis;
 study.population = population;
 study.populationStatus = populationStatus;
@@ -142,6 +151,47 @@ if ~isempty(inputInfo.sourceFiles)
     inputInfo.primarySource = inputInfo.sourceFiles(1);
 end
 inputInfo.specimenCount = numel(entries);
+end
+
+function [entries, manifest, exclusion] = localApplySpecimenConfiguration( ...
+        entries, manifest, specimenConfig)
+specimenCount = numel(entries);
+excludeIndices = unique(round(specimenConfig.excludeIndices(:)));
+if any(~isfinite(excludeIndices)) || any(excludeIndices < 1) || ...
+        any(excludeIndices > specimenCount)
+    error("mechanics:workflow:InvalidExcludedSpecimenIndex", ...
+        "Every excluded specimen index must identify an extracted specimen.");
+end
+
+preloadOverrides = specimenConfig.preloadForceOverrides;
+if isempty(preloadOverrides)
+    preloadOverrides = nan(specimenCount, 1);
+else
+    preloadOverrides = preloadOverrides(:);
+    if numel(preloadOverrides) ~= specimenCount
+        error("mechanics:workflow:PreloadOverrideSizeMismatch", ...
+            "preloadForceOverrides must be empty or contain one value per extracted specimen.");
+    end
+end
+
+for index = 1:specimenCount
+    entries(index).preloadForceOverride = preloadOverrides(index);
+end
+for index = excludeIndices(:)'
+    entries(index).include = false;
+    manifest.Include(index) = false;
+end
+
+exclusion.indices = excludeIndices;
+exclusion.specimenIds = strings(numel(excludeIndices), 1);
+exclusion.sheetNames = strings(numel(excludeIndices), 1);
+for outputIndex = 1:numel(excludeIndices)
+    index = excludeIndices(outputIndex);
+    exclusion.specimenIds(outputIndex) = entries(index).specimenId;
+    exclusion.sheetNames(outputIndex) = entries(index).sheetName;
+end
+exclusion.reason = string(specimenConfig.exclusionReason);
+exclusion.count = numel(excludeIndices);
 end
 
 function inputType = localResolveInputType(inputValue, requestedType)
@@ -338,6 +388,7 @@ entry.sheetName = "";
 entry.initialLength = NaN;
 entry.initialArea = NaN;
 entry.include = true;
+entry.preloadForceOverride = NaN;
 entry.hasSpecimen = false;
 entry.specimen = struct();
 end
