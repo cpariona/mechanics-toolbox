@@ -55,7 +55,7 @@ writetable(table(force, displacement, ...
 config = mechanics.config.compressionSpecimenConfig();
 config.geometry.initialLength = 1;
 config.geometry.initialArea = 1;
-config.cycle.smoothingFrameLength = 1;
+config.cycle.smoothingFrameLength = 5;
 config.cycle.minimumObservations = 5;
 config.processing.analysis.summaryStrainRange = [-0.1, 0];
 study = mechanics.workflow.runCompressionSpecimen(filename, config);
