@@ -29,17 +29,21 @@ selectedRaw = cycle.selectedRaw;
 relativeLoadingEndIndex = ...
     cycle.loadingEndIndex - cycle.cycleStartIndex + 1;
 localValidateSignConvention(config.signConvention);
+[forceOrientation, displacementOrientation] = ...
+    localCompressionOrientation(fullCycleRaw, relativeLoadingEndIndex);
 
 % Conditioning-cycle metrics remain positive presentation magnitudes.
-fullCycleMagnitude = localCompressionMagnitude( ...
-    fullCycleRaw, relativeLoadingEndIndex);
+fullCycleMagnitude = fullCycleRaw;
+fullCycleMagnitude.force = forceOrientation .* fullCycleRaw.force;
+fullCycleMagnitude.displacement = ...
+    displacementOrientation .* fullCycleRaw.displacement;
 cycleMetrics = mechanics.analysis.computeCompressionCycleMetrics( ...
     fullCycleMagnitude, relativeLoadingEndIndex, config.geometry);
 
 % The maintained mechanical state uses physical compression signs.
-selectedRaw.force = -localCompressionMagnitudeVector(selectedRaw.force);
+selectedRaw.force = -forceOrientation .* selectedRaw.force;
 selectedRaw.displacement = ...
-    -localCompressionMagnitudeVector(selectedRaw.displacement);
+    -displacementOrientation .* selectedRaw.displacement;
 
 specimen.originalRaw = specimen.raw;
 specimen.fullCycleRaw = fullCycleMagnitude;
@@ -99,24 +103,21 @@ if ~ismember(value, ["positive-compression", "instrument"])
 end
 end
 
-function output = localCompressionMagnitude(raw, loadingEndIndex)
-output = raw;
-output.force = localCompressionMagnitudeVector( ...
+function [forceOrientation, displacementOrientation] = ...
+        localCompressionOrientation(raw, loadingEndIndex)
+forceOrientation = localPositiveLoadingOrientation( ...
     raw.force, loadingEndIndex);
-output.displacement = localCompressionMagnitudeVector( ...
+displacementOrientation = localPositiveLoadingOrientation( ...
     raw.displacement, loadingEndIndex);
 end
 
-function output = localCompressionMagnitudeVector(input, loadingEndIndex)
+function orientation = localPositiveLoadingOrientation(input, loadingEndIndex)
 input = input(:);
-if nargin < 2
-    loadingEndIndex = numel(input);
-end
 loadingIncrement = input(loadingEndIndex) - input(1);
 if loadingIncrement < 0
-    output = -input;
+    orientation = -1;
 else
-    output = input;
+    orientation = 1;
 end
 end
 
