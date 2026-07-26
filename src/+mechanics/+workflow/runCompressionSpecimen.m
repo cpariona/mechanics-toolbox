@@ -35,6 +35,16 @@ selectedRaw.force = -forceOrientation .* selectedRaw.force;
 selectedRaw.displacement = ...
     -displacementOrientation .* selectedRaw.displacement;
 
+% Cycle detection can include a few leading machine-jitter observations before
+% monotonic loading begins. Start the analyzed branch at its least-compressed
+% displacement so first-sample zeroing cannot create positive compression strain.
+[selectedRaw, leadingTrimCount] = localTrimLeadingDisplacementReversal( ...
+    selectedRaw, config.cycle.minimumObservations);
+if isfield(cycle, "selectedIndices") && leadingTrimCount > 0
+    cycle.selectedIndices = cycle.selectedIndices(leadingTrimCount + 1:end);
+end
+cycle.leadingTrimCount = leadingTrimCount;
+
 specimen.originalRaw = specimen.raw;
 specimen.fullCycleRaw = fullCycleMagnitude;
 specimen.raw = selectedRaw;
@@ -113,6 +123,23 @@ if ~isfinite(geometry.initialLength) || geometry.initialLength <= 0 || ...
     error("mechanics:workflow:InvalidCompressionGeometry", ...
         "Compression geometry requires positive initialLength and initialArea.");
 end
+end
+
+function [output, trimCount] = localTrimLeadingDisplacementReversal(input, minimumObservations)
+displacement = input.displacement(:);
+[~, startIndex] = max(displacement);
+trimCount = startIndex - 1;
+if trimCount == 0
+    output = input;
+    return;
+end
+indices = (startIndex:numel(displacement))';
+if numel(indices) < minimumObservations
+    error("mechanics:workflow:CompressionBranchTooShortAfterTrim", ...
+        ["Removing leading displacement reversal leaves fewer than %d " ...
+        "compression observations."], minimumObservations);
+end
+output = localSubsetRaw(input, indices);
 end
 
 function record = localSelectedFitRecord(modelSelection)
