@@ -42,6 +42,35 @@ verifyEqual(testCase, record(end).fitResult.parameters(1), 2.5, ...
     "RelTol", 0.05);
 end
 
+function testCompressionWorkbookRunsAsStudy(testCase)
+filename = localCompressionWorkbook();
+cleanup = onCleanup(@() localDelete(filename)); %#ok<NASGU>
+
+config = mechanics.config.compressionStudyConfig();
+config.specimen.cycle.smoothingFrameLength = 1;
+config.specimen.processing.analysis.summaryStrainRange = [-0.2, 0];
+config.population.config.bootstrap.enabled = false;
+config.population.config.strainGridPointCount = 21;
+
+study = mechanics.workflow.runCompressionStudy(filename, config);
+
+verifyEqual(testCase, study.input.type, "workbook");
+verifyEqual(testCase, height(study.manifest), 2);
+verifyEqual(testCase, study.manifest.SpecimenId, ["C1"; "C2"]);
+verifyEqual(testCase, study.manifest.InitialLength, [10; 12]);
+verifyEqual(testCase, study.manifest.InitialArea, ...
+    repmat(pi .* 20.^2 ./ 4, 2, 1), "AbsTol", 1e-12);
+verifyEqual(testCase, string({study.analysis.records.status})', ...
+    repmat("processed", 2, 1));
+verifyEqual(testCase, study.populationStatus, "completed");
+
+for index = 1:numel(study.analysis.records)
+    processed = study.analysis.records(index).specimen.processed;
+    verifyLessThanOrEqual(testCase, max(processed.strain), 0);
+    verifyLessThanOrEqual(testCase, max(processed.stress), 0);
+end
+end
+
 function testCompletedCompressionStudiesAreCompared(testCase)
 files = strings(4, 1);
 cleanup = onCleanup(@() localDeleteMany(files)); %#ok<NASGU>
@@ -85,6 +114,42 @@ verifyEqual(testCase, comparison.groupComparison.groups(2).specimenCount, 2);
 verifyGreaterThan(testCase, height(comparison.groupComparison.metricComparison), 0);
 verifyTrue(testCase, comparison.compatibility.measuresMatch);
 verifyTrue(testCase, comparison.compatibility.unitsMatch);
+end
+
+function filename = localCompressionWorkbook()
+filename = string(tempname) + ".xlsx";
+results = {
+    "", "Fecha/Hora", "Identificación de probeta", ...
+        "Fmax", "Fmin", "tensayo", "d0", "h0";
+    "", "", "", "N", "N", "s", "mm", "mm";
+    "Probeta 2", 46148.5, "C1", 20, 0, 10, 20, 10;
+    "Probeta 4", 46148.6, "C2", 20, 0, 10, 20, 12
+};
+writecell(results, filename, "Sheet", "Resultados", "Range", "A1");
+
+for index = 1:2
+    if index == 1
+        sheetName = "Probeta 2";
+        lengthValue = 10;
+    else
+        sheetName = "Probeta 4";
+        lengthValue = 12;
+    end
+    loadingDisplacement = linspace(0, 2, 21)';
+    loadingForce = 5 .* loadingDisplacement;
+    unloadingDisplacement = linspace(2, 0, 21)';
+    unloadingForce = flipud(loadingForce);
+    displacement = [loadingDisplacement; unloadingDisplacement(2:end)];
+    force = [loadingForce; unloadingForce(2:end)];
+    rows = [
+        {sheetName, sheetName};
+        {"Deformación", "Fuerza estándar"};
+        {"mm", "N"};
+        num2cell([displacement, force])
+    ];
+    writecell(rows, filename, "Sheet", sheetName, "Range", "A1");
+    assert(lengthValue > 0); %#ok<NASGU>
+end
 end
 
 function filename = localCompressionFile(mu, initialLength, initialArea)
