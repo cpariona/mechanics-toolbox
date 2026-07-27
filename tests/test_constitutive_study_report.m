@@ -33,8 +33,11 @@ config.figureResolution = 72;
 files = mechanics.plotting.exportConstitutiveStudyFigures( ...
     batch, population, inference, config);
 verifyTrue(testCase, isfile(files.modelSelection));
+verifyTrue(testCase, isfile(fullfile(folder, "model_selection.fig")));
 verifyTrue(testCase, isfile(files.selectedParameters));
+verifyTrue(testCase, isfile(fullfile(folder, "selected_parameters.fig")));
 verifyTrue(testCase, isfile(files.groupInference));
+verifyTrue(testCase, isfile(fullfile(folder, "group_parameter_inference.fig")));
 end
 
 function testFiguresCanBeDisabled(testCase)
