@@ -1,7 +1,6 @@
 # mechanics-toolbox
 
-MATLAB toolbox for reproducible processing, constitutive fitting, statistical
-analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
+MATLAB toolbox for reproducible processing, constitutive fitting, statistical analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
 
 ## Maintained scope
 
@@ -11,17 +10,15 @@ analysis, and peak/post-peak characterization of uniaxial mechanical-test data.
 - preprocessing and stress-strain conversion;
 - tangent-modulus estimation;
 - Neo-Hookean, Mooney-Rivlin, and Yeoh models;
-- bounded nonlinear parameter fitting;
-- fit uncertainty, identifiability, residual, and stability diagnostics;
+- bounded nonlinear parameter fitting and diagnostics;
 - reliability-aware model comparison and selection;
-- dataset quality assessment;
-- pre-peak curve segmentation;
+- dataset quality assessment and tensile loading segmentation;
 - peak, post-peak, and energy descriptors without rupture classification;
 - replicate population statistics and bootstrap intervals;
 - group comparison and selected-parameter inference;
 - tensile and compression study workflows;
 - measurement-aware Monte Carlo refitting;
-- end-to-end study execution, figures, and reporting.
+- end-to-end execution, figures, and reporting.
 
 ## Repository layout
 
@@ -35,28 +32,20 @@ startup.m         Adds maintained folders to the MATLAB path
 run_all_tests.m   Runs the complete repository test suite
 ```
 
-Root-level processing functions are not maintained. Public code should use the
-package API under `src/+mechanics`.
+Root-level processing functions are not maintained. Public code should use the package API under `src/+mechanics`.
 
-Local experimental workbooks belong under `data/raw/` and generated outputs
-under `results/`. Both locations are ignored by Git and must not be committed.
+Local experimental workbooks belong under `data/raw/` and generated outputs under `results/`. Both locations are ignored by Git and must not be committed.
 
-## Setup
+## Setup and validation
 
 ```matlab
 startup
-```
-
-## Validation
-
-```matlab
 results = run_all_tests();
 ```
 
-See [`docs/development/testing.md`](docs/development/testing.md) for focused test
-execution and release validation.
+See [`docs/development/testing.md`](docs/development/testing.md) for focused test execution and release validation.
 
-## Complete tensile study
+## Tensile studies
 
 ```matlab
 config = mechanics.config.tensileStudyConfig();
@@ -69,39 +58,20 @@ study = mechanics.workflow.runTensileStudy( ...
     "data/raw/test.xlsx", config);
 ```
 
-Outputs:
-
-```text
-study.dataset
-study.analysis
-study.population
-study.provenance
-study.config
-study.outputFiles
-```
-
-A complete experiment-oriented driver is maintained at:
+Maintained experiment driver:
 
 ```text
 studies/tension/run_tensile_experiment.m
 ```
 
-It centralizes extraction, preprocessing, fitting, population analysis, reporting, and optional constitutive workflows without duplicating reusable implementation.
-
-## Compression studies
-
-Process one specimen when inspecting or exporting an individual test:
+Compare completed studies without reprocessing specimens:
 
 ```matlab
-config = mechanics.config.compressionSpecimenConfig();
-config.geometry.initialLength = 25;
-config.geometry.initialArea = 100;
-specimenStudy = mechanics.workflow.runCompressionSpecimen( ...
-    "compression.csv", config);
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [studyA, studyB], ["Condition A", "Condition B"]);
 ```
 
-Process every specimen in a Zwick workbook directly. Circular geometry is read
-from `d0` and `h0` in the `Resultados` sheet:
+## Compression studies
 
 ```matlab
 config = mechanics.config.compressionStudyConfig();
@@ -113,33 +83,44 @@ study = mechanics.workflow.runCompressionStudy( ...
     "data/raw/compression.xlsx", config);
 ```
 
-Manifest and pre-extracted dataset inputs remain supported when workbook input
-is not appropriate. Specimen exclusions are explicit; dimensional compliance
-is not inferred automatically.
-
-A maintained real-experiment driver is available at:
+Maintained experiment driver:
 
 ```text
 studies/compression/run_compression_experiment.m
 ```
 
-It implements the ASTM D575 Method A cycle convention used by the current
-experiment: the first two cycles condition the specimen and the third loading
-branch is analyzed. The maintained workflow does not apply a preload threshold.
+The maintained ASTM D575 Method A configuration selects the final complete cycle and analyzes its loading branch. Dimensional compliance and experimental exclusions remain explicit user decisions.
 
-Compare completed studies without re-importing or reprocessing specimens:
+Compare completed studies with:
 
 ```matlab
 comparison = mechanics.workflow.compareCompressionStudies( ...
     [studyA, studyB], ["Condition A", "Condition B"]);
 ```
 
-## Constitutive study workflow
+## Shared uniaxial architecture
 
-The maintained workflow supports specimen-level diagnostics, model comparison,
-batch selection, selected-parameter summaries, group inference, and integrated
-reporting. These operations are exposed through `mechanics.workflow` and
-`mechanics.io`.
+Tension and compression share import normalization, mechanical measures, tangent modulus, constitutive fitting, uncertainty, population analysis, group comparison, unit-aware labels, and maintained figure export when their contracts are identical.
+
+Test-specific behavior remains separate:
+
+- tension: loading segmentation and peak/post-peak interpretation;
+- compression: cycle selection, loading/unloading branches, hysteresis, and cycle diagnostics.
+
+Stored mechanics use physical signs. Compression reports may display positive magnitudes without changing the stored state.
+
+## Reporting and figure export
+
+Maintained reports are exposed through `mechanics.io`, including tensile, compression, and constitutive study reports.
+
+Every maintained workflow figure is persisted through `mechanics.plotting.exportFigureFiles` as:
+
+```text
+figure_name.png   % or configured image format
+figure_name.fig   % editable MATLAB figure
+```
+
+Manual figures created directly in study drivers are not required to follow this persistence contract.
 
 ## Constitutive models
 
@@ -149,16 +130,8 @@ Registered models:
 - `mooney-rivlin`;
 - `yeoh`.
 
+Model functions only evaluate constitutive equations. They do not read files, modify experimental data, plot, or invoke optimizers.
+
 ## Documentation
 
-Start at [`docs/README.md`](docs/README.md). Documentation is organized into
-workflows, data handling, technical reference, and repository development.
-
-## Architecture
-
-Input/output, extraction, preprocessing, mechanics, constitutive models,
-fitting, quality assessment, segmentation, statistics, plotting, and workflow
-orchestration remain separate.
-
-Model functions only evaluate constitutive equations. They do not read files,
-modify experimental data, plot, or invoke optimizers.
+Start at [`docs/README.md`](docs/README.md). Current persistent project state and maintenance priorities are recorded only in [`docs/development/context-handoff.md`](docs/development/context-handoff.md).
