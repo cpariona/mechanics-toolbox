@@ -99,7 +99,9 @@ verifyTrue(testCase, isfile(files.initialShearValues));
 verifyTrue(testCase, isfile(files.initialShearSummary));
 verifyTrue(testCase, isfile(files.initialShearErrors));
 verifyTrue(testCase, isfile(files.parameterFigure));
+verifyTrue(testCase, isfile(files.parameterFigureFig));
 verifyTrue(testCase, isfile(files.initialShearFigure));
+verifyTrue(testCase, isfile(files.initialShearFigureFig));
 verifyTrue(testCase, isfile(files.data));
 end
 

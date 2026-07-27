@@ -80,7 +80,7 @@ verifyEqual(testCase, metrics.hysteresisEnergy, 0.5, "AbsTol", 1e-12);
 verifyEqual(testCase, metrics.hysteresisFraction, 0.2, "AbsTol", 1e-12);
 end
 
-function testCompressionSpecimenExport(testCase)
+function testCompressionSpecimenExportIntegration(testCase)
 [displacement, force] = localThreeCycles();
 filename = string(tempname) + ".csv";
 cleanupFile = onCleanup(@() localDelete(filename)); %#ok<NASGU>
@@ -101,9 +101,8 @@ verifyTrue(testCase, isfile(study.outputFiles.processed));
 verifyTrue(testCase, isfile(study.outputFiles.metrics));
 verifyTrue(testCase, isfile(study.outputFiles.study));
 verifyTrue(testCase, isfile(study.outputFiles.reportReport));
-verifyTrue(testCase, isfile(study.outputFiles.reportCycleOverview));
 verifyTrue(testCase, isfile(study.outputFiles.reportSelectedBranch));
-verifyTrue(testCase, isfile(study.outputFiles.reportTangentModulus));
+verifyTrue(testCase, isfile(fullfile(folder, "report", "compression_response.fig")));
 end
 
 function testDecreasingInstrumentSignalsCanBeNormalized(testCase)

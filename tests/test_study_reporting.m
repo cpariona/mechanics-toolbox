@@ -17,6 +17,7 @@ cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
 config.outputFolder = folder;
 files = mechanics.plotting.exportTensileStudyFigures(study, config);
 verifyTrue(testCase, isfile(files.individualCurves));
+verifyTrue(testCase, isfile(fullfile(folder, "individual_curves.fig")));
 verifyFalse(testCase, isfield(files, "populationCurve"));
 verifyFalse(testCase, isfield(files, "peakMetrics"));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
@@ -38,6 +39,7 @@ files = mechanics.plotting.exportTensileStudyFigures(study, config);
 
 verifyTrue(testCase, isfield(files, "populationTangentModulus"));
 verifyTrue(testCase, isfile(files.populationTangentModulus));
+verifyTrue(testCase, isfile(fullfile(folder, "population_tangent_modulus.fig")));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
 end
 
@@ -55,6 +57,7 @@ config.includeTangentModulus = true;
 files = mechanics.plotting.exportTensileStudyFigures(study, config);
 
 verifyFalse(testCase, isfield(files, "populationTangentModulus"));
+verifyFalse(testCase, isfile(fullfile(folder, "population_tangent_modulus.fig")));
 end
 
 function testMarkdownReport(testCase)
@@ -66,10 +69,12 @@ config.outputFolder = folder;
 files = mechanics.io.exportTensileStudyReport(study, config);
 verifyTrue(testCase, isfile(files.report));
 verifyTrue(testCase, isfile(files.individualCurves));
+verifyTrue(testCase, isfile(fullfile(folder, "individual_curves.fig")));
 text = fileread(files.report);
 verifyTrue(testCase, contains(text, "# Tensile study report"));
 verifyTrue(testCase, contains(text, "sample-01"));
 verifyTrue(testCase, contains(text, "individual_curves.png"));
+verifyFalse(testCase, contains(text, "individual_curves.fig"));
 end
 
 function testDefaultConfiguration(testCase)

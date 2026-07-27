@@ -14,160 +14,370 @@ cd(repositoryFolder)
 startup
 
 inputFile = fullfile( ...
-    repositoryFolder, ...
-    "data", ...
-    "raw", ...
+    repositoryFolder, "data", "raw", ...
     "Compression_ASTM_D575_ECOFLEX0050_test.xlsx");
-
 outputFolder = fullfile( ...
-    repositoryFolder, ...
-    "results", ...
-    "real-compression-study");
+    repositoryFolder, "results", "real-compression-study");
 
 %% 1. STUDY CONFIGURATION
-
 config = mechanics.config.compressionStudyConfig();
 
-% Workbook extraction. The shared Zwick adapter reads specimen sheets and
-% obtains circular compression geometry from d0 and h0 in Resultados.
+% Workbook extraction and ASTM D575 Method A cycle selection.
 config.input.type = "workbook";
 config.extraction.extractor = "auto";
-
-% ASTM D575 Method A uses three cycles. The first two condition the specimen;
-% the third loading branch provides the maintained measurement response.
 config.specimen.cycle.selection = "last-complete-cycle";
 config.specimen.cycle.branch = "loading";
 config.specimen.cycle.loadingDirection = "increasing";
+config.specimen.cycle.minimumCycleAmplitude = 0;
 config.specimen.cycle.minimumObservations = 5;
 config.specimen.cycle.smoothingFrameLength = 5;
 
-% The selected branch begins at its first observation. No preload threshold
-% is used for the maintained Method A workflow.
-config.specimen.processing.preprocessing.zeroReference.method = ...
-    "first-sample";
-config.specimen.processing.preprocessing.zeroReference.trimBeforeReference = ...
-    true;
+% Mechanical zero. Method A does not use a preload threshold.
+zeroConfig = config.specimen.processing.preprocessing.zeroReference;
+zeroConfig.method = "first-sample";
+zeroConfig.manualIndex = 1;
+zeroConfig.trimBeforeReference = true;
+config.specimen.processing.preprocessing.zeroReference = zeroConfig;
 
-% Engineering strain and nominal stress are retained as physical signed
-% compression quantities. Report plots below use positive magnitudes only.
-config.specimen.processing.mechanics.strainMeasure = "engineering";
-config.specimen.processing.mechanics.stressMeasure = "engineering";
-config.specimen.processing.analysis.summaryStrainRange = [-0.40, 0.00];
+% Stored compression quantities retain physical negative signs.
+mechanicsConfig = config.specimen.processing.mechanics;
+mechanicsConfig.strainMeasure = "engineering";
+mechanicsConfig.stressMeasure = "engineering";
+mechanicsConfig.areaEvolution = "incompressible";
+config.specimen.processing.mechanics = mechanicsConfig;
 
-% Specimen exclusions are explicit and follow workbook extraction order.
-% These two specimens are outside the ASTM D575 thickness tolerance for the
-% current experiment. Update this section for each new workbook.
+% Tangent-modulus analysis.
+analysisConfig = config.specimen.processing.analysis;
+analysisConfig.modulusMethod = "local-linear";
+analysisConfig.derivativeWindowStrain = 0.02;
+analysisConfig.summaryStrainRange = [-0.40, 0.00];
+analysisConfig.modulusPlotStartStrain = NaN;
+analysisConfig.modulusPlotAutomaticStartFraction = 0.01;
+config.specimen.processing.analysis = analysisConfig;
+
+% Explicit experiment-specific exclusions.
 config.specimens.excludeIndices = [1; 2];
 config.specimens.exclusionReason = ...
     "Initial thickness outside ASTM D575 tolerance";
 
-% Constitutive fitting can be enabled after the maintained cycle and fitting
-% range have been reviewed for the experiment.
-config.specimen.fitting.enabled = false;
+% Constitutive fitting and model selection.
+fitting = config.specimen.fitting;
+fitting.enabled = true;
+fitting.modelNames = [
+    "neo-hookean"
+    "mooney-rivlin"
+    "yeoh"
+];
+fitting.context.deformationMeasure = "engineering-strain";
+fitting.context.stressMeasure = "nominal";
+fitting.fitConfig.numberOfStarts = 8;
+fitting.fitConfig.randomSeed = 1;
+fitting.fitConfig.maxIterations = 3000;
+fitting.fitConfig.maxFunctionEvaluations = 10000;
+fitting.fitConfig.functionTolerance = 1e-10;
+fitting.fitConfig.parameterTolerance = 1e-10;
+fitting.fitConfig.display = "off";
+fitting.fitConfig.initialGuess = [];
+fitting.fitConfig.lowerBounds = [];
+fitting.fitConfig.upperBounds = [];
+fitting.selectionConfig.windowFractions = [0.50, 0.75, 1.00];
+fitting.selectionConfig.minimumObservations = 20;
+fitting.selectionConfig.rankingMetric = "BIC";
+fitting.selectionConfig.requireConvergence = true;
+fitting.selectionConfig.maximumRelativeParameterCV = 0.50;
+
+% Measurement Monte Carlo remains disabled until uncertainties are available.
+mc = fitting.measurementMonteCarlo;
+mc.enabled = false;
+mc.sampleCount = 200;
+mc.confidenceLevel = 0.95;
+mc.randomSeed = 1;
+mc.minimumSuccessfulFraction = 0.80;
+mc.initialLengthStd = NaN; % mm
+mc.initialAreaStd = NaN;   % mm^2
+mc.forceStd = NaN;         % N
+mc.displacementStd = NaN;  % mm
+mc.refitNumberOfStarts = 2;
+mc.storeFits = false;
+fitting.measurementMonteCarlo = mc;
+config.specimen.fitting = fitting;
+
+% Pointwise geometry uncertainty remains disabled until h0 and A0 standard
+% uncertainties are available.
+geometryUncertainty = config.specimen.processing.uncertainty.geometry;
+geometryUncertainty.enabled = false;
+geometryUncertainty.initialLengthStd = NaN; % mm
+geometryUncertainty.initialAreaStd = NaN;   % mm^2
+config.specimen.processing.uncertainty.geometry = geometryUncertainty;
+
+% The integrated study driver owns export; per-specimen export stays disabled.
 config.specimen.export.enabled = false;
 
-% Population analysis uses only records with status "processed".
-config.population.enabled = true;
-config.population.continueOnError = true;
-config.population.config.minimumSpecimens = 2;
-config.population.config.strainGridPointCount = 201;
-config.population.config.bootstrap.enabled = true;
-config.population.config.bootstrap.iterations = 2000;
-config.population.config.bootstrap.confidenceLevel = 0.95;
-config.population.config.bootstrap.randomSeed = 1;
+% Population analysis.
+population = config.population;
+population.enabled = true;
+population.continueOnError = true;
+population.config.centralStatistic = "median";
+population.config.strainGridPointCount = 201;
+population.config.minimumSpecimens = 2;
+population.config.bootstrap.enabled = true;
+population.config.bootstrap.iterations = 2000;
+population.config.bootstrap.confidenceLevel = 0.95;
+population.config.bootstrap.randomSeed = 1;
+population.config.export.enabled = false;
+config.population = population;
 
 %% 2. RUN THE COMPLETE COMPRESSION WORKFLOW
-
 tic
 study = mechanics.workflow.runCompressionStudy(inputFile, config);
 elapsedTime = toc;
 
-fprintf('Study completed in %.2f seconds.\n', elapsedTime)
+fprintf("Study completed in %.2f seconds.\n", elapsedTime)
 disp(study.exclusion)
 disp(study.manifest)
 disp(study.analysis.summary)
-fprintf('Population status: %s\n', char(study.populationStatus))
+fprintf("Population status: %s\n", char(study.populationStatus))
 
-if study.populationStatus == "failed"
-    fprintf(2, 'Population error: %s\n', ...
+if study.populationStatus == "completed"
+    disp(study.population.metrics)
+    disp(study.population.modelParameters)
+elseif study.populationStatus == "failed"
+    fprintf(2, "Population error: %s\n", ...
         char(study.populationErrorMessage))
 end
 
-%% 3. SAVE MAINTAINED RESULTS
-
+%% 3. MAINTAINED EXPORTS
 if ~isfolder(outputFolder)
     mkdir(outputFolder)
 end
 
 save(fullfile(outputFolder, "compression_study.mat"), ...
     "study", "config");
-
 writetable(study.manifest, ...
     fullfile(outputFolder, "compression_manifest.csv"));
 writetable(study.analysis.summary, ...
     fullfile(outputFolder, "compression_summary.csv"));
 
-%% 4. PLOTS
+if study.populationStatus == "completed"
+    populationFiles = mechanics.io.exportPopulationAnalysis( ...
+        study.population, outputFolder);
+    disp(populationFiles)
+end
+
+reportConfig = mechanics.config.compressionStudyReportConfig();
+reportConfig.outputFolder = fullfile(outputFolder, "report");
+reportConfig.studyTitle = ...
+    "ECOFLEX 00-50 — ASTM D575 Method A compression study";
+reportFiles = mechanics.io.exportCompressionStudyReport( ...
+    study, reportConfig);
+disp(reportFiles)
+
+%% 4. INTERACTIVE RESULTS
+% Persistent PNG and FIG files are generated only by the maintained report
+% exporter. This section is for interactive inspection during development.
+summaryTable = study.analysis.summary;
+availableColumns = string(summaryTable.Properties.VariableNames);
+requestedColumns = [
+    "SpecimenId"
+    "Status"
+    "MaximumStrain"
+    "MaximumStress"
+    "MedianTangentModulus"
+    "SelectedModel"
+];
+selectedColumns = requestedColumns( ...
+    ismember(requestedColumns, availableColumns));
+disp(summaryTable(:, cellstr(selectedColumns)))
 
 records = study.analysis.records;
-processedMask = string({records.status}) == "processed";
-processedIndices = find(processedMask);
+processedIndices = find(string({records.status}) == "processed");
 
-figure("Color", "w")
-hold on
-for index = processedIndices(:)'
-    record = records(index);
-    processed = record.specimen.processed;
-    plot( ...
-        -processed.strain, ...
-        -processed.stress, ...
-        "LineWidth", 1.3, ...
-        "DisplayName", record.specimenId);
-end
-xlabel("Compression engineering strain magnitude")
-ylabel("Compression nominal stress magnitude")
-title("ASTM D575 Method A compression study")
-legend("Location", "best")
-grid on
-box on
-hold off
-
-exportgraphics(gcf, ...
-    fullfile(outputFolder, "compression_stress_strain.png"), ...
-    "Resolution", 300);
-
-% Inspect the selected full cycle and processed loading branch for the first
-% retained specimen.
 if ~isempty(processedIndices)
-    record = records(processedIndices(1));
-    specimen = record.specimen;
+    specimen = records(processedIndices(1)).specimen;
+    mechanics.plotting.plotStressStrain( ...
+        specimen.processed, ...
+        Title="Processed compression specimen: " + string(specimen.id), ...
+        DisplayName="Experimental");
 
     figure("Color", "w")
-    tiledlayout(1, 2, "TileSpacing", "compact", "Padding", "compact")
-
+    tiledlayout(1, 3, "TileSpacing", "compact", "Padding", "compact")
     nexttile
-    plot( ...
-        specimen.fullCycleRaw.displacement, ...
-        specimen.fullCycleRaw.force, ...
-        "LineWidth", 1.1)
-    xlabel("Compression displacement magnitude")
-    ylabel("Compression force magnitude")
-    title("Selected third cycle")
+    plot(specimen.originalRaw.displacement, specimen.originalRaw.force, ...
+        "LineWidth", 1.0)
+    xlabel("Instrument displacement")
+    ylabel("Instrument force")
+    title("Original recorded cycles")
     grid on
     box on
 
     nexttile
-    plot( ...
-        -specimen.processed.strain, ...
-        -specimen.processed.stress, ...
-        "LineWidth", 1.3)
+    plot(specimen.fullCycleRaw.displacement, specimen.fullCycleRaw.force, ...
+        "LineWidth", 1.1)
+    xlabel("Compression displacement magnitude")
+    ylabel("Compression force magnitude")
+    title("Selected measurement cycle")
+    grid on
+    box on
+
+    nexttile
+    plot(-specimen.processed.strain, -specimen.processed.stress, ...
+        "LineWidth", 1.4)
     xlabel("Compression strain magnitude")
     ylabel("Compression stress magnitude")
     title("Processed loading branch")
     grid on
     box on
 
-    exportgraphics(gcf, ...
-        fullfile(outputFolder, "compression_cycle_check.png"), ...
-        "Resolution", 300);
+    if isfield(specimen, "modelSelection") && ...
+            specimen.modelSelection.selection.hasEligibleModel
+        modelStudy = specimen.modelSelection;
+        bestModel = string(modelStudy.selection.bestModel);
+        modelRecords = modelStudy.records;
+        validMask = [modelRecords.succeeded] & ...
+            string({modelRecords.modelName}) == bestModel;
+        validRecords = modelRecords(validMask);
+        if ~isempty(validRecords)
+            [~, fullWindowIndex] = max([validRecords.windowFraction]);
+            bestFit = validRecords(fullWindowIndex).fitResult;
+            modelDefinition = mechanics.models.modelRegistry(bestFit.modelName);
+            parameterTable = table( ...
+                string(modelDefinition.parameterNames(:)), ...
+                bestFit.parameters(:), ...
+                'VariableNames', {'Parameter', 'Estimate'});
+            disp("Selected model: " + bestModel)
+            disp(parameterTable)
+            disp(bestFit.metrics)
+            mechanics.plotting.plotModelFit(bestFit);
+        end
+    end
 end
+
+%% 5. OPTIONAL COMPRESSION WORKFLOWS
+runFitDiagnostics = false;
+runReliabilityAwareModelComparison = false;
+runSelectedParameterPopulation = true;
+runGroupComparison = false;
+runGroupParameterInference = false;
+runConstitutiveStudyReport = false;
+
+if ~isempty(processedIndices)
+    optionalSpecimen = records(processedIndices(1)).specimen;
+    optionalDeformation = optionalSpecimen.processed.strain;
+    optionalStress = optionalSpecimen.processed.stress;
+    optionalContext = config.specimen.fitting.context;
+else
+    optionalDeformation = [];
+    optionalStress = [];
+    optionalContext = struct();
+end
+
+if runFitDiagnostics
+    diagnosticModel = "yeoh";
+    diagnosticConfig = mechanics.config.fitDiagnosticsWorkflowConfig();
+    fitDiagnostics = mechanics.workflow.runFitDiagnostics( ...
+        diagnosticModel, optionalDeformation, optionalStress, ...
+        optionalContext, mechanics.config.fittingConfig(), ...
+        diagnosticConfig);
+    disp(fitDiagnostics.reliability.componentSummary)
+    disp(fitDiagnostics.reliability.status)
+    mechanics.plotting.plotFitReliability(fitDiagnostics.reliability);
+    mechanics.io.exportFitDiagnostics( ...
+        fitDiagnostics, fullfile(outputFolder, "fit-diagnostics"));
+end
+
+if runReliabilityAwareModelComparison
+    comparisonConfig = mechanics.config.modelComparisonWorkflowConfig();
+    modelComparison = mechanics.workflow.compareModelsWithDiagnostics( ...
+        config.specimen.fitting.modelNames, ...
+        optionalDeformation, optionalStress, optionalContext, ...
+        mechanics.config.fittingConfig(), comparisonConfig);
+    disp(modelComparison.summary)
+    disp(modelComparison.selectedModelName)
+    mechanics.plotting.plotModelComparison(modelComparison);
+    mechanics.io.exportModelComparison( ...
+        modelComparison, fullfile(outputFolder, "model-comparison"));
+end
+
+if runSelectedParameterPopulation || ...
+        runGroupParameterInference || runConstitutiveStudyReport
+    comparisonSpecimens = struct([]);
+    outputIndex = 0;
+    for index = processedIndices
+        outputIndex = outputIndex + 1;
+        processedSpecimen = records(index).specimen;
+        comparisonSpecimens(outputIndex).specimenId = ...
+            string(processedSpecimen.id); %#ok<SAGROW>
+        comparisonSpecimens(outputIndex).group = "Unassigned"; %#ok<SAGROW>
+        comparisonSpecimens(outputIndex).deformation = ...
+            processedSpecimen.processed.strain; %#ok<SAGROW>
+        comparisonSpecimens(outputIndex).measuredStress = ...
+            processedSpecimen.processed.stress; %#ok<SAGROW>
+        comparisonSpecimens(outputIndex).context = ...
+            config.specimen.fitting.context; %#ok<SAGROW>
+    end
+
+    batchConfig = mechanics.config.batchModelComparisonConfig();
+    parameterBatch = mechanics.workflow.compareModelsAcrossSpecimens( ...
+        comparisonSpecimens, config.specimen.fitting.modelNames, ...
+        mechanics.config.fittingConfig(), batchConfig);
+    parameterPopulationConfig = ...
+        mechanics.config.selectedParameterPopulationConfig();
+    parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
+        parameterBatch, parameterPopulationConfig);
+    disp(parameterPopulation.parameterTable)
+    disp(parameterPopulation.overallSummary)
+    disp(parameterPopulation.groupSummary)
+
+    if runSelectedParameterPopulation
+        mechanics.plotting.plotSelectedParameterPopulation( ...
+            parameterPopulation);
+        mechanics.io.exportSelectedParameterPopulation( ...
+            parameterPopulation, ...
+            fullfile(outputFolder, "selected-parameter-population"));
+    end
+end
+
+if runGroupComparison
+    groupAssignments = table( ...
+        string(summaryTable.SpecimenId), ...
+        repmat("Unassigned", height(summaryTable), 1), ...
+        'VariableNames', {'SpecimenId', 'Group'});
+    groupedAnalysis = mechanics.workflow.assignSpecimenGroups( ...
+        study.analysis, groupAssignments);
+    groupNames = unique(groupAssignments.Group, "stable");
+    groupComparison = mechanics.workflow.analyzeGroupComparison( ...
+        groupedAnalysis, groupNames, mechanics.config.groupComparisonConfig());
+    disp(groupComparison.metricComparison)
+    mechanics.plotting.plotGroupComparison(groupComparison);
+    mechanics.io.exportGroupComparison( ...
+        groupComparison, fullfile(outputFolder, "group-comparison"));
+end
+
+if runGroupParameterInference
+    parameterInference = ...
+        mechanics.workflow.compareSelectedParametersBetweenGroups( ...
+            parameterPopulation, ...
+            mechanics.config.groupParameterInferenceConfig());
+    disp(parameterInference.comparisonTable)
+    mechanics.plotting.plotGroupParameterInference(parameterInference);
+    mechanics.io.exportGroupParameterInference( ...
+        parameterInference, ...
+        fullfile(outputFolder, "group-parameter-inference"));
+end
+
+if runConstitutiveStudyReport
+    if ~exist("parameterInference", "var")
+        parameterInference = struct();
+    end
+    constitutiveReportConfig = ...
+        mechanics.config.constitutiveStudyReportConfig();
+    constitutiveReportConfig.outputFolder = ...
+        fullfile(outputFolder, "constitutive-study-report");
+    constitutiveReportFiles = mechanics.io.exportConstitutiveStudyReport( ...
+        parameterBatch, parameterPopulation, ...
+        parameterInference, constitutiveReportConfig);
+    disp(constitutiveReportFiles)
+end
+
+% Compare completed material or condition studies separately with:
+% mechanics.workflow.compareCompressionStudies(...)
