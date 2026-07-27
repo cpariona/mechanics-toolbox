@@ -65,6 +65,7 @@ verifyTrue(testCase, isfile(files.metrics));
 verifyTrue(testCase, isfile(files.parameters));
 verifyTrue(testCase, isfile(files.parameterSummary));
 verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.figureFig));
 verifyTrue(testCase, isfile(files.data));
 end
 
