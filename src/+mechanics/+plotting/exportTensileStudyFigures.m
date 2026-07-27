@@ -13,11 +13,14 @@ end
 outputFiles = struct();
 format = lower(string(config.figureFormat));
 records = study.analysis.records;
-units = localStudyUnits(records);
+units = mechanics.plotting.resolveStudyUnits(records);
 studyTitle = localStudyTitle(study, config);
-strainLabel = localUnitLabel("Engineering strain, \epsilon", units.strain);
-stressLabel = localUnitLabel(localStressName(study), units.stress);
-modulusLabel = localUnitLabel("Tangent modulus", units.stress);
+strainLabel = mechanics.plotting.formatUnitLabel( ...
+    "Engineering strain, \epsilon", units.strain);
+stressLabel = mechanics.plotting.formatUnitLabel( ...
+    localStressName(study), units.stress);
+modulusLabel = mechanics.plotting.formatUnitLabel( ...
+    "Tangent modulus", units.stress);
 
 if config.includeIndividualCurves
     figureHandle = figure("Visible", "off", "Color", "w", ...
@@ -99,7 +102,8 @@ if config.includePeakMetrics && ...
 
     axesHandle = nexttile;
     bar(axesHandle, labels, summary.PeakForce);
-    ylabel(axesHandle, localUnitLabel("Peak force", units.force));
+    ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
+        "Peak force", units.force));
     title(axesHandle, "Peak force");
     axesHandle.XTickLabelRotation = 25;
     grid(axesHandle, "on");
@@ -107,7 +111,8 @@ if config.includePeakMetrics && ...
 
     axesHandle = nexttile;
     bar(axesHandle, labels, summary.PeakStress);
-    ylabel(axesHandle, localUnitLabel("Peak nominal stress", units.stress));
+    ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
+        "Peak nominal stress", units.stress));
     title(axesHandle, "Peak stress");
     axesHandle.XTickLabelRotation = 25;
     grid(axesHandle, "on");
@@ -115,7 +120,8 @@ if config.includePeakMetrics && ...
 
     axesHandle = nexttile;
     bar(axesHandle, labels, summary.EnergyToPeak);
-    ylabel(axesHandle, localUnitLabel("Energy to peak", units.energy));
+    ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
+        "Energy to peak", units.energy));
     title(axesHandle, "Energy to peak");
     axesHandle.XTickLabelRotation = 25;
     grid(axesHandle, "on");
@@ -241,8 +247,10 @@ if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
                         "LineWidth", 1.1, "DisplayName", "Mechanical zero");
                 end
             end
-            xlabel(axesHandle, localUnitLabel("Displacement", units.displacement));
-            ylabel(axesHandle, localUnitLabel("Force", units.force));
+            xlabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
+                "Displacement", units.displacement));
+            ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
+                "Force", units.force));
             title(axesHandle, record.specimenId, "Interpreter", "none");
             grid(axesHandle, "on");
             box(axesHandle, "on");
@@ -255,29 +263,6 @@ if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
         outputFiles.zeroReferenceDiagnostics = string(filename);
         localClose(figureHandle, config);
     end
-end
-end
-
-function units = localStudyUnits(records)
-units.force = "N";
-units.displacement = "mm";
-units.strain = "-";
-units.stress = "MPa";
-units.energy = "mJ";
-index = find([records.status] == "processed", 1, "first");
-if isempty(index)
-    return;
-end
-specimen = records(index).specimen;
-if isfield(specimen.processed, "units")
-    source = specimen.processed.units;
-    names = fieldnames(source);
-    for k = 1:numel(names)
-        units.(names{k}) = string(source.(names{k}));
-    end
-end
-if units.strain == "1"
-    units.strain = "-";
 end
 end
 
@@ -305,15 +290,6 @@ end
 titleText = replace(filename, ["_", "-"], " ");
 if strlength(titleText) == 0
     titleText = "Mechanical test";
-end
-end
-
-function label = localUnitLabel(name, unit)
-unit = string(unit);
-if strlength(unit) == 0
-    label = string(name);
-else
-    label = string(name) + " [" + unit + "]";
 end
 end
 
