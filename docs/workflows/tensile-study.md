@@ -1,6 +1,10 @@
-# End-to-end tensile study
+# Tensile study
 
-The study workflow coordinates workbook extraction, specimen selection, loading-curve segmentation, quality assessment, mechanical processing, optional constitutive fitting, peak metrics, population analysis, export, and provenance capture.
+The tensile workflow coordinates input normalization, specimen selection, preprocessing, loading segmentation, quality assessment, mechanical processing, constitutive fitting, peak descriptors, population analysis, export, and provenance capture.
+
+## Maintained entrypoints
+
+Run one study with:
 
 ```matlab
 config = mechanics.config.tensileStudyConfig();
@@ -8,35 +12,58 @@ config.extraction.defaultInitialLength = 25;
 config.datasetAnalysis.fitting.enabled = true;
 config.export.enabled = true;
 config.export.outputFolder = "results/my-study";
-study = mechanics.workflow.runTensileStudy(filename, config);
+
+study = mechanics.workflow.runTensileStudy(inputValue, config);
 ```
 
-A complete executable configuration for a real experiment is maintained at:
+Supported inputs are:
+
+```text
+single workbook
+file list
+batch manifest
+pre-extracted dataset
+```
+
+All inputs are normalized before common downstream analysis.
+
+The maintained real-experiment driver is:
 
 ```text
 studies/tension/run_tensile_experiment.m
 ```
 
-This study driver is intended to be copied or adapted for an experimental campaign. It is not a simplified example and does not contain reusable implementation.
+It contains experiment-specific paths, exclusions, measurement assumptions, settings, optional analyses, and manual inspection figures. Reusable implementation remains under `src/+mechanics`.
 
-## Excluding specimens
+## Specimen selection and mechanical zero
 
 ```matlab
 config.specimens.excludeIndices = [1, 4];
-config.specimens.exclusionReason = "different preload or visible grip slip";
-```
+config.specimens.exclusionReason = ...
+    "different preload or visible grip slip";
 
-## Mechanical zero and preload
-
-```matlab
-processing = config.datasetAnalysis.processingConfig.preprocessing;
-processing.zeroReference.method = "preload-threshold";
-processing.zeroReference.preloadForce = 0.1;
-processing.zeroReference.sustainedPoints = 3;
-config.datasetAnalysis.processingConfig.preprocessing = processing;
+zeroReference = ...
+    config.datasetAnalysis.processingConfig.preprocessing.zeroReference;
+zeroReference.method = "preload-threshold";
+zeroReference.preloadForce = 0.1;
+zeroReference.sustainedPoints = 3;
+config.datasetAnalysis.processingConfig.preprocessing.zeroReference = ...
+    zeroReference;
 ```
 
 Specimen-specific preload values can be supplied in workbook order through `config.specimens.preloadForceOverrides`.
+
+## Mechanical measures
+
+```matlab
+mechanicsConfig = config.datasetAnalysis.processingConfig.mechanics;
+mechanicsConfig.strainMeasure = "engineering";  % or "true"
+mechanicsConfig.stressMeasure = "engineering";  % or "true"
+mechanicsConfig.areaEvolution = "incompressible";
+config.datasetAnalysis.processingConfig.mechanics = mechanicsConfig;
+```
+
+The stored tensile state uses positive displacement, strain, and stress, with stretch greater than one.
 
 ## Tangent modulus
 
@@ -45,83 +72,54 @@ analysis = config.datasetAnalysis.processingConfig.analysis;
 analysis.modulusMethod = "local-linear";
 analysis.derivativeWindowStrain = 0.02;
 analysis.summaryStrainRange = [0.00, 0.05];
-
-% Plot only: hide unstable values at the leading edge.
 analysis.modulusPlotStartStrain = NaN;
 analysis.modulusPlotAutomaticStartFraction = 0.01;
-
 config.datasetAnalysis.processingConfig.analysis = analysis;
 ```
 
-Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Derivative smoothing does not modify the stress curves used in population averaging.
+Alternative methods are `local-quadratic`, `gradient-smoothed`, and `gradient`. Plot trimming affects only `tangentModulusForPlot`; the complete numerical derivative remains in `tangentModulus` and is used for summaries independently of display trimming.
 
-`tangentModulus` always retains the complete numerical derivative. `tangentModulusForPlot` replaces only values before the configured plot start with `NaN`:
-
-- `modulusPlotStartStrain = NaN` selects an automatic start;
-- `modulusPlotAutomaticStartFraction` defines the skipped fraction of the complete strain span;
-- a finite `modulusPlotStartStrain` specifies the first strain shown manually.
-
-This plot-only trimming does not alter the reported mean or median modulus, the processed stress-strain curve, or constitutive fitting.
-
-## Constitutive fitting measures
-
-The fitting context describes how the constitutive model interprets deformation and which stress measure it returns:
+## Constitutive fitting
 
 ```matlab
-config.datasetAnalysis.fitting.context.deformationMeasure = ...
-    "engineering-strain";
-config.datasetAnalysis.fitting.context.stressMeasure = "nominal";
+fitting = config.datasetAnalysis.fitting;
+fitting.enabled = true;
+fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
+fitting.context.deformationMeasure = "engineering-strain";
+fitting.context.stressMeasure = "nominal";
+config.datasetAnalysis.fitting = fitting;
 ```
 
-The default values remain engineering strain and nominal stress and should match the processed curve representation.
+The fitting context must match the processed deformation and stress representation.
 
-## Pointwise geometry uncertainty
-
-```matlab
-uncertainty = config.datasetAnalysis.processingConfig.uncertainty.geometry;
-uncertainty.enabled = true;
-uncertainty.initialLengthStd = 0.10;
-uncertainty.initialAreaStd = 0.20;
-config.datasetAnalysis.processingConfig.uncertainty.geometry = uncertainty;
-```
-
-Results are stored under `specimen.analysis.geometryUncertainty` and added to specimen-level curve exports.
-
-## Measurement Monte Carlo for fitted parameters
-
-After model selection, the selected full-window model can be refitted under repeated perturbations of geometry and signals:
-
-```matlab
-config.datasetAnalysis.fitting.enabled = true;
-mc = config.datasetAnalysis.fitting.measurementMonteCarlo;
-mc.enabled = true;
-mc.sampleCount = 500;
-mc.initialLengthStd = 0.10;
-mc.initialAreaStd = 0.20;
-mc.forceStd = 0.01;
-mc.displacementStd = 0.005;
-config.datasetAnalysis.fitting.measurementMonteCarlo = mc;
-```
-
-The result is stored in:
+Measurement-aware Monte Carlo refitting is configured under:
 
 ```text
-specimen.measurementMonteCarloFit
+config.datasetAnalysis.fitting.measurementMonteCarlo
 ```
 
-and contains parameter samples, percentile limits, medians, and successful-refit statistics. This is separate from residual bootstrap uncertainty.
+Pointwise geometry uncertainty is configured under:
 
-## Population response
+```text
+config.datasetAnalysis.processingConfig.uncertainty.geometry
+```
+
+## Peak and post-peak descriptors
+
+Tension-specific loading segmentation and peak analysis remain separate from the shared uniaxial mechanics core. Peak, post-peak, and energy quantities are descriptive; the workflow does not automatically classify rupture.
+
+## Population analysis
 
 ```matlab
-config.population.config.centralStatistic = "mean";   % or "median"
-config.population.config.strainGridPointCount = 201;
-config.population.config.minimumSpecimens = 2;
+population = config.population;
+population.enabled = true;
+population.config.centralStatistic = "median";
+population.config.strainGridPointCount = 201;
+population.config.minimumSpecimens = 2;
+config.population = population;
 ```
 
-The common grid is an interpolation grid, not experimental resolution.
-
-The population workflow produces both the stress response and, when enough processed specimens contain tangent-modulus analysis, a tangent-modulus population result:
+When enough processed specimens are available, the study contains:
 
 ```text
 study.population.curves
@@ -129,42 +127,22 @@ study.population.tangentModulus
 study.population.tangentModulusStatus
 ```
 
-The tangent-modulus population result:
+Population tangent modulus reuses each specimen's existing plotted derivative curve; it does not recompute derivatives.
 
-- interpolates each specimen's existing `tangentModulusForPlot` curve;
-- does not recompute derivatives;
-- selects a continuous strain interval supported by at least `minimumSpecimens`;
-- preserves the interpolated specimen curves in `modulusMatrix`;
-- records the effective support in `specimenCountByPoint`;
-- reuses the configured central statistic and bootstrap settings.
+## Downstream constitutive workflows
 
-Main fields are:
-
-```text
-study.population.tangentModulus.strain
-study.population.tangentModulus.modulusMatrix
-study.population.tangentModulus.centralModulus
-study.population.tangentModulus.confidenceLower
-study.population.tangentModulus.confidenceUpper
-study.population.tangentModulus.specimenCountByPoint
-study.population.tangentModulus.centralStatistic
-```
-
-If fewer than `minimumSpecimens` expose tangent-modulus curves, the remaining population analyses still run and `tangentModulusStatus` is `"unavailable"`.
-
-## Selected constitutive parameters
-
-Selected-parameter population analysis is a composable downstream workflow because it requires a batch model-comparison result rather than only the core tensile-study result:
+Selected-model parameters can be summarized without reprocessing specimens:
 
 ```matlab
 parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
     parameterBatch, mechanics.config.selectedParameterPopulationConfig());
 
 files = mechanics.io.exportSelectedParameterPopulation( ...
-    parameterPopulation, "results/my-study/selected-parameter-population");
+    parameterPopulation, ...
+    "results/my-study/selected-parameter-population");
 ```
 
-Native fitted parameters remain separated by model family and parameter name. The workflow also derives a common initial shear modulus while retaining the selected model identity:
+Native fitted parameters remain separated by model family and parameter identity. A comparable initial shear modulus is derived while preserving the selected model:
 
 ```text
 neo-hookean:    mu0 = mu
@@ -172,19 +150,39 @@ mooney-rivlin: mu0 = 2 * (C10 + C01)
 yeoh:          mu0 = 2 * C10
 ```
 
-Derived results are stored under:
+Group comparison, selected-parameter inference, consensus-model selection, and constitutive reporting are composable downstream workflows. They should consume completed results rather than re-importing or refitting data unnecessarily.
 
-```text
-parameterPopulation.initialShearModulus.values
-parameterPopulation.initialShearModulus.summary
-parameterPopulation.initialShearModulus.errors
+## Study comparison
+
+Compare completed studies with:
+
+```matlab
+comparison = mechanics.workflow.compareTensileStudies( ...
+    [studyA, studyB], ...
+    ["Condition A", "Condition B"], ...
+    mechanics.config.tensileStudyComparisonConfig());
 ```
 
-The maintained exporter writes the native-parameter tables, initial-shear-modulus tables, a MAT file, `selected_parameter_population.png`, and `initial_shear_modulus_population.png`.
+The comparison validates compatible measures and units, preserves the input studies, namespaces repeated specimen identifiers, and reuses maintained population and group-comparison logic. Dedicated comparison export and reporting remain deferred in issue #25.
 
-## Units
+## Reporting and figure files
 
-The Zwick extractor reads variable names from row 2 and units from row 3. Force and displacement are normalized internally to N and mm when supported. Gauge length remains an explicit geometry input; for the calibrated specimens it should be configured as 25 mm when absent from the workbook.
+```matlab
+reportConfig = mechanics.config.studyReportConfig();
+reportConfig.outputFolder = "results/my-study/report";
+reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
+```
+
+Standard report figures include individual stress-strain curves, population response, peak metrics, specimen tangent modulus, population tangent modulus when available, and zero-reference diagnostics.
+
+Every maintained workflow figure is written as a pair with the same base name:
+
+```text
+figure_name.png   % or configured image format
+figure_name.fig   % editable MATLAB figure
+```
+
+The Markdown report embeds only the image file. Manual figures created directly in the experiment driver are outside this persistence contract.
 
 ## Main outputs
 
@@ -198,14 +196,4 @@ study.config
 study.outputFiles
 ```
 
-The full raw acquisition remains preserved while constitutive analysis uses the selected loading interval.
-
-## Study reporting
-
-```matlab
-reportConfig = mechanics.config.studyReportConfig();
-reportConfig.outputFolder = "results/my-study/report";
-files = mechanics.io.exportTensileStudyReport(study, reportConfig);
-```
-
-Standard figures include individual stress-strain curves, the population response, peak metrics, specimen tangent-modulus curves, the population tangent-modulus response when available, and zero-reference diagnostics. Population tangent-modulus values are also exported to `population_tangent_modulus.csv`. Peak metrics retain descriptive peak, post-peak, and energy quantities without automatic rupture classification.
+Raw acquisition data remain preserved while constitutive analysis uses the selected loading interval.
