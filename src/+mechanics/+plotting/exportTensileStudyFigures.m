@@ -43,11 +43,8 @@ if config.includeIndividualCurves
     grid(axesHandle, "on");
     box(axesHandle, "on");
     legend(axesHandle, "Location", "southeast", "Interpreter", "none");
-    filename = fullfile(folder, "individual_curves." + format);
-    exportgraphics(figureHandle, filename, ...
-        "Resolution", config.figureResolution);
-    outputFiles.individualCurves = string(filename);
-    localClose(figureHandle, config);
+    outputFiles.individualCurves = localExport( ...
+        figureHandle, folder, "individual_curves", format, config);
 end
 
 if config.includePopulationCurve && ...
@@ -82,11 +79,8 @@ if config.includePopulationCurve && ...
     grid(axesHandle, "on");
     box(axesHandle, "on");
     legend(axesHandle, "Location", "northwest");
-    filename = fullfile(folder, "population_curve." + format);
-    exportgraphics(figureHandle, filename, ...
-        "Resolution", config.figureResolution);
-    outputFiles.populationCurve = string(filename);
-    localClose(figureHandle, config);
+    outputFiles.populationCurve = localExport( ...
+        figureHandle, folder, "population_curve", format, config);
 end
 
 if config.includePeakMetrics && ...
@@ -129,11 +123,8 @@ if config.includePeakMetrics && ...
 
     sgtitle(figureHandle, studyTitle + " — peak metrics", ...
         "Interpreter", "none");
-    filename = fullfile(folder, "peak_metrics." + format);
-    exportgraphics(figureHandle, filename, ...
-        "Resolution", config.figureResolution);
-    outputFiles.peakMetrics = string(filename);
-    localClose(figureHandle, config);
+    outputFiles.peakMetrics = localExport( ...
+        figureHandle, folder, "peak_metrics", format, config);
 end
 
 if config.includeTangentModulus
@@ -171,12 +162,11 @@ if config.includeTangentModulus
         grid(axesHandle, "on");
         box(axesHandle, "on");
         legend(axesHandle, "Location", "southwest", "Interpreter", "none");
-        filename = fullfile(folder, "tangent_modulus." + format);
-        exportgraphics(figureHandle, filename, ...
-            "Resolution", config.figureResolution);
-        outputFiles.tangentModulus = string(filename);
+        outputFiles.tangentModulus = localExport( ...
+            figureHandle, folder, "tangent_modulus", format, config);
+    else
+        localClose(figureHandle, config);
     end
-    localClose(figureHandle, config);
 end
 
 if config.includeTangentModulus && ...
@@ -214,11 +204,8 @@ if config.includeTangentModulus && ...
     grid(axesHandle, "on");
     box(axesHandle, "on");
     legend(axesHandle, "Location", "northwest");
-    filename = fullfile(folder, "population_tangent_modulus." + format);
-    exportgraphics(figureHandle, filename, ...
-        "Resolution", config.figureResolution);
-    outputFiles.populationTangentModulus = string(filename);
-    localClose(figureHandle, config);
+    outputFiles.populationTangentModulus = localExport( ...
+        figureHandle, folder, "population_tangent_modulus", format, config);
 end
 
 if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
@@ -257,13 +244,17 @@ if localGetLogical(config, "includeZeroReferenceDiagnostics", false)
         end
         sgtitle(figureHandle, studyTitle + " — zero-reference diagnostics", ...
             "Interpreter", "none");
-        filename = fullfile(folder, "zero_reference_diagnostics." + format);
-        exportgraphics(figureHandle, filename, ...
-            "Resolution", config.figureResolution);
-        outputFiles.zeroReferenceDiagnostics = string(filename);
-        localClose(figureHandle, config);
+        outputFiles.zeroReferenceDiagnostics = localExport( ...
+            figureHandle, folder, "zero_reference_diagnostics", format, config);
     end
 end
+end
+
+function filename = localExport(figureHandle, folder, baseName, format, config)
+filename = mechanics.plotting.exportFigureFiles( ...
+    figureHandle, folder, string(baseName), string(format), ...
+    config.figureResolution);
+localClose(figureHandle, config);
 end
 
 function name = localStressName(study)
