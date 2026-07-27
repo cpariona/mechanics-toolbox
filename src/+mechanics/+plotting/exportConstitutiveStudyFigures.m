@@ -26,9 +26,8 @@ if config.includeModelSelectionFigure && isfield(batch, "modelSummary") && ...
     title("Selected constitutive models");
     grid on;
     box on;
-    filename = fullfile(folder, "model_selection." + format);
-    exportgraphics(fig, filename, "Resolution", config.figureResolution);
-    files.modelSelection = string(filename);
+    files.modelSelection = mechanics.plotting.exportFigureFiles( ...
+        fig, folder, "model_selection", format, config.figureResolution);
     localClose(fig, config);
 end
 
@@ -54,9 +53,8 @@ if config.includeParameterFigure && isfield(population, "parameterTable") && ...
     title(axesHandle, "Selected-model parameters by specimen");
     grid(axesHandle, "on");
     box(axesHandle, "on");
-    filename = fullfile(folder, "selected_parameters." + format);
-    exportgraphics(fig, filename, "Resolution", config.figureResolution);
-    files.selectedParameters = string(filename);
+    files.selectedParameters = mechanics.plotting.exportFigureFiles( ...
+        fig, folder, "selected_parameters", format, config.figureResolution);
     localClose(fig, config);
 end
 
@@ -85,9 +83,9 @@ if config.includeInferenceFigure && isfield(inference, "comparisonTable") && ...
         title("Between-group parameter differences");
         grid on;
         box on;
-        filename = fullfile(folder, "group_parameter_inference." + format);
-        exportgraphics(fig, filename, "Resolution", config.figureResolution);
-        files.groupInference = string(filename);
+        files.groupInference = mechanics.plotting.exportFigureFiles( ...
+            fig, folder, "group_parameter_inference", format, ...
+            config.figureResolution);
         localClose(fig, config);
     end
 end
