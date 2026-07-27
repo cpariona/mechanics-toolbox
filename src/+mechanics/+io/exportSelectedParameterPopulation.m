@@ -14,8 +14,6 @@ errorFile = fullfile(outputFolder,'selected_parameter_extraction_errors.csv');
 initialShearFile = fullfile(outputFolder,'initial_shear_modulus_values.csv');
 initialShearSummaryFile = fullfile(outputFolder,'initial_shear_modulus_summary.csv');
 initialShearErrorFile = fullfile(outputFolder,'initial_shear_modulus_errors.csv');
-parameterFigureFile = fullfile(outputFolder,'selected_parameter_population.png');
-initialShearFigureFile = fullfile(outputFolder,'initial_shear_modulus_population.png');
 dataFile = fullfile(outputFolder,'selected_parameter_population.mat');
 
 writetable(population.parameterTable, parameterFile);
@@ -34,13 +32,19 @@ end
 
 parameterFigure = mechanics.plotting.plotSelectedParameterPopulation(population);
 parameterCleanup = onCleanup(@() close(parameterFigure)); %#ok<NASGU>
-exportgraphics(parameterFigure, parameterFigureFile, 'Resolution', 200);
+parameterFigureFile = mechanics.plotting.exportFigureFiles( ...
+    parameterFigure, outputFolder, "selected_parameter_population", "png", 200);
+parameterFigureFigFile = fullfile(outputFolder,'selected_parameter_population.fig');
 
 if isfield(population,'initialShearModulus')
     initialShearFigure = ...
         mechanics.plotting.plotInitialShearModulusPopulation(population);
     initialShearCleanup = onCleanup(@() close(initialShearFigure)); %#ok<NASGU>
-    exportgraphics(initialShearFigure, initialShearFigureFile, 'Resolution', 200);
+    initialShearFigureFile = mechanics.plotting.exportFigureFiles( ...
+        initialShearFigure, outputFolder, ...
+        "initial_shear_modulus_population", "png", 200);
+    initialShearFigureFigFile = fullfile( ...
+        outputFolder,'initial_shear_modulus_population.fig');
 end
 
 save(dataFile,'population');
@@ -52,8 +56,10 @@ files.initialShearValues = string(initialShearFile);
 files.initialShearSummary = string(initialShearSummaryFile);
 files.initialShearErrors = string(initialShearErrorFile);
 files.parameterFigure = string(parameterFigureFile);
+files.parameterFigureFig = string(parameterFigureFigFile);
 if isfield(population,'initialShearModulus')
     files.initialShearFigure = string(initialShearFigureFile);
+    files.initialShearFigureFig = string(initialShearFigureFigFile);
 end
 files.data = string(dataFile);
 end
