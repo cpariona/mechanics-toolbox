@@ -201,8 +201,9 @@ function fig = localFigure()
 fig = figure("Visible", "off", "Color", "w", "Position", [100 100 1050 760]);
 end
 function filename = localExport(fig, folder, name, format, config)
-filename = string(fullfile(folder, name + "." + format));
-exportgraphics(fig, filename, "Resolution", config.figureResolution); localClose(fig, config);
+filename = mechanics.plotting.exportFigureFiles( ...
+    fig, folder, string(name), string(format), config.figureResolution);
+localClose(fig, config);
 end
 function titleText = localStudyTitle(study, config)
 if string(config.studyTitle) ~= "auto", titleText = string(config.studyTitle); return; end
