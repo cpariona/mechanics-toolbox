@@ -172,9 +172,10 @@ reportFiles = mechanics.io.exportCompressionStudyReport( ...
     study, reportConfig);
 disp(reportFiles)
 
-%% 4. INTERACTIVE RESULTS
-% Persistent PNG and FIG files are generated only by the maintained report
-% exporter. This section is for interactive inspection during development.
+%% 4. RESULTS AND DISTINCT INTERACTIVE DIAGNOSTICS
+% Report figures already cover processed curves, the population response,
+% tangent modulus, and the selected cycle versus processed loading branch.
+% Keep only interactive views that add information not present in that report.
 summaryTable = study.analysis.summary;
 availableColumns = string(summaryTable.Properties.VariableNames);
 requestedColumns = [
@@ -194,40 +195,20 @@ processedIndices = find(string({records.status}) == "processed");
 
 if ~isempty(processedIndices)
     specimen = records(processedIndices(1)).specimen;
-    mechanics.plotting.plotStressStrain( ...
-        specimen.processed, ...
-        Title="Processed compression specimen: " + string(specimen.id), ...
-        DisplayName="Experimental");
 
+    % Distinct acquisition diagnostic: the maintained report begins at the
+    % selected measurement cycle and does not show all recorded cycles.
     figure("Color", "w")
-    tiledlayout(1, 3, "TileSpacing", "compact", "Padding", "compact")
-    nexttile
     plot(specimen.originalRaw.displacement, specimen.originalRaw.force, ...
         "LineWidth", 1.0)
     xlabel("Instrument displacement")
     ylabel("Instrument force")
-    title("Original recorded cycles")
+    title("Original recorded compression cycles")
     grid on
     box on
 
-    nexttile
-    plot(specimen.fullCycleRaw.displacement, specimen.fullCycleRaw.force, ...
-        "LineWidth", 1.1)
-    xlabel("Compression displacement magnitude")
-    ylabel("Compression force magnitude")
-    title("Selected measurement cycle")
-    grid on
-    box on
-
-    nexttile
-    plot(-specimen.processed.strain, -specimen.processed.stress, ...
-        "LineWidth", 1.4)
-    xlabel("Compression strain magnitude")
-    ylabel("Compression stress magnitude")
-    title("Processed loading branch")
-    grid on
-    box on
-
+    % Distinct model diagnostic: the study report does not include the
+    % selected constitutive fit for an individual specimen.
     if isfield(specimen, "modelSelection") && ...
             specimen.modelSelection.selection.hasEligibleModel
         modelStudy = specimen.modelSelection;
@@ -273,11 +254,10 @@ end
 
 if runFitDiagnostics
     diagnosticModel = "yeoh";
-    diagnosticConfig = mechanics.config.fitDiagnosticsWorkflowConfig();
     fitDiagnostics = mechanics.workflow.runFitDiagnostics( ...
         diagnosticModel, optionalDeformation, optionalStress, ...
         optionalContext, mechanics.config.fittingConfig(), ...
-        diagnosticConfig);
+        mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
     disp(fitDiagnostics.reliability.status)
     mechanics.plotting.plotFitReliability(fitDiagnostics.reliability);
@@ -286,11 +266,11 @@ if runFitDiagnostics
 end
 
 if runReliabilityAwareModelComparison
-    comparisonConfig = mechanics.config.modelComparisonWorkflowConfig();
     modelComparison = mechanics.workflow.compareModelsWithDiagnostics( ...
         config.specimen.fitting.modelNames, ...
         optionalDeformation, optionalStress, optionalContext, ...
-        mechanics.config.fittingConfig(), comparisonConfig);
+        mechanics.config.fittingConfig(), ...
+        mechanics.config.modelComparisonWorkflowConfig());
     disp(modelComparison.summary)
     disp(modelComparison.selectedModelName)
     mechanics.plotting.plotModelComparison(modelComparison);
@@ -316,21 +296,18 @@ if runSelectedParameterPopulation || ...
             config.specimen.fitting.context; %#ok<SAGROW>
     end
 
-    batchConfig = mechanics.config.batchModelComparisonConfig();
     parameterBatch = mechanics.workflow.compareModelsAcrossSpecimens( ...
         comparisonSpecimens, config.specimen.fitting.modelNames, ...
-        mechanics.config.fittingConfig(), batchConfig);
-    parameterPopulationConfig = ...
-        mechanics.config.selectedParameterPopulationConfig();
+        mechanics.config.fittingConfig(), ...
+        mechanics.config.batchModelComparisonConfig());
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
-        parameterBatch, parameterPopulationConfig);
+        parameterBatch, ...
+        mechanics.config.selectedParameterPopulationConfig());
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
     disp(parameterPopulation.groupSummary)
 
     if runSelectedParameterPopulation
-        mechanics.plotting.plotSelectedParameterPopulation( ...
-            parameterPopulation);
         mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
             fullfile(outputFolder, "selected-parameter-population"));
@@ -346,7 +323,8 @@ if runGroupComparison
         study.analysis, groupAssignments);
     groupNames = unique(groupAssignments.Group, "stable");
     groupComparison = mechanics.workflow.analyzeGroupComparison( ...
-        groupedAnalysis, groupNames, mechanics.config.groupComparisonConfig());
+        groupedAnalysis, groupNames, ...
+        mechanics.config.groupComparisonConfig());
     disp(groupComparison.metricComparison)
     mechanics.plotting.plotGroupComparison(groupComparison);
     mechanics.io.exportGroupComparison( ...
@@ -356,8 +334,8 @@ end
 if runGroupParameterInference
     parameterInference = ...
         mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-            parameterPopulation, ...
-            mechanics.config.groupParameterInferenceConfig());
+        parameterPopulation, ...
+        mechanics.config.groupParameterInferenceConfig());
     disp(parameterInference.comparisonTable)
     mechanics.plotting.plotGroupParameterInference(parameterInference);
     mechanics.io.exportGroupParameterInference( ...
