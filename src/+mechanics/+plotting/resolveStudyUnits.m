@@ -6,7 +6,7 @@ end
 
 units.force = "N";
 units.displacement = "mm";
-units.strain = "-";
+units.strain = "m/m";
 units.stress = "MPa";
 units.energy = "mJ";
 
@@ -32,7 +32,8 @@ for k = 1:numel(names)
     units.(names{k}) = string(source.(names{k}));
 end
 
-if units.strain == "1" || strlength(units.strain) == 0
-    units.strain = "-";
+if units.strain == "-" || units.strain == "1" || ...
+        strlength(units.strain) == 0
+    units.strain = "m/m";
 end
 end
