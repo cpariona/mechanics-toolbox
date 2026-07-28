@@ -1,5 +1,5 @@
 %% 0. INITIALIZATION AND FILES
-% Executable study driver for one tensile experiment.
+% Executable driver for one tensile experiment.
 % Keep experiment-specific paths, exclusions, and settings in this file.
 
 restoredefaultpath
@@ -13,26 +13,21 @@ repositoryFolder = 'D:\Escritorio\mechanics-toolbox';
 cd(repositoryFolder)
 startup
 
-inputFile = fullfile( ...
-    repositoryFolder, "data", "raw", ...
+inputFile = fullfile(repositoryFolder, "data", "raw", ...
     "Tension_ASTM_D412_ECOFLEX0050_test.xlsx");
-outputFolder = fullfile( ...
-    repositoryFolder, "results", "real-tensile-study");
+outputFolder = fullfile(repositoryFolder, "results", "real-tensile-study");
 
 %% 1. STUDY CONFIGURATION
 config = mechanics.config.tensileStudyConfig();
 
-% Workbook extraction.
 config.extraction.extractor = "auto";
 config.extraction.defaultInitialLength = 25; % mm
 
-% Specimen selection. Indices follow workbook extraction order.
 config.specimens.excludeIndices = 1;
 config.specimens.exclusionReason = ...
     "Manual exclusion after visual inspection";
 config.specimens.preloadForceOverrides = [];
 
-% Mechanical zero.
 zeroConfig = ...
     config.datasetAnalysis.processingConfig.preprocessing.zeroReference;
 zeroConfig.method = "preload-threshold";
@@ -42,14 +37,12 @@ zeroConfig.manualIndex = 1;
 config.datasetAnalysis.processingConfig.preprocessing.zeroReference = ...
     zeroConfig;
 
-% Stress and strain measures.
 mechanicsConfig = config.datasetAnalysis.processingConfig.mechanics;
 mechanicsConfig.strainMeasure = "engineering";
 mechanicsConfig.stressMeasure = "engineering";
 mechanicsConfig.areaEvolution = "incompressible";
 config.datasetAnalysis.processingConfig.mechanics = mechanicsConfig;
 
-% Tangent-modulus analysis.
 analysisConfig = config.datasetAnalysis.processingConfig.analysis;
 analysisConfig.modulusMethod = "local-linear";
 analysisConfig.derivativeWindowStrain = 0.02;
@@ -58,7 +51,6 @@ analysisConfig.modulusPlotStartStrain = NaN;
 analysisConfig.modulusPlotAutomaticStartFraction = 0.01;
 config.datasetAnalysis.processingConfig.analysis = analysisConfig;
 
-% Loading-curve segmentation.
 segmentation = config.datasetAnalysis.segmentation;
 segmentation.enabled = true;
 segmentation.method = "pre-peak";
@@ -66,7 +58,6 @@ segmentation.analysisPeakFraction = 1.0;
 segmentation.minimumPostPeakDropFraction = 0.20;
 config.datasetAnalysis.segmentation = segmentation;
 
-% Quality control.
 quality = config.datasetAnalysis.quality;
 quality.minimumObservations = 20;
 quality.requireMonotonicDisplacement = false;
@@ -78,14 +69,9 @@ quality.rejectFailedQuality = true;
 config.datasetAnalysis.quality = quality;
 config.datasetAnalysis.continueOnError = true;
 
-% Constitutive fitting and model selection.
 fitting = config.datasetAnalysis.fitting;
 fitting.enabled = true;
-fitting.modelNames = [
-    "neo-hookean"
-    "mooney-rivlin"
-    "yeoh"
-];
+fitting.modelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
 fitting.context.deformationMeasure = "engineering-strain";
 fitting.context.stressMeasure = "nominal";
 fitting.fitConfig.numberOfStarts = 8;
@@ -104,7 +90,6 @@ fitting.selectionConfig.rankingMetric = "BIC";
 fitting.selectionConfig.requireConvergence = true;
 fitting.selectionConfig.maximumRelativeParameterCV = 0.50;
 
-% Measurement Monte Carlo remains disabled until uncertainties are available.
 mc = fitting.measurementMonteCarlo;
 mc.enabled = false;
 mc.sampleCount = 200;
@@ -120,8 +105,6 @@ mc.storeFits = false;
 fitting.measurementMonteCarlo = mc;
 config.datasetAnalysis.fitting = fitting;
 
-% Pointwise geometry uncertainty remains disabled until L0 and A0 standard
-% uncertainties are available.
 geometryUncertainty = ...
     config.datasetAnalysis.processingConfig.uncertainty.geometry;
 geometryUncertainty.enabled = false;
@@ -130,7 +113,6 @@ geometryUncertainty.initialAreaStd = NaN;   % mm^2
 config.datasetAnalysis.processingConfig.uncertainty.geometry = ...
     geometryUncertainty;
 
-% Peak and post-peak descriptors.
 config.peakAnalysis.enabled = true;
 peakConfig = config.peakAnalysis.config;
 peakConfig.enabled = true;
@@ -138,7 +120,6 @@ peakConfig.integrateAbsoluteDisplacement = false;
 peakConfig.minimumObservations = 3;
 config.peakAnalysis.config = peakConfig;
 
-% Population analysis.
 population = config.population;
 population.enabled = true;
 population.continueOnError = true;
@@ -151,12 +132,11 @@ population.config.bootstrap.confidenceLevel = 0.95;
 population.config.bootstrap.randomSeed = 1;
 config.population = population;
 
-% Automatic study export.
 config.export.enabled = true;
 config.export.outputFolder = outputFolder;
-config.export.saveAnalysisMat = true;
-config.export.saveConfigurationMat = true;
+config.export.saveStudyMat = true;
 config.export.saveTables = true;
+config.export.savePopulation = true;
 
 %% 2. RUN THE COMPLETE TENSILE WORKFLOW
 tic
@@ -164,10 +144,8 @@ study = mechanics.workflow.runTensileStudy(inputFile, config);
 elapsedTime = toc;
 
 fprintf("Study completed in %.2f seconds.\n", elapsedTime)
-studySummary = mechanics.workflow.summarizeTensileStudy(study);
-disp(studySummary)
+disp(mechanics.workflow.summarizeTensileStudy(study))
 disp(study.analysis.summary)
-
 if ~isempty(study.analysis.peakSummary)
     disp(study.analysis.peakSummary)
 end
@@ -175,39 +153,26 @@ if study.populationStatus == "completed"
     disp(study.population.metrics)
 end
 
-% Generate the integrated Markdown report and maintained PNG/FIG pairs.
-reportConfig = mechanics.config.studyReportConfig();
+disp(study.outputFiles)
+reportConfig = mechanics.config.tensileStudyReportConfig();
 reportConfig.outputFolder = fullfile(outputFolder, "report");
 reportConfig.studyTitle = "";
 reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
-disp(study.outputFiles)
 disp(reportFiles)
 
-%% 3. RESULTS AND DISTINCT INTERACTIVE DIAGNOSTICS
-% Persistent workflow figures are owned by maintained exporters. Keep only
-% experiment-inspection views that are not represented in those exports.
+%% 3. DISTINCT INTERACTIVE DIAGNOSTICS
 summaryTable = study.analysis.summary;
+requestedColumns = ["SpecimenId"; "Status"; "MaximumStrain"; ...
+    "MaximumStress"; "MedianTangentModulus"; "BestModel"];
 availableColumns = string(summaryTable.Properties.VariableNames);
-requestedColumns = [
-    "SpecimenId"
-    "Status"
-    "MaximumStrain"
-    "MaximumStress"
-    "MedianTangentModulus"
-    "BestModel"
-];
-selectedColumns = requestedColumns( ...
-    ismember(requestedColumns, availableColumns));
+selectedColumns = requestedColumns(ismember(requestedColumns, availableColumns));
 disp(summaryTable(:, cellstr(selectedColumns)))
 disp(study.exclusion)
 
 records = study.analysis.records;
 processedIndices = find(string({records.status}) == "processed");
-
 if ~isempty(processedIndices)
     specimen = records(processedIndices(1)).specimen;
-
-    % Complete acquisition versus the final selected and zero-referenced curve.
     figure("Color", "w")
     hold on
     plot(specimen.originalRaw.displacement, specimen.originalRaw.force, ...
@@ -221,53 +186,29 @@ if ~isempty(processedIndices)
     grid on
     box on
 
-    % Selected constitutive fit for one specimen remains an interactive view.
     if isfield(specimen, "modelSelection") && ...
             specimen.modelSelection.selection.hasEligibleModel
         modelStudy = specimen.modelSelection;
         bestModel = string(modelStudy.selection.bestModel);
         modelRecords = modelStudy.records;
-        validMask = [modelRecords.succeeded] & ...
-            string({modelRecords.modelName}) == bestModel;
-        validRecords = modelRecords(validMask);
+        validRecords = modelRecords([modelRecords.succeeded] & ...
+            string({modelRecords.modelName}) == bestModel);
         if ~isempty(validRecords)
             [~, fullWindowIndex] = max([validRecords.windowFraction]);
             bestFit = validRecords(fullWindowIndex).fitResult;
             modelDefinition = mechanics.models.modelRegistry(bestFit.modelName);
-            parameterTable = table( ...
-                string(modelDefinition.parameterNames(:)), ...
-                bestFit.parameters(:), ...
-                'VariableNames', {'Parameter', 'Estimate'});
             disp("Selected model: " + bestModel)
-            disp(parameterTable)
+            disp(table(string(modelDefinition.parameterNames(:)), ...
+                bestFit.parameters(:), ...
+                'VariableNames', {'Parameter', 'Estimate'}))
             disp(bestFit.metrics)
             mechanics.plotting.plotModelFit(bestFit);
         end
     end
-
-    if isfield(specimen, "measurementMonteCarloFit")
-        mcResult = specimen.measurementMonteCarloFit;
-        mcParameterNames = string(mcResult.parameterNames);
-        if ischar(mcResult.parameterNames)
-            mcParameterNames = string({mcResult.parameterNames});
-        end
-        mcTable = table( ...
-            mcParameterNames(:), ...
-            mcResult.baseParameters(:), ...
-            mcResult.parameterLower(:), ...
-            mcResult.parameterMedian(:), ...
-            mcResult.parameterUpper(:), ...
-            'VariableNames', {'Parameter', 'BaseEstimate', ...
-            'Lower', 'Median', 'Upper'});
-        disp(mcTable)
-        fprintf("Successful Monte Carlo refits: %.1f %%\n", ...
-            100 * mcResult.successfulFraction)
-    end
 end
 
 %% 4. OPTIONAL TENSILE WORKFLOWS
-% Disabled workflows remain available for compatible future datasets. Their
-% exporters own all persistent figures and tabular/MAT outputs.
+% Keep disabled workflows available for compatible future datasets.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
 runSelectedParameterPopulation = true;
@@ -293,31 +234,26 @@ if runFitDiagnostics
         mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
     disp(fitDiagnostics.reliability.status)
-    fitDiagnosticFiles = mechanics.io.exportFitDiagnostics( ...
-        fitDiagnostics, fullfile(outputFolder, "fit-diagnostics"));
-    disp(fitDiagnosticFiles)
+    disp(mechanics.io.exportFitDiagnostics( ...
+        fitDiagnostics, fullfile(outputFolder, "fit-diagnostics")))
 end
 
 if runReliabilityAwareModelComparison
     modelComparison = mechanics.workflow.compareModelsWithDiagnostics( ...
-        config.datasetAnalysis.fitting.modelNames, ...
-        optionalDeformation, optionalStress, optionalContext, ...
-        mechanics.config.fittingConfig(), ...
+        config.datasetAnalysis.fitting.modelNames, optionalDeformation, ...
+        optionalStress, optionalContext, mechanics.config.fittingConfig(), ...
         mechanics.config.modelComparisonWorkflowConfig());
     disp(modelComparison.summary)
     disp(modelComparison.selectedModelName)
-    modelComparisonFiles = mechanics.io.exportModelComparison( ...
-        modelComparison, fullfile(outputFolder, "model-comparison"));
-    disp(modelComparisonFiles)
+    disp(mechanics.io.exportModelComparison( ...
+        modelComparison, fullfile(outputFolder, "model-comparison")))
 end
 
 if runSelectedParameterPopulation || ...
         runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
-    outputIndex = 0;
-    for index = processedIndices
-        outputIndex = outputIndex + 1;
-        processedSpecimen = records(index).specimen;
+    for outputIndex = 1:numel(processedIndices)
+        processedSpecimen = records(processedIndices(outputIndex)).specimen;
         comparisonSpecimens(outputIndex).specimenId = ...
             string(processedSpecimen.id); %#ok<SAGROW>
         comparisonSpecimens(outputIndex).group = "Unassigned"; %#ok<SAGROW>
@@ -328,55 +264,44 @@ if runSelectedParameterPopulation || ...
         comparisonSpecimens(outputIndex).context = ...
             config.datasetAnalysis.fitting.context; %#ok<SAGROW>
     end
-
     parameterBatch = mechanics.workflow.compareModelsAcrossSpecimens( ...
         comparisonSpecimens, config.datasetAnalysis.fitting.modelNames, ...
         mechanics.config.fittingConfig(), ...
         mechanics.config.batchModelComparisonConfig());
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
-        parameterBatch, ...
-        mechanics.config.selectedParameterPopulationConfig());
+        parameterBatch, mechanics.config.selectedParameterPopulationConfig());
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
     disp(parameterPopulation.groupSummary)
-
     if runSelectedParameterPopulation
-        selectedParameterFiles = ...
-            mechanics.io.exportSelectedParameterPopulation( ...
+        disp(mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
-            fullfile(outputFolder, "selected-parameter-population"));
-        disp(selectedParameterFiles)
+            fullfile(outputFolder, "selected-parameter-population")))
     end
 end
 
 if runGroupComparison
-    % Replace the placeholder labels with the real experimental groups.
-    groupAssignments = table( ...
-        string(summaryTable.SpecimenId), ...
+    groupAssignments = table(string(summaryTable.SpecimenId), ...
         repmat("Unassigned", height(summaryTable), 1), ...
         'VariableNames', {'SpecimenId', 'Group'});
     groupedAnalysis = mechanics.workflow.assignSpecimenGroups( ...
         study.analysis, groupAssignments);
-    groupNames = unique(groupAssignments.Group, "stable");
     groupComparison = mechanics.workflow.analyzeGroupComparison( ...
-        groupedAnalysis, groupNames, ...
+        groupedAnalysis, unique(groupAssignments.Group, "stable"), ...
         mechanics.config.groupComparisonConfig());
     disp(groupComparison.metricComparison)
-    groupComparisonFiles = mechanics.io.exportGroupComparison( ...
-        groupComparison, fullfile(outputFolder, "group-comparison"));
-    disp(groupComparisonFiles)
+    disp(mechanics.io.exportGroupComparison( ...
+        groupComparison, fullfile(outputFolder, "group-comparison")))
 end
 
 if runGroupParameterInference
     parameterInference = ...
         mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-        parameterPopulation, ...
-        mechanics.config.groupParameterInferenceConfig());
+        parameterPopulation, mechanics.config.groupParameterInferenceConfig());
     disp(parameterInference.comparisonTable)
-    inferenceFiles = mechanics.io.exportGroupParameterInference( ...
+    disp(mechanics.io.exportGroupParameterInference( ...
         parameterInference, ...
-        fullfile(outputFolder, "group-parameter-inference"));
-    disp(inferenceFiles)
+        fullfile(outputFolder, "group-parameter-inference")))
 end
 
 if runConstitutiveStudyReport
@@ -387,8 +312,7 @@ if runConstitutiveStudyReport
         mechanics.config.constitutiveStudyReportConfig();
     constitutiveReportConfig.outputFolder = ...
         fullfile(outputFolder, "constitutive-study-report");
-    constitutiveReportFiles = mechanics.io.exportConstitutiveStudyReport( ...
+    disp(mechanics.io.exportConstitutiveStudyReport( ...
         parameterBatch, parameterPopulation, ...
-        parameterInference, constitutiveReportConfig);
-    disp(constitutiveReportFiles)
+        parameterInference, constitutiveReportConfig))
 end
