@@ -28,8 +28,16 @@ summary = table( ...
 writetable(summary, summaryFile);
 save(dataFile, "analysis");
 
+figureHandle = mechanics.plotting.plotFitReliability(analysis.reliability);
+figureCleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
+figureFile = mechanics.plotting.exportFigureFiles( ...
+    figureHandle, outputFolder, "fit_reliability", "png", 200);
+figureFigFile = fullfile(outputFolder, "fit_reliability.fig");
+
 files.reliability = string(reliabilityFile);
 files.errors = string(errorFile);
 files.summary = string(summaryFile);
 files.data = string(dataFile);
+files.figure = string(figureFile);
+files.figureFig = string(figureFigFile);
 end
