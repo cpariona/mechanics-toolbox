@@ -33,7 +33,7 @@ titleText = localStudyTitle(study, config);
 summary = study.analysis.summary;
 status = string(summary.Status);
 units = mechanics.plotting.resolveStudyUnits(study.analysis.records);
-[ strainName, stressName ] = localMeasureNames(study);
+[strainName, stressName] = localMeasureNames(study);
 
 fprintf(fileId, "# %s\n\n", char(titleText));
 fprintf(fileId, "Generated: %s\n\n", char(string(study.createdAt)));
@@ -146,10 +146,11 @@ fprintf(fileId, "## Figures\n\n");
 for index = 1:numel(fields)
     path = string(figureFiles.(fields{index}));
     [~, name, extension] = fileparts(path);
-    label = regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2");
+    label = string(regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2"));
     label = upper(extractBefore(label, 2)) + extractAfter(label, 1);
     label = replace(label, "Zero reference", "Zero-reference");
-    fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", label, label, name, extension);
+    fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", ...
+        char(label), char(label), name, extension);
 end
 end
 
