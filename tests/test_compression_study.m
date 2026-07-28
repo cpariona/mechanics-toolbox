@@ -42,6 +42,39 @@ verifyEqual(testCase, study.cycleMetrics.hysteresisEnergy, 0, "AbsTol", 1e-12);
 verifyEqual(testCase, study.cycleMetrics.hysteresisFraction, 0, "AbsTol", 1e-12);
 end
 
+function testInstrumentPolarityDoesNotChangeStoredCompressionSigns(testCase)
+[displacement, force] = localThreeCycles();
+polarities = [1, 1; 1, -1; -1, 1; -1, -1];
+
+for caseIndex = 1:size(polarities, 1)
+    displacementSign = polarities(caseIndex, 1);
+    forceSign = polarities(caseIndex, 2);
+    specimen.id = "polarity-" + caseIndex;
+    specimen.raw.displacement = displacementSign .* displacement;
+    specimen.raw.force = forceSign .* force;
+
+    config = mechanics.config.compressionSpecimenConfig();
+    config.geometry.initialLength = 10;
+    config.geometry.initialArea = 2;
+    config.cycle.smoothingFrameLength = 1;
+    config.processing.analysis.summaryStrainRange = [-0.1, 0];
+    if displacementSign < 0
+        config.cycle.loadingDirection = "decreasing";
+    end
+
+    study = mechanics.workflow.runCompressionSpecimen(specimen, config);
+    processed = study.specimen.processed;
+    verifyLessThanOrEqual(testCase, max(processed.force), 0);
+    verifyLessThanOrEqual(testCase, max(processed.displacement), 0);
+    verifyLessThanOrEqual(testCase, max(processed.stress), 0);
+    verifyLessThanOrEqual(testCase, max(processed.strain), 0);
+    verifyEqual(testCase, processed.displacement(end), -1, "AbsTol", 1e-12);
+    verifyEqual(testCase, processed.force(end), -5, "AbsTol", 1e-12);
+    verifyEqual(testCase, processed.strain(end), -0.1, "AbsTol", 1e-12);
+    verifyEqual(testCase, processed.stress(end), -2.5, "AbsTol", 1e-12);
+end
+end
+
 function testLeadingDisplacementReversalIsTrimmed(testCase)
 loadingDisplacement = [0.003; 0; 0.01; 0.02; 0.04; 0.06; 0.08; 0.10]';
 loadingDisplacement = loadingDisplacement(:);
