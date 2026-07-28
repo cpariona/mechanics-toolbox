@@ -9,6 +9,7 @@ config.includeIndividualCurves = true;
 config.includePopulationCurve = true;
 config.includePeakMetrics = true;
 config.includeTangentModulus = true;
+config.includePopulationTangentModulus = true;
 config.includeZeroReferenceDiagnostics = true;
 config.closeFiguresAfterExport = true;
 end
