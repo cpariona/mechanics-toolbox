@@ -225,8 +225,9 @@ if ~isempty(processedIndices)
 end
 
 %% 5. OPTIONAL COMPRESSION WORKFLOWS
-% Disabled workflows remain available for compatible future datasets. Their
-% exporters own all persistent figures and tabular/MAT outputs.
+% Optional workflows remain available for compatible datasets.
+% Selected-parameter population is enabled for the current experiment.
+% Their exporters own all persistent figures and tabular/MAT outputs.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
 runSelectedParameterPopulation = true;
@@ -273,10 +274,8 @@ end
 if runSelectedParameterPopulation || ...
         runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
-    outputIndex = 0;
-    for index = processedIndices
-        outputIndex = outputIndex + 1;
-        processedSpecimen = records(index).specimen;
+    for outputIndex = 1:numel(processedIndices)
+        processedSpecimen = records(processedIndices(outputIndex)).specimen;
         comparisonSpecimens(outputIndex).specimenId = ...
             string(processedSpecimen.id); %#ok<SAGROW>
         comparisonSpecimens(outputIndex).group = "Unassigned"; %#ok<SAGROW>

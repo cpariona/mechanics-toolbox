@@ -5,6 +5,11 @@ arguments
     unit (1,1) string
 end
 
+if contains(lower(name), "strain") && ...
+        (unit == "-" || unit == "1" || strlength(unit) == 0)
+    unit = "mm/mm";
+end
+
 if strlength(unit) == 0
     label = name;
 else

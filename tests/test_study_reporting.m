@@ -33,7 +33,7 @@ folder = string(tempname);
 cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
 config.outputFolder = folder;
 config.includeIndividualCurves = false;
-config.includeTangentModulus = true;
+config.includePopulationTangentModulus = true;
 
 files = mechanics.plotting.exportTensileStudyFigures(study, config);
 
@@ -41,6 +41,25 @@ verifyTrue(testCase, isfield(files, "populationTangentModulus"));
 verifyTrue(testCase, isfile(files.populationTangentModulus));
 verifyTrue(testCase, isfile(fullfile(folder, "population_tangent_modulus.fig")));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
+end
+
+function testIndividualAndPopulationTangentModulusControlsAreIndependent(testCase)
+study = localStudy();
+study.population.tangentModulusStatus = "completed";
+study.population.tangentModulus = localPopulationTangentModulus();
+study.analysis.records.specimen.analysis.tangentModulus = localSpecimenTangentModulus();
+config = localConfig();
+folder = string(tempname);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+config.outputFolder = folder;
+config.includeIndividualCurves = false;
+config.includeTangentModulus = true;
+config.includePopulationTangentModulus = false;
+
+files = mechanics.plotting.exportTensileStudyFigures(study, config);
+
+verifyTrue(testCase, isfield(files, "tangentModulus"));
+verifyFalse(testCase, isfield(files, "populationTangentModulus"));
 end
 
 function testUnavailablePopulationTangentModulusIsNotExported(testCase)
@@ -52,7 +71,7 @@ folder = string(tempname);
 cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
 config.outputFolder = folder;
 config.includeIndividualCurves = false;
-config.includeTangentModulus = true;
+config.includePopulationTangentModulus = true;
 
 files = mechanics.plotting.exportTensileStudyFigures(study, config);
 
@@ -73,8 +92,49 @@ verifyTrue(testCase, isfile(fullfile(folder, "individual_curves.fig")));
 text = fileread(files.report);
 verifyTrue(testCase, contains(text, "# Tensile study report"));
 verifyTrue(testCase, contains(text, "sample-01"));
+verifyTrue(testCase, contains(text, "Maximum engineering strain (mm/mm)"));
+verifyTrue(testCase, contains(text, "Maximum engineering stress (MPa)"));
+verifyTrue(testCase, contains(text, "Peak force (N)"));
+verifyTrue(testCase, contains(text, "Median tangent modulus (MPa)"));
+verifyTrue(testCase, contains(text, "### Individual curves"));
 verifyTrue(testCase, contains(text, "individual_curves.png"));
 verifyFalse(testCase, contains(text, "individual_curves.fig"));
+verifyTrue(testCase, contains(text, "Strain measure: `engineering`"));
+verifyTrue(testCase, contains(text, "Strain unit: `mm/mm`"));
+verifyTrue(testCase, contains(text, "Stress measure: `engineering`"));
+verifyTrue(testCase, contains(text, "Area evolution: `incompressible`"));
+verifyTrue(testCase, contains(text, ...
+    "Tangent-modulus summary strain range: `[0.1, 0.3] mm/mm`"));
+verifyTrue(testCase, contains(text, ...
+    "Candidate models: `neo-hookean, yeoh`"));
+verifyTrue(testCase, contains(text, "Model-ranking metric: `BIC`"));
+verifyTrue(testCase, contains(text, "Fit starts: `8`"));
+verifyTrue(testCase, contains(text, "Fit random seed: `1`"));
+end
+
+function testMarkdownReportIncludesPopulationSummary(testCase)
+study = localStudy();
+study.populationStatus = "completed";
+study.population.specimenCount = 3;
+study.population.curves.centralStatistic = "median";
+study.population.tangentModulusStatus = "completed";
+study.population.modelParameters.summary = table( ...
+    "neo-hookean", "mu", 3, 1.25, 0.10, ...
+    'VariableNames', {'Model','Parameter','Count','Mean','StandardDeviation'});
+config = localConfig();
+folder = string(tempname);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+config.outputFolder = folder;
+files = mechanics.io.exportTensileStudyReport(study, config);
+text = fileread(files.report);
+verifyTrue(testCase, contains(text, "## Population analysis"));
+verifyTrue(testCase, contains(text, "Retained specimen count: 3"));
+verifyTrue(testCase, contains(text, "Central statistic: `median`"));
+verifyTrue(testCase, contains(text, "### Selected-model parameter summary"));
+verifyTrue(testCase, contains(text, "neo-hookean"));
+verifyTrue(testCase, contains(text, "mu"));
+verifyTrue(testCase, contains(text, "Unit"));
+verifyTrue(testCase, contains(text, "MPa"));
 end
 
 function testDefaultConfiguration(testCase)
@@ -83,6 +143,7 @@ verifyEqual(testCase, config.figureFormat, "png");
 verifyTrue(testCase, config.includeIndividualCurves);
 verifyTrue(testCase, config.includePeakMetrics);
 verifyTrue(testCase, config.includeTangentModulus);
+verifyTrue(testCase, config.includePopulationTangentModulus);
 verifyTrue(testCase, config.closeFiguresAfterExport);
 end
 
@@ -92,6 +153,7 @@ config.studyTitle = "Tensile study report";
 config.includePopulationCurve = false;
 config.includePeakMetrics = false;
 config.includeTangentModulus = false;
+config.includePopulationTangentModulus = false;
 config.figureResolution = 72;
 end
 
@@ -139,6 +201,19 @@ study.analysis.summary = table( ...
     'ErrorIdentifier','ErrorMessage'});
 study.population = struct();
 study.populationStatus = "disabled";
+study.config.datasetAnalysis.processingConfig.mechanics.strainMeasure = ...
+    "engineering";
+study.config.datasetAnalysis.processingConfig.mechanics.stressMeasure = ...
+    "engineering";
+study.config.datasetAnalysis.processingConfig.mechanics.areaEvolution = ...
+    "incompressible";
+study.config.datasetAnalysis.processingConfig.analysis.summaryStrainRange = ...
+    [0.1, 0.3];
+study.config.datasetAnalysis.fitting.modelNames = ...
+    ["neo-hookean"; "yeoh"];
+study.config.datasetAnalysis.fitting.selectionConfig.rankingMetric = "BIC";
+study.config.datasetAnalysis.fitting.fitConfig.numberOfStarts = 8;
+study.config.datasetAnalysis.fitting.fitConfig.randomSeed = 1;
 study.provenance.sourceFile = study.sourceFile;
 study.provenance.sourceFileBytes = 0;
 study.provenance.matlabRelease = string(version("-release"));
@@ -147,6 +222,12 @@ study.provenance.specimenCount = 1;
 study.provenance.processedSpecimenCount = 1;
 study.provenance.qualityFailedSpecimenCount = 0;
 study.provenance.failedSpecimenCount = 0;
+end
+
+function tangent = localSpecimenTangentModulus()
+tangent.strain = [0.1; 0.2; 0.3];
+tangent.tangentModulusForPlot = [2; 3; 4];
+tangent.summaryStrainRange = [0.1, 0.3];
 end
 
 function tangent = localPopulationTangentModulus()
