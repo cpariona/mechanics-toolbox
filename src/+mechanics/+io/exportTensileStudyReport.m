@@ -61,8 +61,9 @@ if isfield(study, "exclusion") && study.exclusion.count > 0
 end
 
 fprintf(fileId, "## Specimen status\n\n");
-fprintf(fileId, ["| Specimen | Status | Maximum strain | Maximum stress | " ...
-    "Peak force | Median tangent modulus | Selected model |\n"]);
+fprintf(fileId, "%s", [ ...
+    '| Specimen | Status | Maximum strain | Maximum stress | ' ...
+    'Peak force | Median tangent modulus | Selected model |' newline]);
 fprintf(fileId, "|---|---|---:|---:|---:|---:|---|\n");
 summary = study.analysis.summary;
 for row = 1:height(summary)
