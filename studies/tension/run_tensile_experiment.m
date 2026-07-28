@@ -184,9 +184,8 @@ disp(study.outputFiles)
 disp(reportFiles)
 
 %% 3. RESULTS AND DISTINCT INTERACTIVE DIAGNOSTICS
-% Report figures already cover specimen stress-strain curves, the population
-% response, peak metrics, tangent modulus, and zero-reference diagnostics.
-% Keep only interactive views that add information not present in that report.
+% Persistent workflow figures are owned by maintained exporters. Keep only
+% experiment-inspection views that are not represented in those exports.
 summaryTable = study.analysis.summary;
 availableColumns = string(summaryTable.Properties.VariableNames);
 requestedColumns = [
@@ -208,8 +207,7 @@ processedIndices = find(string({records.status}) == "processed");
 if ~isempty(processedIndices)
     specimen = records(processedIndices(1)).specimen;
 
-    % Distinct preprocessing diagnostic: complete original acquisition versus
-    % the final selected and zero-referenced curve.
+    % Complete acquisition versus the final selected and zero-referenced curve.
     figure("Color", "w")
     hold on
     plot(specimen.originalRaw.displacement, specimen.originalRaw.force, ...
@@ -223,8 +221,7 @@ if ~isempty(processedIndices)
     grid on
     box on
 
-    % Distinct model diagnostic: the study report does not include the
-    % selected constitutive fit for an individual specimen.
+    % Selected constitutive fit for one specimen remains an interactive view.
     if isfield(specimen, "modelSelection") && ...
             specimen.modelSelection.selection.hasEligibleModel
         modelStudy = specimen.modelSelection;
@@ -269,7 +266,8 @@ if ~isempty(processedIndices)
 end
 
 %% 4. OPTIONAL TENSILE WORKFLOWS
-% Enable only the analyses required for the current experiment.
+% Disabled workflows remain available for compatible future datasets. Their
+% exporters own all persistent figures and tabular/MAT outputs.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
 runSelectedParameterPopulation = true;
@@ -289,16 +287,15 @@ else
 end
 
 if runFitDiagnostics
-    diagnosticModel = "yeoh";
     fitDiagnostics = mechanics.workflow.runFitDiagnostics( ...
-        diagnosticModel, optionalDeformation, optionalStress, ...
-        optionalContext, mechanics.config.fittingConfig(), ...
+        "yeoh", optionalDeformation, optionalStress, optionalContext, ...
+        mechanics.config.fittingConfig(), ...
         mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
     disp(fitDiagnostics.reliability.status)
-    mechanics.plotting.plotFitReliability(fitDiagnostics.reliability);
-    mechanics.io.exportFitDiagnostics( ...
+    fitDiagnosticFiles = mechanics.io.exportFitDiagnostics( ...
         fitDiagnostics, fullfile(outputFolder, "fit-diagnostics"));
+    disp(fitDiagnosticFiles)
 end
 
 if runReliabilityAwareModelComparison
@@ -309,9 +306,9 @@ if runReliabilityAwareModelComparison
         mechanics.config.modelComparisonWorkflowConfig());
     disp(modelComparison.summary)
     disp(modelComparison.selectedModelName)
-    mechanics.plotting.plotModelComparison(modelComparison);
-    mechanics.io.exportModelComparison( ...
+    modelComparisonFiles = mechanics.io.exportModelComparison( ...
         modelComparison, fullfile(outputFolder, "model-comparison"));
+    disp(modelComparisonFiles)
 end
 
 if runSelectedParameterPopulation || ...
@@ -344,13 +341,16 @@ if runSelectedParameterPopulation || ...
     disp(parameterPopulation.groupSummary)
 
     if runSelectedParameterPopulation
-        mechanics.io.exportSelectedParameterPopulation( ...
+        selectedParameterFiles = ...
+            mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
             fullfile(outputFolder, "selected-parameter-population"));
+        disp(selectedParameterFiles)
     end
 end
 
 if runGroupComparison
+    % Replace the placeholder labels with the real experimental groups.
     groupAssignments = table( ...
         string(summaryTable.SpecimenId), ...
         repmat("Unassigned", height(summaryTable), 1), ...
@@ -362,9 +362,9 @@ if runGroupComparison
         groupedAnalysis, groupNames, ...
         mechanics.config.groupComparisonConfig());
     disp(groupComparison.metricComparison)
-    mechanics.plotting.plotGroupComparison(groupComparison);
-    mechanics.io.exportGroupComparison( ...
+    groupComparisonFiles = mechanics.io.exportGroupComparison( ...
         groupComparison, fullfile(outputFolder, "group-comparison"));
+    disp(groupComparisonFiles)
 end
 
 if runGroupParameterInference
@@ -373,10 +373,10 @@ if runGroupParameterInference
         parameterPopulation, ...
         mechanics.config.groupParameterInferenceConfig());
     disp(parameterInference.comparisonTable)
-    mechanics.plotting.plotGroupParameterInference(parameterInference);
-    mechanics.io.exportGroupParameterInference( ...
+    inferenceFiles = mechanics.io.exportGroupParameterInference( ...
         parameterInference, ...
         fullfile(outputFolder, "group-parameter-inference"));
+    disp(inferenceFiles)
 end
 
 if runConstitutiveStudyReport
