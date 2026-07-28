@@ -18,7 +18,6 @@ selectedRaw = cycle.selectedRaw;
 
 relativeLoadingEndIndex = ...
     cycle.loadingEndIndex - cycle.cycleStartIndex + 1;
-localValidateSignConvention(config.signConvention);
 [forceOrientation, displacementOrientation] = ...
     localCompressionOrientation(fullCycleRaw, relativeLoadingEndIndex);
 
@@ -157,14 +156,6 @@ if isempty(candidates)
 end
 [~, localIndex] = max([records(candidates).windowFraction]);
 record = records(candidates(localIndex));
-end
-
-function localValidateSignConvention(value)
-value = lower(string(value));
-if ~ismember(value, ["positive-compression", "instrument"])
-    error("mechanics:workflow:UnknownCompressionSignConvention", ...
-        "Unknown compression sign convention: %s", value);
-end
 end
 
 function [forceOrientation, displacementOrientation] = ...
