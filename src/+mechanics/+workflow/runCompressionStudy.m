@@ -86,6 +86,11 @@ study.populationErrorIdentifier = populationErrorIdentifier;
 study.populationErrorMessage = populationErrorMessage;
 study.config = config;
 study.createdAt = datetime("now");
+
+if config.export.enabled
+    study.outputFiles = mechanics.io.exportCompressionStudy( ...
+        study, config.export);
+end
 end
 
 function [entries, manifest, inputInfo] = localNormalizeInput(inputValue, config)

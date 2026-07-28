@@ -1,5 +1,5 @@
-function config = studyReportConfig()
-%STUDYREPORTCONFIG Default configuration for tensile-study reporting.
+function config = tensileStudyReportConfig()
+%TENSILESTUDYREPORTCONFIG Default tensile-study report configuration.
 config.outputFolder = "results/tensile-study/report";
 config.reportFilename = "report.md";
 config.figureFormat = "png";

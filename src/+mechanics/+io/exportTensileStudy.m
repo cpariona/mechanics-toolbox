@@ -28,29 +28,23 @@ if exportConfig.saveTables
     provenanceTable = struct2table(study.provenance, "AsArray", true);
     outputFiles.provenance = fullfile(folder, "provenance.csv");
     writetable(provenanceTable, outputFiles.provenance);
-
-    if isfield(study.population, "metrics") && ...
-            istable(study.population.metrics)
-        outputFiles.populationMetrics = ...
-            fullfile(folder, "population_metrics.csv");
-        writetable(study.population.metrics, ...
-            outputFiles.populationMetrics);
-    end
 end
 
-if exportConfig.saveAnalysisMat
+if exportConfig.savePopulation && study.populationStatus == "completed"
+    outputFiles.population = mechanics.io.exportPopulationAnalysis( ...
+        study.population, folder, SaveData=false);
+end
+
+if exportConfig.saveStudyMat
     outputFiles.study = fullfile(folder, "tensile_study.mat");
     save(outputFiles.study, "study");
 end
 
-if exportConfig.saveConfigurationMat
-    config = study.config; %#ok<NASGU>
-    outputFiles.config = fullfile(folder, "study_config.mat");
-    save(outputFiles.config, "config");
-end
-
 fields = fieldnames(outputFiles);
 for index = 1:numel(fields)
+    if isstruct(outputFiles.(fields{index}))
+        continue;
+    end
     outputFiles.(fields{index}) = string(outputFiles.(fields{index}));
 end
 end

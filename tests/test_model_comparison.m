@@ -10,11 +10,9 @@ function testNeoHookeanSelectedForNeoHookeanData(testCase)
 [strain, stress, context] = localData();
 fitConfig = mechanics.config.fittingConfig();
 config = localFastConfig();
-
 comparison = mechanics.workflow.compareModelsWithDiagnostics( ...
     ["neo-hookean", "mooney-rivlin"], strain, stress, context, ...
     fitConfig, config);
-
 verifyTrue(testCase, comparison.hasSelectedModel);
 verifyEqual(testCase, comparison.selectedModelName, "neo-hookean");
 verifyEqual(testCase, height(comparison.summary), 2);
@@ -27,11 +25,9 @@ function testUnknownModelCanBeRecorded(testCase)
 fitConfig = mechanics.config.fittingConfig();
 config = localFastConfig();
 config.requireEligibleModel = false;
-
 comparison = mechanics.workflow.compareModelsWithDiagnostics( ...
     ["neo-hookean", "not-a-model"], strain, stress, context, ...
     fitConfig, config);
-
 verifyTrue(testCase, comparison.summary.Success(1));
 verifyFalse(testCase, comparison.summary.Success(2));
 verifyNotEmpty(testCase, comparison.summary.ErrorIdentifier(2));
@@ -42,7 +38,6 @@ function testUnknownCriterionRejected(testCase)
 fitConfig = mechanics.config.fittingConfig();
 config = localFastConfig();
 config.selectionCriterion = "unknown";
-
 verifyError(testCase, @() mechanics.workflow.compareModelsWithDiagnostics( ...
     "neo-hookean", strain, stress, context, fitConfig, config), ...
     "mechanics:workflow:UnknownModelSelectionCriterion");
@@ -51,18 +46,21 @@ end
 function testExportCreatesFiles(testCase)
 [strain, stress, context] = localData();
 fitConfig = mechanics.config.fittingConfig();
-config = localFastConfig();
 comparison = mechanics.workflow.compareModelsWithDiagnostics( ...
     ["neo-hookean", "mooney-rivlin"], strain, stress, context, ...
-    fitConfig, config);
-
+    fitConfig, localFastConfig());
 folder = string(tempname);
 cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
 files = mechanics.io.exportModelComparison(comparison, folder);
-
 verifyTrue(testCase, isfile(files.summary));
 verifyTrue(testCase, isfile(files.selection));
 verifyTrue(testCase, isfile(files.data));
+verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.figureFig));
+verifyEqual(testCase, string(files.figure), ...
+    string(fullfile(folder, "model_comparison.png")));
+verifyEqual(testCase, string(files.figureFig), ...
+    string(fullfile(folder, "model_comparison.fig")));
 end
 
 function config = localFastConfig()

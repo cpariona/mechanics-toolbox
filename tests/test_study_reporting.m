@@ -78,7 +78,7 @@ verifyFalse(testCase, contains(text, "individual_curves.fig"));
 end
 
 function testDefaultConfiguration(testCase)
-config = mechanics.config.studyReportConfig();
+config = mechanics.config.tensileStudyReportConfig();
 verifyEqual(testCase, config.figureFormat, "png");
 verifyTrue(testCase, config.includeIndividualCurves);
 verifyTrue(testCase, config.includePeakMetrics);
@@ -87,7 +87,7 @@ verifyTrue(testCase, config.closeFiguresAfterExport);
 end
 
 function config = localConfig()
-config = mechanics.config.studyReportConfig();
+config = mechanics.config.tensileStudyReportConfig();
 config.studyTitle = "Tensile study report";
 config.includePopulationCurve = false;
 config.includePeakMetrics = false;

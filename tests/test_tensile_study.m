@@ -47,7 +47,14 @@ verifyTrue(testCase, isfile(study.outputFiles.datasetSummary));
 verifyTrue(testCase, isfile(study.outputFiles.peakSummary));
 verifyTrue(testCase, isfile(study.outputFiles.provenance));
 verifyTrue(testCase, isfile(study.outputFiles.study));
-verifyTrue(testCase, isfile(study.outputFiles.config));
+verifyTrue(testCase, isfile(study.outputFiles.population.curve));
+verifyTrue(testCase, isfile(study.outputFiles.population.metrics));
+verifyTrue(testCase, isfile(study.outputFiles.population.tangentModulus));
+verifyTrue(testCase, isfile(study.outputFiles.population.parameterValues));
+verifyTrue(testCase, isfile(study.outputFiles.population.parameterSummary));
+verifyFalse(testCase, isfield(study.outputFiles, "config"));
+verifyFalse(testCase, isfile(fullfile(config.export.outputFolder, "study_config.mat")));
+verifyFalse(testCase, isfile(fullfile(config.export.outputFolder, "population_analysis.mat")));
 end
 
 function testExcludedSpecimenIsRemovedBeforeAnalysis(testCase)

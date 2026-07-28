@@ -18,7 +18,7 @@ config.population.continueOnError = true;
 
 config.export.enabled = false;
 config.export.outputFolder = "results/tensile-study";
-config.export.saveAnalysisMat = true;
-config.export.saveConfigurationMat = true;
+config.export.saveStudyMat = true;
 config.export.saveTables = true;
+config.export.savePopulation = true;
 end

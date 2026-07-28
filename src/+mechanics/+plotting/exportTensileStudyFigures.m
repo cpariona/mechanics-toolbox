@@ -2,7 +2,7 @@ function outputFiles = exportTensileStudyFigures(study, config)
 %EXPORTTENSILESTUDYFIGURES Export standard figures for a tensile study.
 arguments
     study (1,1) struct
-    config (1,1) struct = mechanics.config.studyReportConfig()
+    config (1,1) struct = mechanics.config.tensileStudyReportConfig()
 end
 
 folder = string(config.outputFolder);

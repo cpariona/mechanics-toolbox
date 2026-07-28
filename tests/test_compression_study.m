@@ -100,9 +100,51 @@ study = mechanics.workflow.runCompressionSpecimen(filename, config);
 verifyTrue(testCase, isfile(study.outputFiles.processed));
 verifyTrue(testCase, isfile(study.outputFiles.metrics));
 verifyTrue(testCase, isfile(study.outputFiles.study));
+verifyEqual(testCase, string(study.outputFiles.study), ...
+    fullfile(folder, "compression_specimen.mat"));
 verifyTrue(testCase, isfile(study.outputFiles.reportReport));
 verifyTrue(testCase, isfile(study.outputFiles.reportSelectedBranch));
 verifyTrue(testCase, isfile(fullfile(folder, "report", "compression_response.fig")));
+end
+
+function testCompressionStudyExportIntegration(testCase)
+folder = string(tempname);
+mkdir(folder);
+cleanup = onCleanup(@() localDeleteFolder(folder)); %#ok<NASGU>
+[displacement, force] = localThreeCycles();
+files = [fullfile(folder, "specimen_a.csv"); ...
+    fullfile(folder, "specimen_b.csv")];
+for index = 1:numel(files)
+    writetable(table(force, displacement, ...
+        'VariableNames', {'Force','Displacement'}), files(index));
+end
+manifest = table(files, ["A"; "B"], [10; 10], [2; 2], ...
+    true(2,1), strings(2,1), ...
+    'VariableNames', {'File','SpecimenId','InitialLength','InitialArea', ...
+    'Include','Sheet'});
+outputFolder = fullfile(folder, "output");
+config = mechanics.config.compressionStudyConfig();
+config.input.type = "manifest";
+config.specimen.cycle.smoothingFrameLength = 1;
+config.specimen.processing.analysis.summaryStrainRange = [-0.1, 0];
+config.population.config.bootstrap.enabled = false;
+config.population.config.export.enabled = false;
+config.export.enabled = true;
+config.export.outputFolder = outputFolder;
+study = mechanics.workflow.runCompressionStudy(manifest, config);
+verifyEqual(testCase, study.populationStatus, "completed");
+verifyTrue(testCase, isfile(study.outputFiles.study));
+verifyTrue(testCase, isfile(study.outputFiles.manifest));
+verifyTrue(testCase, isfile(study.outputFiles.summary));
+verifyTrue(testCase, isfile(study.outputFiles.population.curve));
+verifyTrue(testCase, isfile(study.outputFiles.population.metrics));
+verifyTrue(testCase, isfile(study.outputFiles.population.tangentModulus));
+verifyTrue(testCase, isfile(study.outputFiles.population.parameterValues));
+verifyTrue(testCase, isfile(study.outputFiles.population.parameterSummary));
+verifyFalse(testCase, isfield(study.outputFiles.population, "population"));
+verifyFalse(testCase, isfile(fullfile(outputFolder, "population_analysis.mat")));
+verifyEqual(testCase, string(study.outputFiles.study), ...
+    fullfile(outputFolder, "compression_study.mat"));
 end
 
 function testDecreasingInstrumentSignalsCanBeNormalized(testCase)

@@ -25,9 +25,12 @@ diagnosticConfig = mechanics.config.fitDiagnosticsWorkflowConfig();
 analysis = mechanics.workflow.runFitDiagnostics( ...
     modelName, deformation, measuredStress, context, ...
     fitConfig, diagnosticConfig);
+
+files = mechanics.io.exportFitDiagnostics( ...
+    analysis, "results/fit-diagnostics");
 ```
 
-The result contains the fitted parameters, bootstrap uncertainty, identifiability diagnostics, deformation-window stability, residual diagnostics, reliability classification, and captured optional-diagnostic errors.
+The result contains the fitted parameters, bootstrap uncertainty, identifiability diagnostics, deformation-window stability, residual diagnostics, reliability classification, and captured optional-diagnostic errors. The exporter writes CSV and MAT results together with `fit_reliability.png` and the editable `fit_reliability.fig`.
 
 ## Compare candidate models
 
@@ -35,9 +38,12 @@ The result contains the fitted parameters, bootstrap uncertainty, identifiabilit
 config = mechanics.config.modelComparisonWorkflowConfig();
 comparison = mechanics.workflow.compareModelsWithDiagnostics( ...
     modelNames, deformation, measuredStress, context, fitConfig, config);
+
+files = mechanics.io.exportModelComparison( ...
+    comparison, "results/model-comparison");
 ```
 
-Only successfully fitted models with an allowed reliability status are eligible for ranking. Supported criteria include AICc, AIC, BIC, RMSE, and normalized RMSE.
+Only successfully fitted models with an allowed reliability status are eligible for ranking. Supported criteria include AICc, AIC, BIC, RMSE, and normalized RMSE. The exporter owns the maintained comparison figure and writes both `model_comparison.png` and `model_comparison.fig`.
 
 ## Compare models across specimens
 
@@ -62,15 +68,34 @@ population = mechanics.workflow.summarizeSelectedParameters(batch, config);
 
 Parameters remain separated by model family and parameter name. The result includes a long-form specimen table, overall summaries, group summaries, bootstrap intervals when available, and extraction errors. `requireFiniteParameters` controls whether nonfinite selected parameters are rejected, while `continueOnExtractionError` controls whether one failed specimen aborts the complete summary.
 
+## Descriptive group comparison
+
+```matlab
+comparison = mechanics.workflow.analyzeGroupComparison( ...
+    groupedAnalysis, groupNames, mechanics.config.groupComparisonConfig());
+
+files = mechanics.io.exportGroupComparison( ...
+    comparison, "results/group-comparison");
+```
+
+For a two-group comparison, the exporter writes the group summaries, population bundles, pairwise curve and metric tables, MAT result, and the maintained `group_comparison.png` and `group_comparison.fig` figure pair. Comparisons with more than two groups retain their tabular and MAT outputs without inventing a pairwise figure.
+
 ## Group inference
 
 ```matlab
 config = mechanics.config.groupParameterInferenceConfig();
 inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
     population, config);
+
+files = mechanics.io.exportGroupParameterInference( ...
+    inference, "results/group-parameter-inference");
 ```
 
-Pairwise comparisons are performed separately for each model and parameter combination. Outputs include mean and median differences, bootstrap confidence intervals, Hedges' g, Cliff's delta, permutation p-values, and multiplicity-adjusted p-values.
+Pairwise comparisons are performed separately for each model and parameter combination. Outputs include mean and median differences, bootstrap confidence intervals, Hedges' g, Cliff's delta, permutation p-values, and multiplicity-adjusted p-values. The exporter also writes `group_parameter_inference.png` and `group_parameter_inference.fig`, including an explicit no-successful-comparisons view when the result contains no finite estimates.
+
+## Figure ownership
+
+Maintained exporters own persistent workflow figures. Every maintained figure is written as a PNG image and an editable MATLAB FIG file with the same base name. Drivers should not call the corresponding plotter separately before invoking an exporter. Interactive driver figures are reserved for experiment-specific diagnostics that are not part of a maintained export contract.
 
 ## Integrated report
 

@@ -8,9 +8,8 @@ end
 
 function testDetectsClearGroupDifference(testCase)
 population = localPopulation([10 11 9 10.5], [20 21 19 20.5]);
-config = localConfig();
 inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-    population, config);
+    population, localConfig());
 verifyEqual(testCase, inference.comparisonCount, 1);
 verifyLessThan(testCase, inference.comparisonTable.AdjustedPValue, 0.05);
 verifyTrue(testCase, inference.comparisonTable.Significant);
@@ -33,9 +32,8 @@ extra = population.parameterTable;
 extra.Parameter(:) = "beta";
 extra.Value = extra.Value .* 2;
 population.parameterTable = [population.parameterTable; extra];
-config = localConfig();
 inference = mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-    population, config);
+    population, localConfig());
 verifyEqual(testCase, inference.comparisonCount, 2);
 verifyEqual(testCase, numel(unique(inference.comparisonTable.Parameter)), 2);
 end
@@ -50,6 +48,12 @@ files = mechanics.io.exportGroupParameterInference(inference, folder);
 verifyTrue(testCase, isfile(files.comparisons));
 verifyTrue(testCase, isfile(files.summary));
 verifyTrue(testCase, isfile(files.data));
+verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.figureFig));
+verifyEqual(testCase, string(files.figure), ...
+    string(fullfile(folder, "group_parameter_inference.png")));
+verifyEqual(testCase, string(files.figureFig), ...
+    string(fullfile(folder, "group_parameter_inference.fig")));
 end
 
 function config = localConfig()

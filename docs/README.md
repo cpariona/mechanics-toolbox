@@ -1,33 +1,31 @@
 # Documentation
 
-The documentation is organized by task.
+The documentation is organized by task. Persistent project state is maintained in one place: `development/context-handoff.md`.
 
 ## Workflows
 
-- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis, executable study driver, and reporting.
-- [`workflows/compression-study.md`](workflows/compression-study.md): last-cycle compression selection and specimen processing.
+- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis, experiment driver, population results, downstream constitutive workflows, and reporting.
+- [`workflows/compression-study.md`](workflows/compression-study.md): compression-cycle selection, study processing, shared uniaxial contracts, and reporting.
 - [`workflows/constitutive-analysis.md`](workflows/constitutive-analysis.md): fitting, diagnostics, model comparison, parameter summaries, group inference, and reporting.
 
 ## Data
 
-- [`data/import-and-processing.md`](data/import-and-processing.md): table import, workbook extraction, batch manifests, quality checks, and normalized specimen contracts.
+- [`data/import-and-processing.md`](data/import-and-processing.md): table import, workbook extraction, manifests, quality checks, and normalized specimen contracts.
 
 ## Reference
 
 - [`reference/constitutive-models.md`](reference/constitutive-models.md): deformation measures, stress measures, model equations, and parameter definitions.
 - [`reference/fit-diagnostics.md`](reference/fit-diagnostics.md): uncertainty, identifiability, window stability, residual diagnostics, and reliability.
 - [`reference/peak-analysis.md`](reference/peak-analysis.md): peak segmentation, post-peak descriptors, and energy conventions.
-- [`reference/geometry-uncertainty.md`](reference/geometry-uncertainty.md): propagation of initial-length and initial-area uncertainty to stress and strain.
+- [`reference/geometry-uncertainty.md`](reference/geometry-uncertainty.md): propagation of initial-length and initial-area uncertainty.
 - [`reference/population-and-group-analysis.md`](reference/population-and-group-analysis.md): replicate statistics and experimental group comparisons.
-- [`reference/tensile-input-contracts.md`](reference/tensile-input-contracts.md): workbook, file-list, manifest, and pre-extracted dataset inputs for the tensile workflow.
+- [`reference/tensile-input-contracts.md`](reference/tensile-input-contracts.md): supported tensile-study inputs and normalization.
 
 ## Development
 
-- [`development/context-handoff.md`](development/context-handoff.md): persistent state and protocol for continuing repository work.
-- [`development/next-chat-prompt.md`](development/next-chat-prompt.md): ready-to-copy prompt for the next tensile-study development chat.
+- [`development/context-handoff.md`](development/context-handoff.md): current validated state, deferred work, maintenance priorities, and continuation protocol.
 - [`development/repository-structure.md`](development/repository-structure.md): maintained source layout and contribution boundaries.
 - [`development/testing.md`](development/testing.md): focused tests and complete release validation.
-- [`development/tensile-study-follow-up.md`](development/tensile-study-follow-up.md): completed tensile-study scope and remaining maintenance boundaries.
-- [`development/final-cleanup-audit.md`](development/final-cleanup-audit.md): final cleanup decisions, retained legacy behavior, and deferred consolidation.
+- [`development/final-cleanup-audit.md`](development/final-cleanup-audit.md): historical record of the cleanup completed after the tensile-study comparison migration.
 
-Development chronology is retained in Git history and merged pull requests.
+Development chronology belongs in Git history and merged pull requests. Superseded phase prompts and temporary handoff notes are not retained as parallel documentation.

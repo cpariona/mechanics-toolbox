@@ -62,6 +62,12 @@ verifyTrue(testCase, isfile(files.reliability));
 verifyTrue(testCase, isfile(files.errors));
 verifyTrue(testCase, isfile(files.summary));
 verifyTrue(testCase, isfile(files.data));
+verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.figureFig));
+verifyEqual(testCase, string(files.figure), ...
+    string(fullfile(folder, "fit_reliability.png")));
+verifyEqual(testCase, string(files.figureFig), ...
+    string(fullfile(folder, "fit_reliability.fig")));
 end
 
 function [strain, measuredStress, context] = localData()

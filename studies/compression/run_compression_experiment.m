@@ -110,7 +110,8 @@ geometryUncertainty.initialLengthStd = NaN; % mm
 geometryUncertainty.initialAreaStd = NaN;   % mm^2
 config.specimen.processing.uncertainty.geometry = geometryUncertainty;
 
-% The integrated study driver owns export; per-specimen export stays disabled.
+% Study processing owns all persisted study outputs. Per-specimen export stays
+% disabled while specimens are assembled into the population result.
 config.specimen.export.enabled = false;
 
 % Population analysis.
@@ -126,6 +127,14 @@ population.config.bootstrap.confidenceLevel = 0.95;
 population.config.bootstrap.randomSeed = 1;
 population.config.export.enabled = false;
 config.population = population;
+
+% Automatic study bundle export.
+config.export.enabled = true;
+config.export.outputFolder = outputFolder;
+config.export.saveStudyMat = true;
+config.export.saveManifest = true;
+config.export.saveSummary = true;
+config.export.savePopulation = true;
 
 %% 2. RUN THE COMPLETE COMPRESSION WORKFLOW
 tic
@@ -146,24 +155,9 @@ elseif study.populationStatus == "failed"
         char(study.populationErrorMessage))
 end
 
-%% 3. MAINTAINED EXPORTS
-if ~isfolder(outputFolder)
-    mkdir(outputFolder)
-end
+disp(study.outputFiles)
 
-save(fullfile(outputFolder, "compression_study.mat"), ...
-    "study", "config");
-writetable(study.manifest, ...
-    fullfile(outputFolder, "compression_manifest.csv"));
-writetable(study.analysis.summary, ...
-    fullfile(outputFolder, "compression_summary.csv"));
-
-if study.populationStatus == "completed"
-    populationFiles = mechanics.io.exportPopulationAnalysis( ...
-        study.population, outputFolder);
-    disp(populationFiles)
-end
-
+%% 3. MAINTAINED REPORT
 reportConfig = mechanics.config.compressionStudyReportConfig();
 reportConfig.outputFolder = fullfile(outputFolder, "report");
 reportConfig.studyTitle = ...
@@ -172,9 +166,9 @@ reportFiles = mechanics.io.exportCompressionStudyReport( ...
     study, reportConfig);
 disp(reportFiles)
 
-%% 4. INTERACTIVE RESULTS
-% Persistent PNG and FIG files are generated only by the maintained report
-% exporter. This section is for interactive inspection during development.
+%% 4. RESULTS AND DISTINCT INTERACTIVE DIAGNOSTICS
+% Persistent workflow figures are owned by maintained exporters. Keep only
+% experiment-inspection views that are not represented in those exports.
 summaryTable = study.analysis.summary;
 availableColumns = string(summaryTable.Properties.VariableNames);
 requestedColumns = [
@@ -194,40 +188,18 @@ processedIndices = find(string({records.status}) == "processed");
 
 if ~isempty(processedIndices)
     specimen = records(processedIndices(1)).specimen;
-    mechanics.plotting.plotStressStrain( ...
-        specimen.processed, ...
-        Title="Processed compression specimen: " + string(specimen.id), ...
-        DisplayName="Experimental");
 
+    % Complete instrument acquisition, including conditioning cycles.
     figure("Color", "w")
-    tiledlayout(1, 3, "TileSpacing", "compact", "Padding", "compact")
-    nexttile
     plot(specimen.originalRaw.displacement, specimen.originalRaw.force, ...
         "LineWidth", 1.0)
     xlabel("Instrument displacement")
     ylabel("Instrument force")
-    title("Original recorded cycles")
+    title("Original recorded compression cycles")
     grid on
     box on
 
-    nexttile
-    plot(specimen.fullCycleRaw.displacement, specimen.fullCycleRaw.force, ...
-        "LineWidth", 1.1)
-    xlabel("Compression displacement magnitude")
-    ylabel("Compression force magnitude")
-    title("Selected measurement cycle")
-    grid on
-    box on
-
-    nexttile
-    plot(-specimen.processed.strain, -specimen.processed.stress, ...
-        "LineWidth", 1.4)
-    xlabel("Compression strain magnitude")
-    ylabel("Compression stress magnitude")
-    title("Processed loading branch")
-    grid on
-    box on
-
+    % Selected constitutive fit for one specimen remains an interactive view.
     if isfield(specimen, "modelSelection") && ...
             specimen.modelSelection.selection.hasEligibleModel
         modelStudy = specimen.modelSelection;
@@ -253,6 +225,8 @@ if ~isempty(processedIndices)
 end
 
 %% 5. OPTIONAL COMPRESSION WORKFLOWS
+% Disabled workflows remain available for compatible future datasets. Their
+% exporters own all persistent figures and tabular/MAT outputs.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
 runSelectedParameterPopulation = true;
@@ -272,30 +246,28 @@ else
 end
 
 if runFitDiagnostics
-    diagnosticModel = "yeoh";
-    diagnosticConfig = mechanics.config.fitDiagnosticsWorkflowConfig();
     fitDiagnostics = mechanics.workflow.runFitDiagnostics( ...
-        diagnosticModel, optionalDeformation, optionalStress, ...
-        optionalContext, mechanics.config.fittingConfig(), ...
-        diagnosticConfig);
+        "yeoh", optionalDeformation, optionalStress, optionalContext, ...
+        mechanics.config.fittingConfig(), ...
+        mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
     disp(fitDiagnostics.reliability.status)
-    mechanics.plotting.plotFitReliability(fitDiagnostics.reliability);
-    mechanics.io.exportFitDiagnostics( ...
+    fitDiagnosticFiles = mechanics.io.exportFitDiagnostics( ...
         fitDiagnostics, fullfile(outputFolder, "fit-diagnostics"));
+    disp(fitDiagnosticFiles)
 end
 
 if runReliabilityAwareModelComparison
-    comparisonConfig = mechanics.config.modelComparisonWorkflowConfig();
     modelComparison = mechanics.workflow.compareModelsWithDiagnostics( ...
         config.specimen.fitting.modelNames, ...
         optionalDeformation, optionalStress, optionalContext, ...
-        mechanics.config.fittingConfig(), comparisonConfig);
+        mechanics.config.fittingConfig(), ...
+        mechanics.config.modelComparisonWorkflowConfig());
     disp(modelComparison.summary)
     disp(modelComparison.selectedModelName)
-    mechanics.plotting.plotModelComparison(modelComparison);
-    mechanics.io.exportModelComparison( ...
+    modelComparisonFiles = mechanics.io.exportModelComparison( ...
         modelComparison, fullfile(outputFolder, "model-comparison"));
+    disp(modelComparisonFiles)
 end
 
 if runSelectedParameterPopulation || ...
@@ -316,28 +288,28 @@ if runSelectedParameterPopulation || ...
             config.specimen.fitting.context; %#ok<SAGROW>
     end
 
-    batchConfig = mechanics.config.batchModelComparisonConfig();
     parameterBatch = mechanics.workflow.compareModelsAcrossSpecimens( ...
         comparisonSpecimens, config.specimen.fitting.modelNames, ...
-        mechanics.config.fittingConfig(), batchConfig);
-    parameterPopulationConfig = ...
-        mechanics.config.selectedParameterPopulationConfig();
+        mechanics.config.fittingConfig(), ...
+        mechanics.config.batchModelComparisonConfig());
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
-        parameterBatch, parameterPopulationConfig);
+        parameterBatch, ...
+        mechanics.config.selectedParameterPopulationConfig());
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
     disp(parameterPopulation.groupSummary)
 
     if runSelectedParameterPopulation
-        mechanics.plotting.plotSelectedParameterPopulation( ...
-            parameterPopulation);
-        mechanics.io.exportSelectedParameterPopulation( ...
+        selectedParameterFiles = ...
+            mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
             fullfile(outputFolder, "selected-parameter-population"));
+        disp(selectedParameterFiles)
     end
 end
 
 if runGroupComparison
+    % Replace the placeholder labels with the real experimental groups.
     groupAssignments = table( ...
         string(summaryTable.SpecimenId), ...
         repmat("Unassigned", height(summaryTable), 1), ...
@@ -346,23 +318,24 @@ if runGroupComparison
         study.analysis, groupAssignments);
     groupNames = unique(groupAssignments.Group, "stable");
     groupComparison = mechanics.workflow.analyzeGroupComparison( ...
-        groupedAnalysis, groupNames, mechanics.config.groupComparisonConfig());
+        groupedAnalysis, groupNames, ...
+        mechanics.config.groupComparisonConfig());
     disp(groupComparison.metricComparison)
-    mechanics.plotting.plotGroupComparison(groupComparison);
-    mechanics.io.exportGroupComparison( ...
+    groupComparisonFiles = mechanics.io.exportGroupComparison( ...
         groupComparison, fullfile(outputFolder, "group-comparison"));
+    disp(groupComparisonFiles)
 end
 
 if runGroupParameterInference
     parameterInference = ...
         mechanics.workflow.compareSelectedParametersBetweenGroups( ...
-            parameterPopulation, ...
-            mechanics.config.groupParameterInferenceConfig());
+        parameterPopulation, ...
+        mechanics.config.groupParameterInferenceConfig());
     disp(parameterInference.comparisonTable)
-    mechanics.plotting.plotGroupParameterInference(parameterInference);
-    mechanics.io.exportGroupParameterInference( ...
+    inferenceFiles = mechanics.io.exportGroupParameterInference( ...
         parameterInference, ...
         fullfile(outputFolder, "group-parameter-inference"));
+    disp(inferenceFiles)
 end
 
 if runConstitutiveStudyReport
