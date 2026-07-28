@@ -33,6 +33,7 @@ titleText = localStudyTitle(study, config);
 summary = study.analysis.summary;
 status = string(summary.Status);
 units = mechanics.plotting.resolveStudyUnits(study.analysis.records);
+units.strain = localDisplayStrainUnit(units.strain);
 [strainName, stressName] = localMeasureNames(study);
 
 fprintf(fileId, "# %s\n\n", char(titleText));
