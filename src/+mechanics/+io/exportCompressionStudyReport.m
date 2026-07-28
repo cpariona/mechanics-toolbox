@@ -62,10 +62,10 @@ if isfield(study, "exclusion") && study.exclusion.count > 0
 end
 
 fprintf(fileId, "## Specimen status\n\n");
-fprintf(fileId, "%s", char( ...
-    "| Specimen | Status | Maximum " + strainName + " (" + units.strain + ") | " + ...
-    "Maximum " + stressName + " (" + units.stress + ") | " + ...
-    "Median tangent modulus (" + units.stress + ") | Selected model |\n"));
+fprintf(fileId, ...
+    "| Specimen | Status | Maximum %s (%s) | Maximum %s (%s) | Median tangent modulus (%s) | Selected model |\n", ...
+    char(strainName), char(units.strain), char(stressName), ...
+    char(units.stress), char(units.stress));
 fprintf(fileId, "|---|---|---:|---:|---:|---|\n");
 for row = 1:height(summary)
     fprintf(fileId, "| %s | %s | %.6g | %.6g | %.6g | %s |\n", ...
@@ -194,7 +194,7 @@ end
 function unit = localDisplayStrainUnit(unit)
 unit = string(unit);
 if unit == "-" || unit == "1" || strlength(unit) == 0
-    unit = "m/m";
+    unit = "mm/mm";
 end
 end
 
