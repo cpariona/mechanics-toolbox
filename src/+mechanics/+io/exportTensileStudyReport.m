@@ -2,7 +2,7 @@ function outputFiles = exportTensileStudyReport(study, config)
 %EXPORTTENSILESTUDYREPORT Export standard figures and a Markdown report.
 arguments
     study (1,1) struct
-    config (1,1) struct = mechanics.config.studyReportConfig()
+    config (1,1) struct = mechanics.config.tensileStudyReportConfig()
 end
 
 if strlength(strtrim(string(config.studyTitle))) == 0
