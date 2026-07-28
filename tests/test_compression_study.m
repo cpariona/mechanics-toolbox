@@ -141,7 +141,8 @@ verifyTrue(testCase, isfile(study.outputFiles.population.metrics));
 verifyTrue(testCase, isfile(study.outputFiles.population.tangentModulus));
 verifyTrue(testCase, isfile(study.outputFiles.population.parameterValues));
 verifyTrue(testCase, isfile(study.outputFiles.population.parameterSummary));
-verifyTrue(testCase, isfile(study.outputFiles.population.population));
+verifyFalse(testCase, isfield(study.outputFiles.population, "population"));
+verifyFalse(testCase, isfile(fullfile(outputFolder, "population_analysis.mat")));
 verifyEqual(testCase, string(study.outputFiles.study), ...
     fullfile(outputFolder, "compression_study.mat"));
 end
