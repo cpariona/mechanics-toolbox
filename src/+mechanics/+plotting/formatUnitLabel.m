@@ -7,7 +7,7 @@ end
 
 if contains(lower(name), "strain") && ...
         (unit == "-" || unit == "1" || strlength(unit) == 0)
-    unit = "m/m";
+    unit = "mm/mm";
 end
 
 if strlength(unit) == 0
