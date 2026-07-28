@@ -61,16 +61,44 @@ if isfield(study, "exclusion") && study.exclusion.count > 0
 end
 
 fprintf(fileId, "## Specimen status\n\n");
-fprintf(fileId, "| Specimen | Status | Peak force | Peak displacement | Best model |\n");
-fprintf(fileId, "|---|---|---:|---:|---|\n");
+fprintf(fileId, ["| Specimen | Status | Maximum strain | Maximum stress | " ...
+    "Peak force | Median tangent modulus | Selected model |\n"]);
+fprintf(fileId, "|---|---|---:|---:|---:|---:|---|\n");
 summary = study.analysis.summary;
 for row = 1:height(summary)
-    fprintf(fileId, "| %s | %s | %.6g | %.6g | %s |\n", ...
+    fprintf(fileId, "| %s | %s | %.6g | %.6g | %.6g | %.6g | %s |\n", ...
         char(summary.SpecimenId(row)), char(summary.Status(row)), ...
-        summary.PeakForce(row), summary.PeakDisplacement(row), ...
+        summary.MaximumStrain(row), summary.MaximumStress(row), ...
+        summary.PeakForce(row), summary.MedianTangentModulus(row), ...
         char(summary.BestModel(row)));
 end
 fprintf(fileId, "\n");
+
+if string(study.populationStatus) == "completed" && ...
+        isfield(study, "population")
+    fprintf(fileId, "## Population analysis\n\n");
+    if isfield(study.population, "specimenCount")
+        fprintf(fileId, "- Retained specimen count: %d\n", ...
+            study.population.specimenCount);
+    end
+    if isfield(study.population, "curves") && ...
+            isfield(study.population.curves, "centralStatistic")
+        fprintf(fileId, "- Central statistic: `%s`\n", ...
+            char(string(study.population.curves.centralStatistic)));
+    end
+    if isfield(study.population, "tangentModulusStatus")
+        fprintf(fileId, "- Tangent-modulus population status: `%s`\n", ...
+            char(string(study.population.tangentModulusStatus)));
+    end
+    fprintf(fileId, "\n");
+
+    if isfield(study.population, "modelParameters") && ...
+            isfield(study.population.modelParameters, "summary") && ...
+            ~isempty(study.population.modelParameters.summary)
+        fprintf(fileId, "### Selected-model parameter summary\n\n");
+        localWriteTable(fileId, study.population.modelParameters.summary);
+    end
+end
 
 fields = fieldnames(figureFiles);
 if ~isempty(fields)
@@ -96,6 +124,25 @@ fprintf(fileId, "- Source bytes: `%d`\n", ...
 
 outputFiles = figureFiles;
 outputFiles.report = string(reportFile);
+end
+
+function localWriteTable(fileId, inputTable)
+names = string(inputTable.Properties.VariableNames);
+fprintf(fileId, "| %s |\n", char(strjoin(names, " | ")));
+fprintf(fileId, "|%s|\n", char(strjoin(repmat("---", size(names)), "|")));
+for row = 1:height(inputTable)
+    values = strings(1, width(inputTable));
+    for column = 1:width(inputTable)
+        value = inputTable{row, column};
+        if isnumeric(value) || islogical(value)
+            values(column) = string(value);
+        else
+            values(column) = string(inputTable.(names(column))(row));
+        end
+    end
+    fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
+end
+fprintf(fileId, "\n");
 end
 
 function titleText = localStudyTitle(study, config)
