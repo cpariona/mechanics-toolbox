@@ -32,6 +32,6 @@ end
 
 if exportConfig.savePopulation && study.populationStatus == "completed"
     outputFiles.population = mechanics.io.exportPopulationAnalysis( ...
-        study.population, folder);
+        study.population, folder, SaveData=false);
 end
 end
