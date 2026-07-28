@@ -154,13 +154,15 @@ if study.populationStatus == "completed"
 end
 
 disp(study.outputFiles)
+
+%% 3. MAINTAINED REPORT
 reportConfig = mechanics.config.tensileStudyReportConfig();
 reportConfig.outputFolder = fullfile(outputFolder, "report");
-reportConfig.studyTitle = "";
+reportConfig.studyTitle = "auto";
 reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
 disp(reportFiles)
 
-%% 3. DISTINCT INTERACTIVE DIAGNOSTICS
+%% 4. RESULTS AND DISTINCT INTERACTIVE DIAGNOSTICS
 summaryTable = study.analysis.summary;
 requestedColumns = ["SpecimenId"; "Status"; "MaximumStrain"; ...
     "MaximumStress"; "MedianTangentModulus"; "BestModel"];
@@ -207,8 +209,9 @@ if ~isempty(processedIndices)
     end
 end
 
-%% 4. OPTIONAL TENSILE WORKFLOWS
-% Keep disabled workflows available for compatible future datasets.
+%% 5. OPTIONAL TENSILE WORKFLOWS
+% Optional workflows remain available for compatible datasets.
+% Selected-parameter population is enabled for the current experiment.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
 runSelectedParameterPopulation = true;
@@ -234,8 +237,9 @@ if runFitDiagnostics
         mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
     disp(fitDiagnostics.reliability.status)
-    disp(mechanics.io.exportFitDiagnostics( ...
-        fitDiagnostics, fullfile(outputFolder, "fit-diagnostics")))
+    fitDiagnosticFiles = mechanics.io.exportFitDiagnostics( ...
+        fitDiagnostics, fullfile(outputFolder, "fit-diagnostics"));
+    disp(fitDiagnosticFiles)
 end
 
 if runReliabilityAwareModelComparison
@@ -245,8 +249,9 @@ if runReliabilityAwareModelComparison
         mechanics.config.modelComparisonWorkflowConfig());
     disp(modelComparison.summary)
     disp(modelComparison.selectedModelName)
-    disp(mechanics.io.exportModelComparison( ...
-        modelComparison, fullfile(outputFolder, "model-comparison")))
+    modelComparisonFiles = mechanics.io.exportModelComparison( ...
+        modelComparison, fullfile(outputFolder, "model-comparison"));
+    disp(modelComparisonFiles)
 end
 
 if runSelectedParameterPopulation || ...
@@ -274,9 +279,11 @@ if runSelectedParameterPopulation || ...
     disp(parameterPopulation.overallSummary)
     disp(parameterPopulation.groupSummary)
     if runSelectedParameterPopulation
-        disp(mechanics.io.exportSelectedParameterPopulation( ...
+        selectedParameterFiles = ...
+            mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
-            fullfile(outputFolder, "selected-parameter-population")))
+            fullfile(outputFolder, "selected-parameter-population"));
+        disp(selectedParameterFiles)
     end
 end
 
@@ -290,8 +297,9 @@ if runGroupComparison
         groupedAnalysis, unique(groupAssignments.Group, "stable"), ...
         mechanics.config.groupComparisonConfig());
     disp(groupComparison.metricComparison)
-    disp(mechanics.io.exportGroupComparison( ...
-        groupComparison, fullfile(outputFolder, "group-comparison")))
+    groupComparisonFiles = mechanics.io.exportGroupComparison( ...
+        groupComparison, fullfile(outputFolder, "group-comparison"));
+    disp(groupComparisonFiles)
 end
 
 if runGroupParameterInference
@@ -299,9 +307,10 @@ if runGroupParameterInference
         mechanics.workflow.compareSelectedParametersBetweenGroups( ...
         parameterPopulation, mechanics.config.groupParameterInferenceConfig());
     disp(parameterInference.comparisonTable)
-    disp(mechanics.io.exportGroupParameterInference( ...
+    inferenceFiles = mechanics.io.exportGroupParameterInference( ...
         parameterInference, ...
-        fullfile(outputFolder, "group-parameter-inference")))
+        fullfile(outputFolder, "group-parameter-inference"));
+    disp(inferenceFiles)
 end
 
 if runConstitutiveStudyReport
@@ -312,7 +321,11 @@ if runConstitutiveStudyReport
         mechanics.config.constitutiveStudyReportConfig();
     constitutiveReportConfig.outputFolder = ...
         fullfile(outputFolder, "constitutive-study-report");
-    disp(mechanics.io.exportConstitutiveStudyReport( ...
+    constitutiveReportFiles = mechanics.io.exportConstitutiveStudyReport( ...
         parameterBatch, parameterPopulation, ...
-        parameterInference, constitutiveReportConfig))
+        parameterInference, constitutiveReportConfig);
+    disp(constitutiveReportFiles)
 end
+
+% Compare completed material or condition studies separately with:
+% mechanics.workflow.compareTensileStudies(...)
