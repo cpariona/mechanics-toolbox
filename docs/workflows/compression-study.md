@@ -6,12 +6,12 @@ Compression data use the shared uniaxial mechanics pipeline after test-specific 
 
 - `compressionConfig` controls preprocessing and mechanics for one processed curve;
 - `compressionSpecimenConfig` controls import, cycle selection, geometry, fitting, export, and reporting for one specimen;
-- `compressionStudyConfig` coordinates several specimens belonging to one material or condition;
+- `compressionStudyConfig` coordinates several specimens, population analysis, and the maintained study bundle;
 - `compressionStudyComparisonConfig` controls comparison of completed studies;
 - `compressionStudyReportConfig` controls individual and population report presentation;
 - `studies/compression/run_compression_experiment.m` is the maintained human-facing driver for one real experiment.
 
-The driver stores experiment-specific paths, exclusions, fitting settings, and optional analyses. Reusable extraction, mechanics, statistics, plotting, and report generation remain in `src/+mechanics`.
+Experiment-specific paths, exclusions, and optional analyses remain in the driver. Reusable extraction, mechanics, statistics, plotting, export, and report generation remain under `src/+mechanics`.
 
 ## One specimen
 
@@ -26,9 +26,11 @@ result = mechanics.workflow.runCompressionSpecimen( ...
     "compression.csv", config);
 ```
 
-Compression files may contain repeated conditioning cycles before the maintained measurement cycle. Only the selected branch is passed to stress-strain conversion, tangent-modulus estimation, constitutive fitting, and measurement Monte Carlo.
+Only the selected branch is passed to stress-strain conversion, tangent-modulus estimation, constitutive fitting, and measurement Monte Carlo.
 
-## One study from a workbook
+When `config.export.enabled` is true, `runCompressionSpecimen` delegates to `mechanics.io.exportCompressionSpecimen`. The maintained specimen bundle contains the processed table, cycle metrics, `compression_specimen.mat`, and the configured single-specimen report. The name `exportCompressionStudy` is reserved for multi-specimen study results.
+
+## One study
 
 A Zwick workbook may be passed directly to the study workflow:
 
@@ -36,25 +38,49 @@ A Zwick workbook may be passed directly to the study workflow:
 config = mechanics.config.compressionStudyConfig();
 config.input.type = "workbook";
 config.extraction.extractor = "auto";
+config.export.enabled = true;
+config.export.outputFolder = "results/compression-study";
 
 study = mechanics.workflow.runCompressionStudy( ...
     "data/raw/compression.xlsx", config);
 ```
 
-The shared Zwick adapter reads specimen sheets and the `Resultados` sheet. For circular compression specimens, it recognizes `d0` and `h0`, calculates
+The same workflow accepts a pre-extracted dataset, a workbook list, or a manifest. Manifest input requires `File`, `SpecimenId`, and `InitialArea`; `InitialLength`, `Include`, and `Sheet` are optional.
+
+The shared Zwick adapter reads specimen sheets and the `Resultados` sheet. For circular compression specimens, it recognizes `d0` and `h0` and resolves:
 
 ```text
 initialArea = pi*d0^2/4
 initialLength = h0
 ```
 
-and preserves the workbook specimen ID and sheet name. The normalized manifest contains `File`, `SpecimenId`, `InitialLength`, `InitialArea`, `Include`, and `Sheet`.
+The normalized manifest contains `File`, `SpecimenId`, `InitialLength`, `InitialArea`, `Include`, and `Sheet`.
 
-The same workflow also accepts a pre-extracted dataset, a workbook list, or a manifest. Manifest input requires `File`, `SpecimenId`, and `InitialArea`; `InitialLength`, `Include`, and `Sheet` are optional.
+## Study bundle
+
+`runCompressionStudy` owns study-level export. When enabled, it calls `mechanics.io.exportCompressionStudy` and records the returned paths under `study.outputFiles`.
+
+The default bundle contains all relevant nonredundant study outputs:
+
+```text
+compression_study.mat
+compression_manifest.csv
+compression_summary.csv
+population_analysis.mat
+population_curve.csv
+population_metrics.csv
+population_tangent_modulus.csv
+selected_model_parameter_values.csv
+selected_model_parameter_summary.csv
+```
+
+Population files are generated only when population analysis completes. They are produced by the shared `mechanics.io.exportPopulationAnalysis` implementation and are exposed under `study.outputFiles.population`.
+
+The MAT file contains `study`, including `study.config`; no separate compression configuration MAT file is generated.
 
 ## ASTM D575 Method A convention
 
-The maintained real-experiment workflow follows the Method A cycle structure:
+The maintained real-experiment workflow follows this cycle structure:
 
 - three successive compression cycles are expected;
 - the first two cycles condition the specimen;
@@ -62,16 +88,6 @@ The maintained real-experiment workflow follows the Method A cycle structure:
 - the loading branch of that cycle is analyzed;
 - the first selected observation defines the mechanical zero;
 - no preload threshold is applied.
-
-The maintained driver is:
-
-```text
-studies/compression/run_compression_experiment.m
-```
-
-It calls `mechanics.workflow.runCompressionStudy`, exports tables and MAT files, creates the integrated report, and exposes optional shared constitutive workflows. Persistent report figures are generated by the maintained report exporter rather than by duplicated plotting code in the driver.
-
-## Manual exclusions
 
 Standard compliance and experimental suitability are not inferred by the extractor. Exclusions are explicit and follow workbook extraction order:
 
@@ -96,29 +112,18 @@ study.population
 study.populationStatus
 study.sourceFiles
 study.config
-study.provenance
+study.outputFiles       % when export is enabled
 ```
 
-The manifest describes ingestion and inclusion only. Experimental group labels are not inferred from it.
+The manifest describes ingestion and inclusion only. Experimental group labels are assigned downstream and are not inferred from it.
 
-## Parity with tension
+## Shared and test-specific behavior
 
-Compression and tension share the maintained implementations for:
+Compression and tension share maintained implementations for stress-strain processing, tangent-modulus estimation, constitutive fitting, uncertainty propagation, population aggregation, selected-parameter analysis, group comparison, unit formatting, and PNG/FIG persistence.
 
-- stress-strain processing;
-- tangent-modulus estimation;
-- constitutive fitting and model selection;
-- measurement Monte Carlo;
-- geometry-uncertainty propagation;
-- population stress-strain and tangent-modulus aggregation;
-- selected-parameter population analysis;
-- descriptive group comparison and parameter inference;
-- unit resolution and axis-label formatting;
-- image and editable MATLAB figure export.
+Compression retains its own cycle selection, loading/unloading interpretation, contact and hysteresis quantities. It does not copy tensile peak, rupture, or post-peak failure analysis.
 
-Compression does not copy tension-only peak, rupture, or post-peak failure analysis. Cycle selection and hysteresis remain compression-specific.
-
-## Integrated reports and figure files
+## Integrated report
 
 ```matlab
 reportConfig = mechanics.config.compressionStudyReportConfig();
@@ -127,21 +132,9 @@ reportFiles = mechanics.io.exportCompressionStudyReport( ...
     study, reportConfig);
 ```
 
-Each maintained report figure is written twice with the same base name:
+Each maintained report figure is written as both the configured image format and an editable MATLAB `.fig`. The Markdown report embeds only the image file.
 
-```text
-figure_name.png   % or the configured image format
-figure_name.fig   % editable MATLAB figure
-```
-
-The Markdown report embeds only the image file. The `.fig` file is retained for later editing in MATLAB.
-
-Tension and compression use the same plotting utilities to:
-
-- obtain processed units from the first available processed specimen;
-- normalize dimensionless strain units to `-`;
-- format axis labels consistently;
-- export image and `.fig` copies.
+The report exporter owns persistent report figures. The driver retains only interactive diagnostics that provide information absent from the maintained report.
 
 ## Comparing completed studies
 
@@ -166,31 +159,12 @@ tension:     displacement > 0, strain > 0, stress > 0, stretch > 1
 compression: displacement < 0, strain < 0, stress < 0, 0 < stretch < 1
 ```
 
-Peak force, peak displacement, and other report-oriented cycle quantities may remain positive magnitudes. Plotting positive compression magnitudes is a presentation choice and does not change stored values.
+Peak force, peak displacement, and other cycle quantities may remain positive reporting magnitudes. Plotting positive compression magnitudes does not alter the stored mechanical state.
 
-This contract ensures that engineering strain, true strain, stretch, area evolution, true stress, tangent modulus, constitutive fitting, and measurement Monte Carlo use one representation.
-
-## Constitutive fitting
-
-The same incompressible uniaxial models used in tension can be fitted directly to compression:
-
-```matlab
-config.specimen.fitting.enabled = true;
-config.specimen.fitting.modelNames = ...
-    ["neo-hookean", "mooney-rivlin", "yeoh"];
-```
-
-No post-processing sign inversion is applied before fitting.
+The incompressible uniaxial models used in tension can be fitted directly to compression. No post-processing sign inversion is applied before fitting.
 
 ## Validation
 
-Real compression datasets require visual confirmation of:
-
-- exclusion of conditioning cycles;
-- selection of the maintained measurement cycle and loading branch;
-- first-sample zero-reference behavior;
-- physical sign normalization;
-- fitting range and area assumptions;
-- explicit exclusion of specimens that do not satisfy the intended protocol.
+Real compression datasets require visual confirmation of cycle selection, first-sample zeroing, physical sign normalization, fitting range, area assumptions, and explicit protocol exclusions.
 
 For the current experiment, a crosshead speed of `20 mm/min` should be reported as a protocol deviation if strict ASTM D575 Method A compliance is claimed.
