@@ -23,7 +23,15 @@ selection = table( ...
 writetable(selection, selectionFile);
 save(dataFile, "comparison");
 
+figureHandle = mechanics.plotting.plotModelComparison(comparison);
+figureCleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
+figureFile = mechanics.plotting.exportFigureFiles( ...
+    figureHandle, outputFolder, "model_comparison", "png", 200);
+figureFigFile = fullfile(outputFolder, "model_comparison.fig");
+
 files.summary = string(summaryFile);
 files.selection = string(selectionFile);
 files.data = string(dataFile);
+files.figure = string(figureFile);
+files.figureFig = string(figureFigFile);
 end
