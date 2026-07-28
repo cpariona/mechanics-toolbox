@@ -80,7 +80,8 @@ study.config.geometry = geometry;
 study.createdAt = datetime("now");
 
 if config.export.enabled
-    study.outputFiles = mechanics.io.exportCompressionStudy(study, config.export);
+    study.outputFiles = mechanics.io.exportCompressionSpecimen( ...
+        study, config.export);
 end
 end
 
