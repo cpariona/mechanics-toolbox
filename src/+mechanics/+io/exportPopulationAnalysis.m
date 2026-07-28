@@ -1,8 +1,9 @@
-function outputFiles = exportPopulationAnalysis(population, outputFolder)
+function outputFiles = exportPopulationAnalysis(population, outputFolder, options)
 %EXPORTPOPULATIONANALYSIS Export population curves and statistical summaries.
 arguments
     population (1,1) struct
     outputFolder (1,1) string
+    options.SaveData (1,1) logical = true
 end
 
 if ~isfolder(outputFolder)
@@ -40,7 +41,6 @@ parameterValueFile = fullfile( ...
     outputFolder, "selected_model_parameter_values.csv");
 parameterSummaryFile = fullfile( ...
     outputFolder, "selected_model_parameter_summary.csv");
-populationFile = fullfile(outputFolder, "population_analysis.mat");
 
 writetable(curveTable, curveFile);
 
@@ -74,11 +74,15 @@ if ~isempty(population.modelParameters.summary)
 else
     writetable(table(), parameterSummaryFile);
 end
-save(populationFile, "population");
 
 outputFiles.curve = string(curveFile);
 outputFiles.metrics = string(metricFile);
 outputFiles.parameterValues = string(parameterValueFile);
 outputFiles.parameterSummary = string(parameterSummaryFile);
-outputFiles.population = string(populationFile);
+
+if options.SaveData
+    populationFile = fullfile(outputFolder, "population_analysis.mat");
+    save(populationFile, "population");
+    outputFiles.population = string(populationFile);
+end
 end
