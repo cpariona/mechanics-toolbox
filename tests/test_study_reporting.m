@@ -92,10 +92,24 @@ verifyTrue(testCase, isfile(fullfile(folder, "individual_curves.fig")));
 text = fileread(files.report);
 verifyTrue(testCase, contains(text, "# Tensile study report"));
 verifyTrue(testCase, contains(text, "sample-01"));
-verifyTrue(testCase, contains(text, "Maximum strain"));
-verifyTrue(testCase, contains(text, "Median tangent modulus"));
+verifyTrue(testCase, contains(text, "Maximum engineering strain (mm/mm)"));
+verifyTrue(testCase, contains(text, "Maximum engineering stress (MPa)"));
+verifyTrue(testCase, contains(text, "Peak force (N)"));
+verifyTrue(testCase, contains(text, "Median tangent modulus (MPa)"));
+verifyTrue(testCase, contains(text, "### Individual curves"));
 verifyTrue(testCase, contains(text, "individual_curves.png"));
 verifyFalse(testCase, contains(text, "individual_curves.fig"));
+verifyTrue(testCase, contains(text, "Strain measure: `engineering`"));
+verifyTrue(testCase, contains(text, "Strain unit: `mm/mm`"));
+verifyTrue(testCase, contains(text, "Stress measure: `engineering`"));
+verifyTrue(testCase, contains(text, "Area evolution: `incompressible`"));
+verifyTrue(testCase, contains(text, ...
+    "Tangent-modulus summary strain range: `[0.1, 0.3] mm/mm`"));
+verifyTrue(testCase, contains(text, ...
+    "Candidate models: `neo-hookean, yeoh`"));
+verifyTrue(testCase, contains(text, "Model-ranking metric: `BIC`"));
+verifyTrue(testCase, contains(text, "Fit starts: `8`"));
+verifyTrue(testCase, contains(text, "Fit random seed: `1`"));
 end
 
 function testMarkdownReportIncludesPopulationSummary(testCase)
@@ -119,6 +133,8 @@ verifyTrue(testCase, contains(text, "Central statistic: `median`"));
 verifyTrue(testCase, contains(text, "### Selected-model parameter summary"));
 verifyTrue(testCase, contains(text, "neo-hookean"));
 verifyTrue(testCase, contains(text, "mu"));
+verifyTrue(testCase, contains(text, "Unit"));
+verifyTrue(testCase, contains(text, "MPa"));
 end
 
 function testDefaultConfiguration(testCase)
@@ -185,6 +201,19 @@ study.analysis.summary = table( ...
     'ErrorIdentifier','ErrorMessage'});
 study.population = struct();
 study.populationStatus = "disabled";
+study.config.datasetAnalysis.processingConfig.mechanics.strainMeasure = ...
+    "engineering";
+study.config.datasetAnalysis.processingConfig.mechanics.stressMeasure = ...
+    "engineering";
+study.config.datasetAnalysis.processingConfig.mechanics.areaEvolution = ...
+    "incompressible";
+study.config.datasetAnalysis.processingConfig.analysis.summaryStrainRange = ...
+    [0.1, 0.3];
+study.config.datasetAnalysis.fitting.modelNames = ...
+    ["neo-hookean"; "yeoh"];
+study.config.datasetAnalysis.fitting.selectionConfig.rankingMetric = "BIC";
+study.config.datasetAnalysis.fitting.fitConfig.numberOfStarts = 8;
+study.config.datasetAnalysis.fitting.fitConfig.randomSeed = 1;
 study.provenance.sourceFile = study.sourceFile;
 study.provenance.sourceFileBytes = 0;
 study.provenance.matlabRelease = string(version("-release"));
