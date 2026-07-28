@@ -110,7 +110,8 @@ geometryUncertainty.initialLengthStd = NaN; % mm
 geometryUncertainty.initialAreaStd = NaN;   % mm^2
 config.specimen.processing.uncertainty.geometry = geometryUncertainty;
 
-% The integrated study driver owns study-level export; specimen export is off.
+% Study processing owns all persisted study outputs. Per-specimen export stays
+% disabled while specimens are assembled into the population result.
 config.specimen.export.enabled = false;
 
 % Population analysis.
@@ -126,6 +127,14 @@ population.config.bootstrap.confidenceLevel = 0.95;
 population.config.bootstrap.randomSeed = 1;
 population.config.export.enabled = false;
 config.population = population;
+
+% Automatic study bundle export.
+config.export.enabled = true;
+config.export.outputFolder = outputFolder;
+config.export.saveStudyMat = true;
+config.export.saveManifest = true;
+config.export.saveSummary = true;
+config.export.savePopulation = true;
 
 %% 2. RUN THE COMPLETE COMPRESSION WORKFLOW
 tic
@@ -146,24 +155,9 @@ elseif study.populationStatus == "failed"
         char(study.populationErrorMessage))
 end
 
-%% 3. MAINTAINED EXPORTS
-if ~isfolder(outputFolder)
-    mkdir(outputFolder)
-end
+disp(study.outputFiles)
 
-save(fullfile(outputFolder, "compression_study.mat"), ...
-    "study", "config");
-writetable(study.manifest, ...
-    fullfile(outputFolder, "compression_manifest.csv"));
-writetable(study.analysis.summary, ...
-    fullfile(outputFolder, "compression_summary.csv"));
-
-if study.populationStatus == "completed"
-    populationFiles = mechanics.io.exportPopulationAnalysis( ...
-        study.population, outputFolder);
-    disp(populationFiles)
-end
-
+%% 3. MAINTAINED REPORT
 reportConfig = mechanics.config.compressionStudyReportConfig();
 reportConfig.outputFolder = fullfile(outputFolder, "report");
 reportConfig.studyTitle = ...
