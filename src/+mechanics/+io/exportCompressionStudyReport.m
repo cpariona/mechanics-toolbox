@@ -32,6 +32,8 @@ function localWritePopulationReport(fileId, study, config, figureFiles)
 titleText = localStudyTitle(study, config);
 summary = study.analysis.summary;
 status = string(summary.Status);
+units = mechanics.plotting.resolveStudyUnits(study.analysis.records);
+[ strainName, stressName ] = localMeasureNames(study);
 
 fprintf(fileId, "# %s\n\n", char(titleText));
 fprintf(fileId, "Generated: %s\n\n", char(string(study.createdAt)));
@@ -60,8 +62,9 @@ end
 
 fprintf(fileId, "## Specimen status\n\n");
 fprintf(fileId, "%s", char( ...
-    "| Specimen | Status | Maximum strain | Maximum stress | " + ...
-    "Median tangent modulus | Selected model |\n"));
+    "| Specimen | Status | Maximum " + strainName + " (" + units.strain + ") | " + ...
+    "Maximum " + stressName + " (" + units.stress + ") | " + ...
+    "Median tangent modulus (" + units.stress + ") | Selected model |\n"));
 fprintf(fileId, "|---|---|---:|---:|---:|---|\n");
 for row = 1:height(summary)
     fprintf(fileId, "| %s | %s | %.6g | %.6g | %.6g | %s |\n", ...
@@ -82,7 +85,9 @@ if study.populationStatus == "completed"
     modelParameters = study.population.modelParameters;
     if isfield(modelParameters, "summary") && ~isempty(modelParameters.summary)
         fprintf(fileId, "### Selected-model parameter summary\n\n");
-        localWriteTable(fileId, modelParameters.summary);
+        parameterSummary = modelParameters.summary;
+        parameterSummary.Unit = repmat(units.stress, height(parameterSummary), 1);
+        localWriteTable(fileId, parameterSummary);
     end
 end
 
@@ -95,6 +100,8 @@ if isfield(study, "provenance")
     fprintf(fileId, "- Platform: `%s`\n", char(string(study.provenance.platform)));
     fprintf(fileId, "- Input type: `%s`\n", char(string(study.provenance.inputType)));
 end
+fprintf(fileId, "- Strain measure: `%s` (`%s`)\n", char(strainName), char(units.strain));
+fprintf(fileId, "- Stress measure: `%s` (`%s`)\n", char(stressName), char(units.stress));
 fprintf(fileId, "- Configuration is stored in `study.config`.\n");
 fprintf(fileId, "- Processed compression variables retain physical negative signs; report figures use positive magnitudes.\n");
 fprintf(fileId, "- The maintained Method A workflow uses the last complete loading cycle and first-sample zeroing.\n");
@@ -103,6 +110,7 @@ end
 function localWriteSpecimenReport(fileId, study, figureFiles)
 metrics = study.cycleMetrics;
 [~, sourceName, sourceExtension] = fileparts(string(study.sourceFile));
+strainUnit = localDisplayStrainUnit(metrics.units.strain);
 fprintf(fileId, "# Compression study report\n\n");
 fprintf(fileId, "Generated: %s\n\n", char(string(study.createdAt)));
 fprintf(fileId, "Source file: `%s%s`\n\n", sourceName, sourceExtension);
@@ -115,7 +123,7 @@ fprintf(fileId, "## Mechanical metrics\n\n| Metric | Value | Unit |\n|---|---:|-
 fprintf(fileId, "| Peak force | %.6g | %s |\n", metrics.peakForce, metrics.units.force);
 fprintf(fileId, "| Peak displacement | %.6g | %s |\n", metrics.peakDisplacement, metrics.units.displacement);
 fprintf(fileId, "| Peak stress | %.6g | %s |\n", metrics.peakStress, metrics.units.stress);
-fprintf(fileId, "| Peak strain | %.6g | %s |\n", metrics.peakStrain, metrics.units.strain);
+fprintf(fileId, "| Peak strain | %.6g | %s |\n", metrics.peakStrain, strainUnit);
 fprintf(fileId, "| Loading energy | %.6g | %s |\n", metrics.loadingEnergy, metrics.units.energy);
 fprintf(fileId, "| Recovered energy | %.6g | %s |\n", metrics.recoveredEnergy, metrics.units.energy);
 fprintf(fileId, "| Hysteresis energy | %.6g | %s |\n", metrics.hysteresisEnergy, metrics.units.energy);
@@ -126,7 +134,7 @@ localWriteFigures(fileId, figureFiles);
 fprintf(fileId, "## Interpretation limits\n\n");
 fprintf(fileId, "- Metrics refer to the configured selected cycle.\n");
 fprintf(fileId, "- Hysteresis is computed from force-displacement work over the selected full cycle.\n");
-fprintf(fileId, "- Contact detection and sign convention remain configuration-dependent.\n");
+fprintf(fileId, "- Instrument polarity is normalized to the maintained physical compression sign contract.\n");
 end
 
 function localWriteFigures(fileId, figureFiles)
@@ -139,6 +147,8 @@ for index = 1:numel(fields)
     path = string(figureFiles.(fields{index}));
     [~, name, extension] = fileparts(path);
     label = regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2");
+    label = upper(extractBefore(label, 2)) + extractAfter(label, 1);
+    label = replace(label, "Zero reference", "Zero-reference");
     fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", label, label, name, extension);
 end
 end
@@ -160,6 +170,30 @@ for row = 1:height(inputTable)
     fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
 end
 fprintf(fileId, "\n");
+end
+
+function [strainName, stressName] = localMeasureNames(study)
+strainName = "engineering strain";
+stressName = "engineering stress";
+if ~isfield(study, "config") || ~isfield(study.config, "specimen") || ...
+        ~isfield(study.config.specimen, "processing") || ...
+        ~isfield(study.config.specimen.processing, "mechanics")
+    return;
+end
+mechanicsConfig = study.config.specimen.processing.mechanics;
+if isfield(mechanicsConfig, "strainMeasure")
+    strainName = lower(string(mechanicsConfig.strainMeasure)) + " strain";
+end
+if isfield(mechanicsConfig, "stressMeasure")
+    stressName = lower(string(mechanicsConfig.stressMeasure)) + " stress";
+end
+end
+
+function unit = localDisplayStrainUnit(unit)
+unit = string(unit);
+if unit == "-" || unit == "1" || strlength(unit) == 0
+    unit = "m/m";
+end
 end
 
 function titleText = localStudyTitle(study, config)
