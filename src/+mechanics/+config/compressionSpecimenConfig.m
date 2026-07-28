@@ -13,8 +13,6 @@ config.cycle.minimumCycleAmplitude = 0;
 config.cycle.minimumObservations = 5;
 config.cycle.smoothingFrameLength = 5;
 
-config.signConvention = "positive-compression";
-
 config.fitting.enabled = false;
 config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
 config.fitting.context.deformationMeasure = "engineering-strain";

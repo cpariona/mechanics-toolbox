@@ -87,7 +87,7 @@ Excluded rows remain in `study.manifest` and `study.analysis.summary`; populatio
 
 Tension and compression share stress-strain processing, tangent-modulus estimation, constitutive fitting, uncertainty propagation, population aggregation, selected-parameter analysis, group comparison, unit formatting, and PNG/FIG persistence.
 
-Compression retains cycle selection, loading/unloading interpretation, contact-oriented preprocessing, hysteresis, and cycle diagnostics. Stored displacement, strain, and stress use physical negative compression signs; reports may display positive magnitudes without modifying the stored state.
+Compression retains cycle selection, loading/unloading interpretation, contact-oriented preprocessing, hysteresis, and cycle diagnostics. Instrument force and displacement may be recorded with either polarity. Compression processing detects their loading orientation and stores displacement, strain, force, and stress with physical negative compression signs. Import scale factors remain available for unit conversion or explicit instrument-polarity correction. Reports may display positive magnitudes without modifying the stored state.
 
 ## Integrated report
 

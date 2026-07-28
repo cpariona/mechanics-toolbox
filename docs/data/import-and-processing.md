@@ -11,7 +11,9 @@ specimen = mechanics.io.readSpecimenTable(filename, config);
 
 The importer resolves configured aliases for force, displacement, optional time,
 and optional current-area columns. Unit conversion is explicit through scale
-factors; units are not inferred automatically from headers.
+factors; units are not inferred automatically from headers. Negative
+`forceScale` or `displacementScale` values may also be used to correct an
+instrument polarity before mechanical processing.
 
 For measured current area:
 
