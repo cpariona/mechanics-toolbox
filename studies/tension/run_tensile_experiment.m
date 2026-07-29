@@ -211,10 +211,10 @@ end
 
 %% 5. OPTIONAL TENSILE WORKFLOWS
 % Optional workflows remain available for compatible datasets.
-% Selected-parameter population is enabled for the current experiment.
+% Consensus-model population fitting is enabled for this experiment.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
-runSelectedParameterPopulation = true;
+runConsensusModelPopulation = true;
 runGroupComparison = false;
 runGroupParameterInference = false;
 runConstitutiveStudyReport = false;
@@ -254,9 +254,10 @@ if runReliabilityAwareModelComparison
     disp(modelComparisonFiles)
 end
 
-if runSelectedParameterPopulation || ...
+if runConsensusModelPopulation || ...
         runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
+    individualSelectedModels = strings(numel(processedIndices), 1);
     for outputIndex = 1:numel(processedIndices)
         processedSpecimen = records(processedIndices(outputIndex)).specimen;
         comparisonSpecimens(outputIndex).specimenId = ...
@@ -268,22 +269,29 @@ if runSelectedParameterPopulation || ...
             processedSpecimen.processed.stress; %#ok<SAGROW>
         comparisonSpecimens(outputIndex).context = ...
             config.datasetAnalysis.fitting.context; %#ok<SAGROW>
+        if isfield(processedSpecimen, "modelSelection") && ...
+                processedSpecimen.modelSelection.selection.hasEligibleModel
+            individualSelectedModels(outputIndex) = ...
+                string(processedSpecimen.modelSelection.selection.bestModel);
+        end
     end
-    parameterBatch = mechanics.workflow.compareModelsAcrossSpecimens( ...
-        comparisonSpecimens, config.datasetAnalysis.fitting.modelNames, ...
+    parameterBatch = mechanics.workflow.fitConsensusModelAcrossSpecimens( ...
+        comparisonSpecimens, individualSelectedModels, ...
+        config.datasetAnalysis.fitting.modelNames, ...
         mechanics.config.fittingConfig(), ...
         mechanics.config.batchModelComparisonConfig());
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
         parameterBatch, mechanics.config.selectedParameterPopulationConfig());
+    disp(parameterBatch.modelSummary)
+    disp("Consensus model: " + parameterBatch.consensusModelName)
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
-    disp(parameterPopulation.groupSummary)
-    if runSelectedParameterPopulation
-        selectedParameterFiles = ...
+    if runConsensusModelPopulation
+        consensusModelFiles = ...
             mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
-            fullfile(outputFolder, "selected-parameter-population"));
-        disp(selectedParameterFiles)
+            fullfile(outputFolder, "consensus-model-population"));
+        disp(consensusModelFiles)
     end
 end
 

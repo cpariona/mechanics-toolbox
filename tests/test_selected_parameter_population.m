@@ -13,6 +13,8 @@ verifyEqual(testCase, population.specimenCount, 3);
 verifyEqual(testCase, height(population.parameterTable), 3);
 verifyTrue(testCase, all(population.parameterTable.Parameter == "mu"));
 verifyEqual(testCase, height(population.extractionErrors), 0);
+verifyEqual(testCase, population.consensusModelName, "neo-hookean");
+verifyEqual(testCase, population.selectionBasis, "consensus-model-refit");
 verifyEqual(testCase, ...
     population.initialShearModulus.values.InitialShearModulus, ...
     [12;15;18], "AbsTol", 1e-8);
@@ -85,23 +87,24 @@ verifyFalse(testCase, diagnostics.runWindowStability);
 verifyFalse(testCase, diagnostics.runResidualDiagnostics);
 end
 
-function testExportCreatesFiles(testCase)
+function testExportCreatesOnlyRelevantFiles(testCase)
 batch = localBatch();
 population = mechanics.workflow.summarizeSelectedParameters(batch);
 folder = string(tempname);
 cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
 files = mechanics.io.exportSelectedParameterPopulation(population, folder);
+verifyTrue(testCase, isfile(files.selection));
 verifyTrue(testCase, isfile(files.parameters));
 verifyTrue(testCase, isfile(files.overall));
 verifyTrue(testCase, isfile(files.groups));
-verifyTrue(testCase, isfile(files.errors));
+verifyFalse(testCase, isfield(files, "errors"));
 verifyTrue(testCase, isfile(files.initialShearValues));
 verifyTrue(testCase, isfile(files.initialShearSummary));
-verifyTrue(testCase, isfile(files.initialShearErrors));
+verifyFalse(testCase, isfield(files, "initialShearErrors"));
 verifyTrue(testCase, isfile(files.parameterFigure));
-verifyTrue(testCase, isfile(files.parameterFigureFig));
+verifyTrue(testCase, isfile(fullfile(folder, "consensus_model_parameters.fig")));
 verifyTrue(testCase, isfile(files.initialShearFigure));
-verifyTrue(testCase, isfile(files.initialShearFigureFig));
+verifyTrue(testCase, isfile(fullfile(folder, "consensus_initial_shear_modulus.fig")));
 verifyTrue(testCase, isfile(files.data));
 end
 
@@ -145,8 +148,10 @@ for index = 1:3
     specimens(index).context = context; %#ok<AGROW>
 end
 config = mechanics.config.batchModelComparisonConfig();
-batch = mechanics.workflow.compareModelsAcrossSpecimens( ...
-    specimens, "neo-hookean", mechanics.config.fittingConfig(), config);
+batch = mechanics.workflow.fitConsensusModelAcrossSpecimens( ...
+    specimens, repmat("neo-hookean", 3, 1), ...
+    ["neo-hookean";"mooney-rivlin"], ...
+    mechanics.config.fittingConfig(), config);
 end
 
 function localRemove(folder)

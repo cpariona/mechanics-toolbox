@@ -113,6 +113,10 @@ if config.includePopulationTangentModulus && study.populationStatus == "complete
     end
     plot(ax, x, tangent.centralModulus(order), "LineWidth", 2.1, ...
         "DisplayName", char(string(tangent.centralStatistic) + " tangent modulus"));
+    if isfield(tangent, "specimenCountByPoint")
+        mechanics.plotting.markPopulationSupportChanges( ...
+            ax, x, tangent.specimenCountByPoint(order));
+    end
     xlabel(ax, strainLabel);
     ylabel(ax, modulusLabel);
     title(ax, titleText + " - population tangent modulus", "Interpreter", "none");

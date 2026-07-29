@@ -89,6 +89,8 @@ files = mechanics.io.exportTensileStudyReport(study, config);
 verifyTrue(testCase, isfile(files.report));
 verifyTrue(testCase, isfile(files.individualCurves));
 verifyTrue(testCase, isfile(fullfile(folder, "individual_curves.fig")));
+verifyTrue(testCase, isfile(files.fittingAudit));
+verifyTrue(testCase, isfile(fullfile(folder, "fitting_audit.fig")));
 text = fileread(files.report);
 verifyTrue(testCase, contains(text, "# Tensile study report"));
 verifyTrue(testCase, contains(text, "sample-01"));
@@ -96,6 +98,13 @@ verifyTrue(testCase, contains(text, "Maximum engineering strain (mm/mm)"));
 verifyTrue(testCase, contains(text, "Maximum engineering stress (MPa)"));
 verifyTrue(testCase, contains(text, "Peak force (N)"));
 verifyTrue(testCase, contains(text, "Median tangent modulus (MPa)"));
+verifyTrue(testCase, contains(text, "## Constitutive fitting audit"));
+verifyTrue(testCase, contains(text, "### Model eligibility and selection"));
+verifyTrue(testCase, contains(text, "### Window-level fitting results"));
+verifyTrue(testCase, contains(text, "InitialShearModulus"));
+verifyTrue(testCase, contains(text, "mu=1.25"));
+verifyTrue(testCase, contains(text, "### Constitutive fitting audit"));
+verifyTrue(testCase, contains(text, "fitting_audit.png"));
 verifyTrue(testCase, contains(text, "### Individual curves"));
 verifyTrue(testCase, contains(text, "individual_curves.png"));
 verifyFalse(testCase, contains(text, "individual_curves.fig"));
@@ -130,7 +139,8 @@ text = fileread(files.report);
 verifyTrue(testCase, contains(text, "## Population analysis"));
 verifyTrue(testCase, contains(text, "Retained specimen count: 3"));
 verifyTrue(testCase, contains(text, "Central statistic: `median`"));
-verifyTrue(testCase, contains(text, "### Selected-model parameter summary"));
+verifyTrue(testCase, contains(text, ...
+    "### Individually selected-model parameter summary"));
 verifyTrue(testCase, contains(text, "neo-hookean"));
 verifyTrue(testCase, contains(text, "mu"));
 verifyTrue(testCase, contains(text, "Unit"));
@@ -167,6 +177,7 @@ specimen.processed.units.force = "N";
 specimen.processed.units.displacement = "mm";
 specimen.processed.units.strain = "-";
 specimen.processed.units.stress = "MPa";
+specimen.modelSelection = localModelSelection();
 
 record.index = 1;
 record.specimenId = "sample-01";
@@ -222,6 +233,46 @@ study.provenance.specimenCount = 1;
 study.provenance.processedSpecimenCount = 1;
 study.provenance.qualityFailedSpecimenCount = 0;
 study.provenance.failedSpecimenCount = 0;
+end
+
+function selection = localModelSelection()
+selection.summary = table( ...
+    "neo-hookean", 3, 3, 3, 1, 0.05, 0.99, -10, -9, 0.08, true, true, ...
+    {{"mu"}}, {[1.20]}, {[0.05]}, {[0.04]}, ...
+    'VariableNames', {'Model','WindowCount','SuccessfulWindowCount', ...
+    'ConvergedWindowCount','FullWindowParameterCount','FullWindowRMSE', ...
+    'FullWindowRSquared','FullWindowAIC','FullWindowBIC', ...
+    'MaximumRelativeParameterCV','ParameterStable','Eligible', ...
+    'ParameterNames','ParameterMeans','ParameterStd','ParameterCV'});
+selection.selection.hasEligibleModel = true;
+selection.selection.bestModel = "neo-hookean";
+selection.selection.rankingMetric = "BIC";
+selection.selection.reason = "Synthetic selection";
+selection.selectionConfig.maximumRelativeParameterCV = 0.50;
+fractions = [0.50, 0.75, 1.00];
+parameters = [1.20, 1.25, 1.30];
+for index = 1:numel(fractions)
+    fit.modelName = "neo-hookean";
+    fit.parameterNames = "mu";
+    fit.parameters = parameters(index);
+    fit.deformation = [0; fractions(index)];
+    fit.measuredStress = [0; 1];
+    fit.predictedStress = [0; 1];
+    fit.residuals = [0; 0];
+    fit.metrics.rmse = 0.05;
+    fit.metrics.rSquared = 0.99;
+    fit.metrics.aic = -10;
+    fit.metrics.bic = -9;
+    fit.converged = true;
+    selection.records(index).modelName = "neo-hookean"; %#ok<AGROW>
+    selection.records(index).windowFraction = fractions(index);
+    selection.records(index).maximumDeformation = fractions(index);
+    selection.records(index).observationCount = 20;
+    selection.records(index).fitResult = fit;
+    selection.records(index).succeeded = true;
+    selection.records(index).errorIdentifier = "";
+    selection.records(index).errorMessage = "";
+end
 end
 
 function tangent = localSpecimenTangentModulus()

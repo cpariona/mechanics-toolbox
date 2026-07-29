@@ -19,7 +19,8 @@ end
 cleanup = onCleanup(@() fclose(fileId)); %#ok<NASGU>
 
 if isfield(study, "analysis") && isfield(study.analysis, "records")
-    localWritePopulationReport(fileId, study, config, figureFiles);
+    figureFiles = localWritePopulationReport( ...
+        fileId, study, config, figureFiles);
 else
     localWriteSpecimenReport(fileId, study, figureFiles);
 end
@@ -28,7 +29,8 @@ files = figureFiles;
 files.report = string(reportFile);
 end
 
-function localWritePopulationReport(fileId, study, config, figureFiles)
+function figureFiles = localWritePopulationReport( ...
+        fileId, study, config, figureFiles)
 titleText = localStudyTitle(study, config);
 summary = study.analysis.summary;
 status = string(summary.Status);
@@ -80,15 +82,33 @@ if study.populationStatus == "completed"
     fprintf(fileId, "- Retained specimen count: %d\n", study.population.specimenCount);
     fprintf(fileId, "- Central statistic: `%s`\n", ...
         char(string(study.population.curves.centralStatistic)));
-    fprintf(fileId, "- Tangent-modulus population status: `%s`\n\n", ...
+    fprintf(fileId, "- Tangent-modulus population status: `%s`\n", ...
         char(string(study.population.tangentModulusStatus)));
+    mechanics.io.writePopulationSupportNote(fileId, study);
+    fprintf(fileId, "\n");
 
     modelParameters = study.population.modelParameters;
     if isfield(modelParameters, "summary") && ~isempty(modelParameters.summary)
-        fprintf(fileId, "### Selected-model parameter summary\n\n");
+        fprintf(fileId, "### Individually selected-model parameter summary\n\n");
         parameterSummary = modelParameters.summary;
         parameterSummary.Unit = repmat(units.stress, height(parameterSummary), 1);
         localWriteTable(fileId, parameterSummary);
+    end
+end
+
+audit = mechanics.workflow.summarizeFittingAudit(study);
+mechanics.io.writeFittingAuditSection( ...
+    fileId, audit, units.strain, units.stress);
+if string(audit.status) == "completed"
+    auditFigure = mechanics.plotting.plotFittingAudit( ...
+        audit, titleText, units.stress);
+    if isgraphics(auditFigure)
+        figureFiles.fittingAudit = mechanics.plotting.exportFigureFiles( ...
+            auditFigure, string(config.outputFolder), "fitting_audit", ...
+            string(config.figureFormat), config.figureResolution);
+        if config.closeFiguresAfterExport
+            close(auditFigure);
+        end
     end
 end
 
@@ -150,6 +170,7 @@ for index = 1:numel(fields)
     label = string(regexprep(fields{index}, "([a-z])([A-Z])", "$1 $2"));
     label = upper(extractBefore(label, 2)) + extractAfter(label, 1);
     label = replace(label, "Zero reference", "Zero-reference");
+    label = replace(label, "Fitting audit", "Constitutive fitting audit");
     fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", ...
         char(label), char(label), name, extension);
 end

@@ -26,7 +26,11 @@ if numel(x) < selectionConfig.minimumObservations
         selectionConfig.minimumObservations);
 end
 
-[x, order] = sort(x, "ascend");
+[~, referenceIndex] = min(abs(x));
+referenceDeformation = x(referenceIndex);
+excursion = abs(x - referenceDeformation);
+[excursion, order] = sort(excursion, "ascend");
+x = x(order);
 y = y(order);
 
 fractions = selectionConfig.windowFractions(:);
@@ -37,10 +41,8 @@ if isempty(fractions) || any(~isfinite(fractions)) || ...
 end
 fractions = unique(fractions, "sorted");
 
-xMin = x(1);
-xMax = x(end);
-xRange = xMax - xMin;
-if xRange <= 0
+maximumExcursion = max(excursion);
+if maximumExcursion <= 0
     error("mechanics:fitting:InvalidDeformationRange", ...
         "Deformation values must span a nonzero range.");
 end
@@ -60,22 +62,28 @@ recordIndex = 0;
 for iModel = 1:numel(modelNames)
     for iWindow = 1:numel(fractions)
         fraction = fractions(iWindow);
-        threshold = xMin + fraction .* xRange;
-        mask = x <= threshold;
+        threshold = fraction .* maximumExcursion;
+        mask = excursion <= threshold;
 
         if nnz(mask) < selectionConfig.minimumObservations
             continue;
         end
 
+        selectedExcursion = excursion(mask);
+        selectedDeformation = x(mask);
+        [~, endpointIndex] = max(selectedExcursion);
+
         recordIndex = recordIndex + 1;
         records(recordIndex).modelName = modelNames(iModel);
         records(recordIndex).windowFraction = fraction;
-        records(recordIndex).maximumDeformation = max(x(mask));
+        records(recordIndex).maximumDeformation = ...
+            selectedDeformation(endpointIndex);
         records(recordIndex).observationCount = nnz(mask);
 
         try
             result = mechanics.fitting.fitModel( ...
-                modelNames(iModel), x(mask), y(mask), context, fitConfig);
+                modelNames(iModel), selectedDeformation, y(mask), ...
+                context, fitConfig);
             records(recordIndex).fitResult = result;
             records(recordIndex).succeeded = true;
             records(recordIndex).errorIdentifier = "";
@@ -99,6 +107,8 @@ study.windowFractions = fractions;
 study.records = records;
 study.deformation = x;
 study.measuredStress = y;
+study.referenceDeformation = referenceDeformation;
+study.deformationExcursion = excursion;
 study.context = context;
 study.fitConfig = fitConfig;
 study.selectionConfig = selectionConfig;

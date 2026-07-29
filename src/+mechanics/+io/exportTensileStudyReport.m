@@ -102,15 +102,32 @@ if string(study.populationStatus) == "completed" && ...
         fprintf(fileId, "- Tangent-modulus population status: `%s`\n", ...
             char(string(study.population.tangentModulusStatus)));
     end
+    mechanics.io.writePopulationSupportNote(fileId, study);
     fprintf(fileId, "\n");
 
     if isfield(study.population, "modelParameters") && ...
             isfield(study.population.modelParameters, "summary") && ...
             ~isempty(study.population.modelParameters.summary)
-        fprintf(fileId, "### Selected-model parameter summary\n\n");
+        fprintf(fileId, "### Individually selected-model parameter summary\n\n");
         parameterSummary = study.population.modelParameters.summary;
         parameterSummary.Unit = repmat(stressUnit, height(parameterSummary), 1);
         localWriteTable(fileId, parameterSummary);
+    end
+end
+
+audit = mechanics.workflow.summarizeFittingAudit(study);
+mechanics.io.writeFittingAuditSection( ...
+    fileId, audit, strainUnit, stressUnit);
+if string(audit.status) == "completed"
+    auditFigure = mechanics.plotting.plotFittingAudit( ...
+        audit, titleText, stressUnit);
+    if isgraphics(auditFigure)
+        figureFiles.fittingAudit = mechanics.plotting.exportFigureFiles( ...
+            auditFigure, folder, "fitting_audit", ...
+            string(config.figureFormat), config.figureResolution);
+        if config.closeFiguresAfterExport
+            close(auditFigure);
+        end
     end
 end
 
@@ -276,6 +293,8 @@ switch string(fieldName)
         titleText = "Population tangent modulus";
     case "zeroReferenceDiagnostics"
         titleText = "Zero-reference diagnostics";
+    case "fittingAudit"
+        titleText = "Constitutive fitting audit";
     otherwise
         titleText = regexprep(string(fieldName), "([a-z])([A-Z])", "$1 $2");
         titleText = upper(extractBefore(titleText, 2)) + extractAfter(titleText, 1);

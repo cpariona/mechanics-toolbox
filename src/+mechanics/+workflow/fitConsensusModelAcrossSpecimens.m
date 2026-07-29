@@ -1,9 +1,11 @@
-function batch = compareModelsAcrossSpecimens( ...
-        specimens, modelNames, fitConfig, config)
-%COMPAREMODELSACROSSSPECIMENS Compare candidate models for many specimens.
+function batch = fitConsensusModelAcrossSpecimens( ...
+        specimens, individualSelectedModelNames, candidateModelNames, ...
+        fitConfig, config)
+%FITCONSENSUSMODELACROSSSPECIMENS Refit all specimens with the standard-selection consensus model.
 arguments
     specimens (1,:) struct
-    modelNames
+    individualSelectedModelNames string
+    candidateModelNames string
     fitConfig (1,1) struct = mechanics.config.fittingConfig()
     config (1,1) struct = mechanics.config.batchModelComparisonConfig()
 end
@@ -11,19 +13,43 @@ end
 required = {'specimenId','deformation','measuredStress'};
 for index = 1:numel(specimens)
     if ~all(isfield(specimens(index), required))
-        error('mechanics:workflow:InvalidBatchSpecimen', ...
-            'Each specimen requires specimenId, deformation, and measuredStress.');
+        error("mechanics:workflow:InvalidConsensusSpecimen", ...
+            "Each specimen requires specimenId, deformation, and measuredStress.");
     end
 end
 
+individualSelectedModelNames = individualSelectedModelNames(:);
+if numel(individualSelectedModelNames) ~= numel(specimens)
+    error("mechanics:workflow:ConsensusSelectionSizeMismatch", ...
+        "One standard-workflow model selection is required per specimen.");
+end
+candidateModelNames = candidateModelNames(:);
+validSelection = strlength(individualSelectedModelNames) > 0;
+selected = individualSelectedModelNames(validSelection);
+if isempty(selected)
+    error("mechanics:workflow:MissingConsensusSelections", ...
+        "No standard-workflow model selections were available.");
+end
+
+selectionCount = zeros(numel(candidateModelNames), 1);
+for index = 1:numel(candidateModelNames)
+    selectionCount(index) = nnz(selected == candidateModelNames(index));
+end
+maximumCount = max(selectionCount);
+consensusIndex = find(selectionCount == maximumCount, 1, "first");
+consensusModelName = candidateModelNames(consensusIndex);
+selectionFraction = selectionCount ./ numel(selected);
+modelSummary = table(candidateModelNames, selectionCount, selectionFraction, ...
+    candidateModelNames == consensusModelName, ...
+    'VariableNames', {'ModelName','SelectionCount','SelectionFraction','Consensus'});
+
 specimenCount = numel(specimens);
-comparisons = cell(specimenCount, 1);
 selectedFits = cell(specimenCount, 1);
 specimenId = strings(specimenCount, 1);
 group = strings(specimenCount, 1);
 success = false(specimenCount, 1);
 hasSelectedModel = false(specimenCount, 1);
-selectedModelName = strings(specimenCount, 1);
+selectedModelName = repmat(consensusModelName, specimenCount, 1);
 selectedCriterionValue = nan(specimenCount, 1);
 errorIdentifier = strings(specimenCount, 1);
 errorMessage = strings(specimenCount, 1);
@@ -31,31 +57,19 @@ errorMessage = strings(specimenCount, 1);
 for index = 1:specimenCount
     specimen = specimens(index);
     specimenId(index) = string(specimen.specimenId);
-    if isfield(specimen, 'group')
+    if isfield(specimen, "group")
         group(index) = string(specimen.group);
     end
     context = struct();
-    if isfield(specimen, 'context')
+    if isfield(specimen, "context")
         context = specimen.context;
     end
-
     try
-        comparison = mechanics.workflow.compareModelsWithDiagnostics( ...
-            modelNames, specimen.deformation, specimen.measuredStress, ...
-            context, fitConfig, config.comparisonConfig);
-        comparisons{index} = comparison;
+        selectedFits{index} = mechanics.fitting.fitModel( ...
+            consensusModelName, specimen.deformation, specimen.measuredStress, ...
+            context, fitConfig);
         success(index) = true;
-        hasSelectedModel(index) = logical(comparison.hasSelectedModel);
-        if comparison.hasSelectedModel
-            selectedModelName(index) = string(comparison.selectedModelName);
-            selectedCriterionValue(index) = comparison.summary.CriterionValue( ...
-                comparison.selectedIndex);
-            selectedFits{index} = ...
-                comparison.analyses{comparison.selectedIndex}.fitResult;
-        elseif config.requireSelectedModel
-            error('mechanics:workflow:NoSelectedBatchModel', ...
-                'No eligible model was selected for specimen %s.', specimenId(index));
-        end
+        hasSelectedModel(index) = true;
     catch ME
         errorIdentifier(index) = string(ME.identifier);
         errorMessage(index) = string(ME.message);
@@ -65,49 +79,34 @@ for index = 1:specimenCount
     end
 end
 
-successfulCount = nnz(success);
-if successfulCount < config.minimumSuccessfulSpecimens
-    error('mechanics:workflow:InsufficientSuccessfulSpecimens', ...
-        'Only %d specimens succeeded; %d are required.', ...
-        successfulCount, config.minimumSuccessfulSpecimens);
+if nnz(success) < config.minimumSuccessfulSpecimens
+    error("mechanics:workflow:InsufficientConsensusFits", ...
+        "Only %d consensus fits succeeded; %d are required.", ...
+        nnz(success), config.minimumSuccessfulSpecimens);
 end
 
 specimenSummary = table(specimenId, group, success, hasSelectedModel, ...
     selectedModelName, selectedCriterionValue, errorIdentifier, errorMessage, ...
+    individualSelectedModelNames, ...
     'VariableNames', {'SpecimenId','Group','Success','HasSelectedModel', ...
-    'SelectedModelName','SelectedCriterionValue','ErrorIdentifier','ErrorMessage'});
+    'SelectedModelName','SelectedCriterionValue','ErrorIdentifier','ErrorMessage', ...
+    'IndividualSelectedModelName'});
 
-selected = selectedModelName(hasSelectedModel);
-if isempty(selected)
-    modelSummary = table(strings(0,1), zeros(0,1), zeros(0,1), ...
-        'VariableNames', {'ModelName','SelectionCount','SelectionFraction'});
-else
-    names = unique(selected, 'stable');
-    counts = zeros(numel(names),1);
-    for index = 1:numel(names)
-        counts(index) = nnz(selected == names(index));
-    end
-    fractions = counts ./ numel(selected);
-    modelSummary = table(names, counts, fractions, ...
-        'VariableNames', {'ModelName','SelectionCount','SelectionFraction'});
-    modelSummary = sortrows(modelSummary, 'SelectionCount', 'descend');
-end
+groupSummary = localGroupSummary(group, individualSelectedModelNames, ...
+    validSelection, config.includeGroupSummary);
 
-groupSummary = localGroupSummary(group, selectedModelName, hasSelectedModel, ...
-    config.includeGroupSummary);
-
-batch.modelNames = string(modelNames(:));
+batch.modelNames = candidateModelNames;
+batch.consensusModelName = consensusModelName;
 batch.specimenCount = specimenCount;
-batch.successfulSpecimenCount = successfulCount;
+batch.successfulSpecimenCount = nnz(success);
 batch.selectedSpecimenCount = nnz(hasSelectedModel);
-batch.comparisons = comparisons;
 batch.selectedFits = selectedFits;
 batch.specimenSummary = specimenSummary;
 batch.modelSummary = modelSummary;
 batch.groupSummary = groupSummary;
 batch.fitConfig = fitConfig;
 batch.config = config;
-batch.createdAt = datetime('now');
+batch.createdAt = datetime("now");
 end
 
 function summary = localGroupSummary(group, selectedModel, hasSelection, enabled)

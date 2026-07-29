@@ -17,6 +17,8 @@ verifyEqual(testCase, batch.successfulSpecimenCount, 3);
 verifyEqual(testCase, batch.selectedSpecimenCount, 3);
 verifyEqual(testCase, height(batch.specimenSummary), 3);
 verifyGreaterThan(testCase, height(batch.modelSummary), 0);
+verifyEqual(testCase, numel(batch.selectedFits), 3);
+verifyTrue(testCase, all(~cellfun(@isempty, batch.selectedFits)));
 end
 
 function testGroupSummaryIsProduced(testCase)

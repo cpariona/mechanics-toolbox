@@ -5,10 +5,10 @@ arguments
     config (1,1) struct = mechanics.config.selectedParameterPopulationConfig()
 end
 
-required = {'specimenSummary','comparisons'};
+required = {'specimenSummary','selectedFits'};
 if ~all(isfield(batch, required))
     error('mechanics:workflow:InvalidSelectedParameterBatch', ...
-        'Batch result is missing specimenSummary or comparisons.');
+        'Batch result is missing specimenSummary or selectedFits.');
 end
 
 summary = batch.specimenSummary;
@@ -29,10 +29,7 @@ for index = 1:height(summary)
         continue;
     end
     try
-        comparison = batch.comparisons{index};
-        selectedIndex = comparison.selectedIndex;
-        analysis = comparison.analyses{selectedIndex};
-        fitResult = analysis.fitResult;
+        fitResult = batch.selectedFits{index};
         model = mechanics.models.modelRegistry(string(fitResult.modelName));
         names = string(model.parameterNames(:));
         values = fitResult.parameters(:);
@@ -48,12 +45,6 @@ for index = 1:height(summary)
         lower = nan(size(values));
         medianValue = nan(size(values));
         upper = nan(size(values));
-        if isfield(analysis, 'uncertainty') && ...
-                isfield(analysis.uncertainty, 'parameterLower')
-            lower = analysis.uncertainty.parameterLower(:);
-            medianValue = analysis.uncertainty.parameterMedian(:);
-            upper = analysis.uncertainty.parameterUpper(:);
-        end
 
         count = numel(values);
         rowSpecimen(end+1:end+count,1) = summary.SpecimenId(index); %#ok<AGROW>
@@ -96,6 +87,18 @@ population.initialShearModulus = ...
 population.extractionErrors = errorTable;
 population.parameterObservationCount = height(parameterTable);
 population.specimenCount = numel(unique(parameterTable.SpecimenId));
+if isfield(batch, 'consensusModelName')
+    population.consensusModelName = string(batch.consensusModelName);
+    population.selectionBasis = "consensus-model-refit";
+else
+    population.consensusModelName = "";
+    population.selectionBasis = "individually-selected-models";
+end
+if isfield(batch, 'modelSummary')
+    population.modelSelectionSummary = batch.modelSummary;
+else
+    population.modelSelectionSummary = table();
+end
 population.config = config;
 population.createdAt = datetime('now');
 end
