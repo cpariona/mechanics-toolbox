@@ -164,14 +164,23 @@ for row = 1:height(inputTable)
     for column = 1:width(inputTable)
         value = inputTable{row, column};
         if isnumeric(value) || islogical(value)
-            values(column) = string(value);
+            values(column) = localTableText(value);
         else
-            values(column) = string(inputTable.(names(column))(row));
+            values(column) = localTableText(inputTable.(names(column))(row));
         end
     end
     fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
 end
 fprintf(fileId, "\n");
+end
+
+function text = localTableText(value)
+text = string(value);
+missingMask = ismissing(text);
+text(missingMask) = "";
+if ~isscalar(text)
+    text = strjoin(text(:)', ", ");
+end
 end
 
 function [strainName, stressName] = localMeasureNames(study)
