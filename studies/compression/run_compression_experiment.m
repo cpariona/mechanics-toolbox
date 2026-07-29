@@ -226,11 +226,11 @@ end
 
 %% 5. OPTIONAL COMPRESSION WORKFLOWS
 % Optional workflows remain available for compatible datasets.
-% Selected-parameter population is enabled for the current experiment.
+% Consensus-model population fitting is enabled for this experiment.
 % Their exporters own all persistent figures and tabular/MAT outputs.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
-runSelectedParameterPopulation = true;
+runConsensusModelPopulation = true;
 runGroupComparison = false;
 runGroupParameterInference = false;
 runConstitutiveStudyReport = false;
@@ -271,7 +271,7 @@ if runReliabilityAwareModelComparison
     disp(modelComparisonFiles)
 end
 
-if runSelectedParameterPopulation || ...
+if runConsensusModelPopulation || ...
         runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
     for outputIndex = 1:numel(processedIndices)
@@ -294,16 +294,17 @@ if runSelectedParameterPopulation || ...
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
         parameterBatch, ...
         mechanics.config.selectedParameterPopulationConfig());
+    disp(parameterBatch.modelSummary)
+    disp("Consensus model: " + parameterBatch.consensusModelName)
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
-    disp(parameterPopulation.groupSummary)
 
-    if runSelectedParameterPopulation
-        selectedParameterFiles = ...
+    if runConsensusModelPopulation
+        consensusModelFiles = ...
             mechanics.io.exportSelectedParameterPopulation( ...
             parameterPopulation, ...
-            fullfile(outputFolder, "selected-parameter-population"));
-        disp(selectedParameterFiles)
+            fullfile(outputFolder, "consensus-model-population"));
+        disp(consensusModelFiles)
     end
 end
 
