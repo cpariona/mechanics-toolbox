@@ -12,24 +12,24 @@ Do not modify `main`, create a branch, open a pull request, or merge changes unl
 
 ## Validated implementation baseline
 
-The latest validated implementation milestone is PR #32, merged into `main` as:
+The latest validated implementation milestone is PR #34, merged into `main` as:
 
 ```text
-81992c8718940eb994bb3dba9ce3652307cf32ee
+bb61fb98308aa024779d4f4d4a28553e2904abe0
 ```
 
 Recent merged milestones:
 
 - PR #31 — remove the unused compression `signConvention` configuration and validation path while preserving automatic instrument-polarity normalization and physical negative compression signs;
-- PR #32 — align tensile and compression drivers and reporting, separate individual and population tangent-modulus figure controls, add unit-aware population summaries, and present strain as `mm/mm` in maintained reports and figures.
+- PR #32 — align tensile and compression drivers and reporting, separate individual and population tangent-modulus figure controls, add unit-aware population summaries, and present strain as `mm/mm` in maintained reports and figures;
+- PR #33 — make tensile and compression Markdown table export robust to textual `missing` values;
+- PR #34 — integrate fitting-window audit results into the maintained study reports, correct compression fitting-window direction, distinguish individual model selections from consensus-model population refits, and annotate variable population support.
 
-The complete MATLAB test suite passed after these changes. The maintained real tensile and compression drivers were also executed successfully, and their generated reports and figures were reviewed.
+The focused MATLAB suites and the complete repository test suite passed. The maintained real tensile and compression drivers were executed successfully. Their generated Markdown reports, CSV files, MAT files, and figures were reviewed.
 
 ## Validated current state
 
-The maintained tensile and compression workflows are complete and share the common uniaxial mechanics implementation where their physical contracts are identical.
-
-Primary entrypoints:
+Primary maintained entrypoints:
 
 ```matlab
 study = mechanics.workflow.runTensileStudy(inputValue, config);
@@ -53,7 +53,7 @@ studies/tension/run_tensile_experiment.m
 studies/compression/run_compression_experiment.m
 ```
 
-Both drivers now follow the same high-level organization:
+Both drivers follow the same high-level organization:
 
 1. experiment-specific configuration and assumptions;
 2. maintained study workflow execution;
@@ -90,31 +90,92 @@ tension:     displacement > 0, strain > 0, stress > 0, stretch > 1
 compression: displacement < 0, strain < 0, stress < 0, 0 < stretch < 1
 ```
 
-Instrument force and displacement may be recorded with either polarity. Compression processing detects loading orientation and normalizes the processed force, displacement, strain, and stress to the physical negative-compression contract. Negative import scale factors remain available for explicit unit conversion or instrument-polarity correction.
+Instrument force and displacement may be recorded with either polarity. Compression processing detects loading orientation and normalizes processed values to the physical negative-compression contract. Compression plots and reports may display positive magnitudes without changing the stored state.
 
-Compression plots and reports may display positive magnitudes without changing the stored state.
+## Fitting-window contract
+
+`mechanics.fitting.fitAcrossWindows` builds nested windows from the state closest to zero deformation toward increasing deformation magnitude.
+
+Therefore:
+
+```text
+tension:     0 -> positive strain
+compression: 0 -> negative strain of increasing magnitude
+```
+
+This behavior operates on processed mechanical data and does not depend on acquisition ordering or raw instrument polarity.
+
+The standard model-selection workflow:
+
+- fits every configured model over every configured window;
+- uses window-to-window parameter variability to assess stability;
+- uses the full-window fit for final RMSE, R-squared, AIC, and BIC;
+- applies convergence, stability, eligibility, parsimony, and ranking rules;
+- stores every fitting result in `specimen.modelSelection.records`.
+
+The configured `maximumRelativeParameterCV` remains a hard eligibility threshold. Reports now flag models close to that threshold and cases where a model excluded by stability had lower full-window RMSE than the selected model. Do not change this criterion without a dedicated analysis of the selection contract.
+
+## Individual selection and consensus-model population
+
+Two distinct results are maintained.
+
+### Individual specimen selection
+
+Each specimen retains the model selected by the standard fitting-window workflow. Root population exports use explicit names:
+
+```text
+individual_selected_model_parameter_values.csv
+individual_selected_model_parameter_summary.csv
+```
+
+### Consensus-model population
+
+The optional material-level workflow:
+
+1. reads the individual standard-workflow selections;
+2. determines the majority model using configured candidate order as the deterministic tie-break;
+3. refits every retained specimen using that one consensus model;
+4. summarizes the consensus-model parameters and equivalent initial shear modulus.
+
+Maintained function:
+
+```matlab
+batch = mechanics.workflow.fitConsensusModelAcrossSpecimens( ...
+    specimens, individualSelectedModels, candidateModelNames, ...
+    fitConfig, batchConfig);
+```
+
+Outputs are stored under:
+
+```text
+consensus-model-population/
+```
+
+with explicit consensus-oriented filenames. Placeholder group summaries are not exported when every specimen belongs only to `Unassigned`.
+
+`compareModelsAcrossSpecimens` remains a separate optional diagnostic/model-comparison workflow. It is not used to determine the standard consensus-model population in the maintained real drivers.
 
 ## Units and presentation contract
 
-Processed strain remains dimensionless in the stored data contract. The normalized internal unit is:
+Processed strain remains dimensionless in the stored data contract:
 
 ```text
 -
 ```
 
-Maintained strain axes and reports present this quantity as:
+Maintained strain axes and reports present it as:
 
 ```text
 mm/mm
 ```
 
-This conversion is presentation-only. Do not change stored strain values or the internal dimensionless-unit contract merely to alter report or plotting labels.
+This is presentation-only. Do not change stored values or the internal dimensionless-unit contract merely to alter labels.
 
 Other units are resolved from processed specimen metadata, with maintained fallbacks including `N`, `mm`, `MPa`, and `mJ`.
 
 ## Reporting and figure export
 
-Maintained study reports are available through:
+Maintained reports:
 
 ```matlab
 mechanics.io.exportTensileStudyReport
@@ -122,54 +183,47 @@ mechanics.io.exportCompressionStudyReport
 mechanics.io.exportConstitutiveStudyReport
 ```
 
-The tensile and compression study reports now include, where available:
+The tensile and compression study reports include, where available:
 
 - study and exclusion summaries;
 - per-specimen status and mechanical metrics with units;
 - population status and central statistic;
-- tangent-modulus population status;
+- tangent-modulus population status and variable-support note;
 - selected-model parameter summaries with units;
-- references to maintained exported figures;
+- constitutive fitting audit tables;
+- warnings about sensitivity to the relative parameter-CV threshold;
+- references to maintained figures;
 - reproducibility metadata.
 
-Tensile individual and population tangent-modulus figures are controlled independently through:
+The fitting audit is part of the maintained primary report. It reads stored fitting results and does not refit models during report generation.
 
-```matlab
-config.includeTangentModulus
-config.includePopulationTangentModulus
-```
+The audit figure uses:
+
+- color for constitutive model;
+- line style and marker for specimen;
+- equivalent initial shear modulus versus fitting-window fraction.
+
+Population tangent-modulus figures mark locations where the number of contributing specimens changes.
 
 Maintained workflow figures are exported through `mechanics.plotting.exportFigureFiles` as:
 
 ```text
-figure_name.png   % or configured image format
-figure_name.fig   % editable MATLAB figure
+figure_name.png
+figure_name.fig
 ```
 
-Manual figures created directly in study drivers are outside this persistence contract.
+Manual figures created directly in study drivers remain outside this persistence contract.
 
-## Deferred work
+## Deferred findings and next priorities
 
-Issue #25 remains open for dedicated export and reporting of tensile-study comparison results. It is not the report for one tensile study.
+1. Audit `maximumRelativeParameterCV` and the hard eligibility rule. The validated tensile data contain a specimen where Yeoh had substantially lower RMSE but was excluded because its parameter CV slightly exceeded `0.50`.
+2. Audit selected-model and consensus-population statistics for `SampleCount < 2`. Decide whether dispersion and inference fields should become `NaN` or carry an explicit insufficient-count status.
+3. Audit Issue #25 and define a limited contract for tensile-study comparison report export.
+4. Review whether consensus should remain a simple majority vote or require a stronger material-level criterion. Do not change it without preserving the separation between individual selection and consensus refitting.
+5. Possible model additions, including Ogden, remain deferred. Audit model registration, parameter naming, fitting support, tests, and documentation as one contract before adding a model.
+6. Remove obsolete documentation, dead sections, or unused configuration only when a concrete inconsistency is demonstrated.
 
-Possible model additions, including Ogden, remain deferred. Before adding a model, audit model registration, parameter naming, fitting support, tests, and documentation as one contract.
-
-The selected-model population summary currently reports degenerate dispersion and confidence values when a model has only one retained specimen. Before changing this behavior, audit the shared selected-parameter summary contract and decide whether insufficient sample counts should produce `NaN` inference fields or an explicit status.
-
-## Current maintenance priorities
-
-Prefer small phases that improve structure, naming, organization, and simplicity before adding new functionality.
-
-Current priorities are:
-
-1. audit Issue #25 and define a limited contract for tensile-study comparison report export;
-2. audit selected-model population statistics for `SampleCount < 2` without changing fitting or model-selection behavior;
-3. remove obsolete documentation and dead driver sections only when a concrete inconsistency is identified;
-4. audit configuration fields against real consumers and remove only fields proven to have no behavioral effect;
-5. review public naming only where simplification clearly outweighs API churn;
-6. avoid compatibility wrappers, aliases, bridge helpers, and unnecessary files.
-
-Do not extract shared driver helpers merely because two scripts have similar syntax. Share implementation only when the physical responsibility, data contract, lifecycle, and error behavior are genuinely common.
+Prefer a small next phase. The highest-priority technical question is the sensitivity of model eligibility and selection to `maximumRelativeParameterCV`.
 
 ## Read first
 
@@ -180,7 +234,7 @@ Do not extract shared driver helpers merely because two scripts have similar syn
 5. `docs/development/testing.md`
 6. `docs/workflows/tensile-study.md`
 7. `docs/workflows/compression-study.md`
-8. documentation specific to the selected objective
+8. documentation and implementation specific to the selected objective
 
 Inspect only implementation contracts required by the chosen scope.
 
@@ -196,7 +250,13 @@ git rev-parse origin/main
 git log -5 --oneline --decorate
 ```
 
-Confirm that local `main` matches `origin/main`. Do not continue work on a branch whose pull request has already been merged. Do not discard local or untracked files automatically.
+Confirm that local `main` matches `origin/main` and that the working tree is clean. Do not continue work on a branch whose pull request has already been merged. Do not discard local or untracked files automatically.
+
+Expected merged baseline before this documentation update:
+
+```text
+bb61fb98308aa024779d4f4d4a28553e2904abe0
+```
 
 ## Validation baseline
 
@@ -214,16 +274,18 @@ results = run_all_tests();
 assert(all([results.Passed]), "Repository tests failed.")
 ```
 
-When reporting or plotting behavior changes, run the focused suites first:
+For model-selection, population, or reporting changes, run focused suites first:
 
 ```matlab
-focusedResults = runtests( ...
-    ["tests/test_plotting_units.m", ...
-     "tests/test_study_reporting.m", ...
-     "tests/test_compression_study.m"], ...
-    "IncludeSubfolders", true);
+focusedResults = runtests([
+    "tests/test_model_selection.m"
+    "tests/test_selected_parameter_population.m"
+    "tests/test_batch_model_comparison.m"
+    "tests/test_study_reporting.m"
+    "tests/test_compression_study.m"
+]);
 assert(all([focusedResults.Passed]), ...
-    "Focused plotting or reporting tests failed.")
+    "Focused model-selection, population, or reporting tests failed.")
 ```
 
 Repository checks:
@@ -238,13 +300,15 @@ git ls-files --others --exclude-standard
 ## Maintenance rules
 
 - Share implementation only when physical and data contracts are genuinely common.
-- Keep instrument normalization, stored mechanics, and presentation conventions separate.
+- Keep instrument normalization, stored mechanics, fitting-window direction, and presentation conventions separate.
 - Keep reusable code under `src/+mechanics`, real experiment drivers under `studies`, examples under `examples`, and tests under `tests`.
 - Do not preserve obsolete APIs through wrappers or aliases.
 - Remove superseded prompts and phase notes instead of maintaining competing sources of truth.
 - Add files only when they represent a distinct maintained contract.
 - Execute focused tests before the complete suite when behavior changes.
 - Maintain relevant, nonredundant outputs by default; make optional only outputs that are genuinely diagnostic or costly.
+- Do not extract shared driver helpers merely because scripts have similar syntax.
+- Do not open or merge a pull request unless explicitly requested.
 
 ## Closing a work session
 
