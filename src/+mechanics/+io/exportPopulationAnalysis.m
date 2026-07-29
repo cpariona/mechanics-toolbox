@@ -38,9 +38,9 @@ tangentModulusFile = fullfile( ...
     outputFolder, "population_tangent_modulus.csv");
 metricFile = fullfile(outputFolder, "population_metrics.csv");
 parameterValueFile = fullfile( ...
-    outputFolder, "selected_model_parameter_values.csv");
+    outputFolder, "individual_selected_model_parameter_values.csv");
 parameterSummaryFile = fullfile( ...
-    outputFolder, "selected_model_parameter_summary.csv");
+    outputFolder, "individual_selected_model_parameter_summary.csv");
 
 writetable(curveTable, curveFile);
 
