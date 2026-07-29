@@ -102,12 +102,13 @@ if string(study.populationStatus) == "completed" && ...
         fprintf(fileId, "- Tangent-modulus population status: `%s`\n", ...
             char(string(study.population.tangentModulusStatus)));
     end
+    mechanics.io.writePopulationSupportNote(fileId, study);
     fprintf(fileId, "\n");
 
     if isfield(study.population, "modelParameters") && ...
             isfield(study.population.modelParameters, "summary") && ...
             ~isempty(study.population.modelParameters.summary)
-        fprintf(fileId, "### Selected-model parameter summary\n\n");
+        fprintf(fileId, "### Individually selected-model parameter summary\n\n");
         parameterSummary = study.population.modelParameters.summary;
         parameterSummary.Unit = repmat(stressUnit, height(parameterSummary), 1);
         localWriteTable(fileId, parameterSummary);
