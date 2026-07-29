@@ -139,7 +139,8 @@ text = fileread(files.report);
 verifyTrue(testCase, contains(text, "## Population analysis"));
 verifyTrue(testCase, contains(text, "Retained specimen count: 3"));
 verifyTrue(testCase, contains(text, "Central statistic: `median`"));
-verifyTrue(testCase, contains(text, "### Selected-model parameter summary"));
+verifyTrue(testCase, contains(text, ...
+    "### Individually selected-model parameter summary"));
 verifyTrue(testCase, contains(text, "neo-hookean"));
 verifyTrue(testCase, contains(text, "mu"));
 verifyTrue(testCase, contains(text, "Unit"));
@@ -247,6 +248,7 @@ selection.selection.hasEligibleModel = true;
 selection.selection.bestModel = "neo-hookean";
 selection.selection.rankingMetric = "BIC";
 selection.selection.reason = "Synthetic selection";
+selection.selectionConfig.maximumRelativeParameterCV = 0.50;
 fractions = [0.50, 0.75, 1.00];
 parameters = [1.20, 1.25, 1.30];
 for index = 1:numel(fractions)
