@@ -49,15 +49,15 @@ for specimenIndex = 1:numel(specimenIds)
     end
 end
 
-plot(axesHandle, NaN, NaN, "Color", "none", ...
-    "DisplayName", "Models");
+plot(axesHandle, NaN, NaN, "LineStyle", "none", "Marker", "none", ...
+    "Color", [0 0 0], "DisplayName", "Models");
 for modelIndex = 1:numel(modelNames)
     plot(axesHandle, NaN, NaN, "-", ...
         "Color", modelColors(modelIndex, :), "LineWidth", 1.8, ...
         "DisplayName", char(modelNames(modelIndex)));
 end
-plot(axesHandle, NaN, NaN, "Color", "none", ...
-    "DisplayName", "Specimens");
+plot(axesHandle, NaN, NaN, "LineStyle", "none", "Marker", "none", ...
+    "Color", [0 0 0], "DisplayName", "Specimens");
 for specimenIndex = 1:numel(specimenIds)
     lineStyle = lineStyles(1 + mod(specimenIndex - 1, numel(lineStyles)));
     marker = markers(1 + mod(specimenIndex - 1, numel(markers)));
