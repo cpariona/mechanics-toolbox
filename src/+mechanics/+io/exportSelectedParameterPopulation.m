@@ -30,7 +30,8 @@ files.selection = string(selectionFile);
 files.parameters = string(parameterFile);
 files.overall = string(overallFile);
 
-if ~isempty(population.groupSummary)
+if ~isempty(population.groupSummary) && ...
+        ~(all(population.groupSummary.Group == "Unassigned"))
     writetable(population.groupSummary, groupFile);
     files.groups = string(groupFile);
 end
