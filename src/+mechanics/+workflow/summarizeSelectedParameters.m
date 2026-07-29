@@ -87,6 +87,17 @@ population.initialShearModulus = ...
 population.extractionErrors = errorTable;
 population.parameterObservationCount = height(parameterTable);
 population.specimenCount = numel(unique(parameterTable.SpecimenId));
+if isfield(batch, 'consensusModelName')
+    population.consensusModelName = string(batch.consensusModelName);
+else
+    population.consensusModelName = "";
+end
+if isfield(batch, 'modelSummary')
+    population.modelSelectionSummary = batch.modelSummary;
+else
+    population.modelSelectionSummary = table();
+end
+population.selectionBasis = "consensus-model-refit";
 population.config = config;
 population.createdAt = datetime('now');
 end
