@@ -18,6 +18,7 @@ end
 
 specimenCount = numel(specimens);
 comparisons = cell(specimenCount, 1);
+selectedFits = cell(specimenCount, 1);
 specimenId = strings(specimenCount, 1);
 group = strings(specimenCount, 1);
 success = false(specimenCount, 1);
@@ -49,6 +50,8 @@ for index = 1:specimenCount
             selectedModelName(index) = string(comparison.selectedModelName);
             selectedCriterionValue(index) = comparison.summary.CriterionValue( ...
                 comparison.selectedIndex);
+            selectedFits{index} = ...
+                comparison.analyses{comparison.selectedIndex}.fitResult;
         elseif config.requireSelectedModel
             error('mechanics:workflow:NoSelectedBatchModel', ...
                 'No eligible model was selected for specimen %s.', specimenId(index));
@@ -98,6 +101,7 @@ batch.specimenCount = specimenCount;
 batch.successfulSpecimenCount = successfulCount;
 batch.selectedSpecimenCount = nnz(hasSelectedModel);
 batch.comparisons = comparisons;
+batch.selectedFits = selectedFits;
 batch.specimenSummary = specimenSummary;
 batch.modelSummary = modelSummary;
 batch.groupSummary = groupSummary;
