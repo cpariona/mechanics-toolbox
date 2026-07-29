@@ -46,6 +46,25 @@ verifyEqual(testCase, study.summary.WindowCount, 3);
 verifyEqual(testCase, study.summary.SuccessfulWindowCount, 3);
 end
 
+function testCompressionWindowsGrowFromZero(testCase)
+strain = linspace(0, -0.4, 101)';
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
+stress = mechanics.models.evaluateModel("neo-hookean", strain, 0.2, context);
+selectionConfig = mechanics.config.modelSelectionConfig();
+selectionConfig.windowFractions = [0.5, 0.75, 1.0];
+selectionConfig.minimumObservations = 10;
+
+study = mechanics.fitting.fitAcrossWindows( ...
+    "neo-hookean", strain, stress, context, ...
+    mechanics.config.fittingConfig(), selectionConfig);
+maximumDeformation = [study.records.maximumDeformation];
+
+verifyEqual(testCase, maximumDeformation, [-0.2, -0.3, -0.4], ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, study.referenceDeformation, 0, "AbsTol", 1e-12);
+end
+
 function testMismatchedInputRejected(testCase)
 verifyError(testCase, @() mechanics.fitting.fitAcrossWindows( ...
     "neo-hookean", [0; 0.1], 0, struct(), ...
