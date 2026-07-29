@@ -6,7 +6,7 @@ function setupOnce(~)
 startup;
 end
 
-function testBatchSelectsModelPerSpecimen(testCase)
+function testBatchSelectsConsensusAndRefitsSpecimens(testCase)
 specimens = localSpecimens();
 config = localConfig();
 batch = mechanics.workflow.compareModelsAcrossSpecimens( ...
@@ -16,7 +16,11 @@ verifyEqual(testCase, batch.specimenCount, 3);
 verifyEqual(testCase, batch.successfulSpecimenCount, 3);
 verifyEqual(testCase, batch.selectedSpecimenCount, 3);
 verifyEqual(testCase, height(batch.specimenSummary), 3);
-verifyGreaterThan(testCase, height(batch.modelSummary), 0);
+verifyEqual(testCase, batch.consensusModelName, "neo-hookean");
+verifyTrue(testCase, all(batch.specimenSummary.ConsensusFitSucceeded));
+verifyTrue(testCase, all(cellfun(@(fit) ...
+    string(fit.modelName) == batch.consensusModelName, batch.selectedFits)));
+verifyEqual(testCase, nnz(batch.modelSummary.Consensus), 1);
 end
 
 function testGroupSummaryIsProduced(testCase)
