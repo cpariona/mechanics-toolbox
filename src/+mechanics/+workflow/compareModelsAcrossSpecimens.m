@@ -1,6 +1,6 @@
 function batch = compareModelsAcrossSpecimens( ...
         specimens, modelNames, fitConfig, config)
-%COMPAREMODELSACROSSSPECIMENS Compare candidate models for many specimens.
+%COMPAREMODELSACROSSSPECIMENS Select a consensus model and refit all specimens.
 arguments
     specimens (1,:) struct
     modelNames
@@ -22,8 +22,8 @@ selectedFits = cell(specimenCount, 1);
 specimenId = strings(specimenCount, 1);
 group = strings(specimenCount, 1);
 success = false(specimenCount, 1);
-hasSelectedModel = false(specimenCount, 1);
-selectedModelName = strings(specimenCount, 1);
+hasIndividualSelection = false(specimenCount, 1);
+individualSelectedModelName = strings(specimenCount, 1);
 selectedCriterionValue = nan(specimenCount, 1);
 errorIdentifier = strings(specimenCount, 1);
 errorMessage = strings(specimenCount, 1);
@@ -45,13 +45,11 @@ for index = 1:specimenCount
             context, fitConfig, config.comparisonConfig);
         comparisons{index} = comparison;
         success(index) = true;
-        hasSelectedModel(index) = logical(comparison.hasSelectedModel);
+        hasIndividualSelection(index) = logical(comparison.hasSelectedModel);
         if comparison.hasSelectedModel
-            selectedModelName(index) = string(comparison.selectedModelName);
+            individualSelectedModelName(index) = string(comparison.selectedModelName);
             selectedCriterionValue(index) = comparison.summary.CriterionValue( ...
                 comparison.selectedIndex);
-            selectedFits{index} = ...
-                comparison.analyses{comparison.selectedIndex}.fitResult;
         elseif config.requireSelectedModel
             error('mechanics:workflow:NoSelectedBatchModel', ...
                 'No eligible model was selected for specimen %s.', specimenId(index));
@@ -72,34 +70,70 @@ if successfulCount < config.minimumSuccessfulSpecimens
         successfulCount, config.minimumSuccessfulSpecimens);
 end
 
-specimenSummary = table(specimenId, group, success, hasSelectedModel, ...
-    selectedModelName, selectedCriterionValue, errorIdentifier, errorMessage, ...
-    'VariableNames', {'SpecimenId','Group','Success','HasSelectedModel', ...
-    'SelectedModelName','SelectedCriterionValue','ErrorIdentifier','ErrorMessage'});
-
-selected = selectedModelName(hasSelectedModel);
+selected = individualSelectedModelName(hasIndividualSelection);
 if isempty(selected)
-    modelSummary = table(strings(0,1), zeros(0,1), zeros(0,1), ...
-        'VariableNames', {'ModelName','SelectionCount','SelectionFraction'});
-else
-    names = unique(selected, 'stable');
-    counts = zeros(numel(names),1);
-    for index = 1:numel(names)
-        counts(index) = nnz(selected == names(index));
+    error('mechanics:workflow:MissingConsensusModel', ...
+        'No specimen produced an individual model selection.');
+end
+candidateNames = string(modelNames(:));
+counts = zeros(numel(candidateNames),1);
+for index = 1:numel(candidateNames)
+    counts(index) = nnz(selected == candidateNames(index));
+end
+fractions = counts ./ numel(selected);
+maximumCount = max(counts);
+consensusIndex = find(counts == maximumCount, 1, 'first');
+consensusModelName = candidateNames(consensusIndex);
+modelSummary = table(candidateNames, counts, fractions, ...
+    candidateNames == consensusModelName, ...
+    'VariableNames', {'ModelName','SelectionCount','SelectionFraction','Consensus'});
+modelSummary = sortrows(modelSummary, {'SelectionCount','ModelName'}, {'descend','ascend'});
+
+consensusFitSucceeded = false(specimenCount,1);
+consensusErrorIdentifier = strings(specimenCount,1);
+consensusErrorMessage = strings(specimenCount,1);
+for index = 1:specimenCount
+    if ~success(index)
+        continue;
     end
-    fractions = counts ./ numel(selected);
-    modelSummary = table(names, counts, fractions, ...
-        'VariableNames', {'ModelName','SelectionCount','SelectionFraction'});
-    modelSummary = sortrows(modelSummary, 'SelectionCount', 'descend');
+    specimen = specimens(index);
+    context = struct();
+    if isfield(specimen, 'context')
+        context = specimen.context;
+    end
+    try
+        selectedFits{index} = mechanics.fitting.fitModel( ...
+            consensusModelName, specimen.deformation, specimen.measuredStress, ...
+            context, fitConfig);
+        consensusFitSucceeded(index) = true;
+    catch ME
+        consensusErrorIdentifier(index) = string(ME.identifier);
+        consensusErrorMessage(index) = string(ME.message);
+        if ~config.continueOnSpecimenError
+            rethrow(ME);
+        end
+    end
 end
 
-groupSummary = localGroupSummary(group, selectedModelName, hasSelectedModel, ...
-    config.includeGroupSummary);
+hasSelectedModel = consensusFitSucceeded;
+selectedModelName = repmat(consensusModelName, specimenCount, 1);
+specimenSummary = table(specimenId, group, success, ...
+    hasIndividualSelection, individualSelectedModelName, selectedCriterionValue, ...
+    hasSelectedModel, selectedModelName, consensusFitSucceeded, ...
+    errorIdentifier, errorMessage, consensusErrorIdentifier, consensusErrorMessage, ...
+    'VariableNames', {'SpecimenId','Group','Success', ...
+    'HasIndividualSelection','IndividualSelectedModelName','SelectedCriterionValue', ...
+    'HasSelectedModel','SelectedModelName','ConsensusFitSucceeded', ...
+    'ErrorIdentifier','ErrorMessage','ConsensusErrorIdentifier','ConsensusErrorMessage'});
 
-batch.modelNames = string(modelNames(:));
+groupSummary = localGroupSummary(group, individualSelectedModelName, ...
+    hasIndividualSelection, config.includeGroupSummary);
+
+batch.modelNames = candidateNames;
+batch.consensusModelName = consensusModelName;
 batch.specimenCount = specimenCount;
 batch.successfulSpecimenCount = successfulCount;
-batch.selectedSpecimenCount = nnz(hasSelectedModel);
+batch.selectedSpecimenCount = nnz(consensusFitSucceeded);
 batch.comparisons = comparisons;
 batch.selectedFits = selectedFits;
 batch.specimenSummary = specimenSummary;
