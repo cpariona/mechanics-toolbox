@@ -114,6 +114,22 @@ if string(study.populationStatus) == "completed" && ...
     end
 end
 
+audit = mechanics.workflow.summarizeFittingAudit(study);
+mechanics.io.writeFittingAuditSection( ...
+    fileId, audit, strainUnit, stressUnit);
+if string(audit.status) == "completed"
+    auditFigure = mechanics.plotting.plotFittingAudit( ...
+        audit, titleText, stressUnit);
+    if isgraphics(auditFigure)
+        figureFiles.fittingAudit = mechanics.plotting.exportFigureFiles( ...
+            auditFigure, folder, "fitting_audit", ...
+            string(config.figureFormat), config.figureResolution);
+        if config.closeFiguresAfterExport
+            close(auditFigure);
+        end
+    end
+end
+
 fields = fieldnames(figureFiles);
 if ~isempty(fields)
     fprintf(fileId, "## Figures\n\n");
@@ -276,6 +292,8 @@ switch string(fieldName)
         titleText = "Population tangent modulus";
     case "zeroReferenceDiagnostics"
         titleText = "Zero-reference diagnostics";
+    case "fittingAudit"
+        titleText = "Constitutive fitting audit";
     otherwise
         titleText = regexprep(string(fieldName), "([a-z])([A-Z])", "$1 $2");
         titleText = upper(extractBefore(titleText, 2)) + extractAfter(titleText, 1);
