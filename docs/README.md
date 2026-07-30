@@ -4,9 +4,10 @@ The documentation is organized by task. Persistent project state is maintained i
 
 ## Workflows
 
-- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis, experiment driver, population results, downstream constitutive workflows, and reporting.
+- [`workflows/tensile-study.md`](workflows/tensile-study.md): end-to-end tensile analysis, experiment driver, population results, downstream constitutive workflows, reporting, and study-comparison export.
 - [`workflows/compression-study.md`](workflows/compression-study.md): compression-cycle selection, study processing, shared uniaxial contracts, and reporting.
 - [`workflows/constitutive-analysis.md`](workflows/constitutive-analysis.md): fitting, diagnostics, model comparison, parameter summaries, group inference, and reporting.
+- [`workflows/joint-material-characterization.md`](workflows/joint-material-characterization.md): planned joint tension-compression characterization contract, model fitting and selection, driver ownership, outputs, and phased implementation.
 
 ## Data
 
