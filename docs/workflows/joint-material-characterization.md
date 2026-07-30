@@ -2,91 +2,62 @@
 
 ## Purpose
 
-Joint material characterization estimates one constitutive parameter set from independent experimental modes while preserving the maintained per-mode studies and their individual model-selection results.
+Joint material characterization estimates one constitutive parameter set from independent experimental modes while preserving the maintained tension and compression studies and their individual model-selection results.
 
-The first supported modes are uniaxial tension and uniaxial compression. Specimens are independent and are not required to be paired. The design remains structurally extensible to additional modes without placeholder implementations for modes that do not yet have a physical contract and data.
-
-This workflow is distinct from:
-
-- individual specimen fitting and model selection;
-- per-study population summaries;
-- majority-model consensus refitting within one study mode;
-- comparison of experimental groups within the same mode.
+The first supported modes are uniaxial tension and uniaxial compression. Specimens are independent and unpaired. Additional modes remain deferred until a real physical contract and data exist.
 
 ## Design principles
 
-- Consume completed, already processed studies. Do not re-import or reprocess raw data.
-- Preserve tension and compression signs, measures, units, and constitutive contexts.
+- Consume completed, already processed studies.
+- Preserve mode-specific signs, measures, units, contexts, and sampling grids.
 - Balance specimens within modes and modes within the objective explicitly.
-- Fit every registered candidate model supplied by configuration and select the best eligible joint model.
-- Reuse the model registry, model evaluation, multistart fitting, fit metrics, and ranking concepts only where their contracts genuinely match.
-- Keep joint orchestration and result ownership explicit. Do not add wrappers, aliases, compatibility entrypoints, or bridge files.
-- Preserve all relevant individual-study and individual-selection outputs. Joint characterization adds a material-level result rather than replacing them.
+- Reuse the model registry and fitting infrastructure only where contracts match.
+- Preserve individual-study and consensus outputs without duplication.
+- Do not add wrappers, aliases, bridge files, or placeholder modes.
 
-## Planned maintained entrypoint
-
-The final public workflow remains planned as:
+## Final planned workflow
 
 ```matlab
 result = mechanics.workflow.runJointMaterialCharacterization( ...
     studies, modeNames, config);
 ```
 
-Initial use will accept heterogeneous completed study results through a cell array:
+Initial inputs use heterogeneous completed studies:
 
 ```matlab
 studies = {tensileStudy, compressionStudy};
 modeNames = ["tension"; "compression"];
 config = mechanics.config.jointMaterialCharacterizationConfig();
-result = mechanics.workflow.runJointMaterialCharacterization( ...
-    studies, modeNames, config);
 ```
 
-The API must accept different specimen counts. A future mode must be introduced through a real registered mode contract rather than by expanding tension/compression conditionals throughout the fitting, reporting, and export implementation.
+The maintained driver remains planned for:
 
-## Maintained configuration
+```text
+studies/joint-characterization/run_joint_material_characterization.m
+```
 
-C1 introduced:
+## C1: implemented input contract
+
+Configuration:
 
 ```matlab
 config = mechanics.config.jointMaterialCharacterizationConfig();
 ```
 
-The configuration owns:
+Mode registry:
 
-```text
-candidateModelNames
-modeNames
-modeWeights
-specimenWeighting
-normalization
-requireFiniteObservations
-requireMatchingStressUnits
-requireMatchingStrainUnits
-fitting
-export
+```matlab
+mode = mechanics.workflow.jointCharacterizationModeRegistry(modeName);
 ```
 
-The initial registered candidate models are:
-
-```text
-neo-hookean
-mooney-rivlin
-yeoh
-```
-
-C1 does not consume the fitting and export sections yet. They are retained because they belong to the final joint workflow configuration rather than to separate compatibility configurations.
-
-## Implemented input normalization
-
-C1 introduced the maintained normalizer:
+Study normalization:
 
 ```matlab
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, modeNames, config);
 ```
 
-It consumes completed studies and returns:
+The normalized result contains:
 
 ```text
 normalized.modeNames
@@ -99,120 +70,136 @@ normalized.config
 normalized.createdAt
 ```
 
-Each normalized specimen contains:
+Each specimen contains mode, study and original identifiers, a namespaced global identifier, deformation, measured stress, constitutive context, units, and observation count.
 
-```text
-Mode
-StudyIndex
-OriginalSpecimenId
-SpecimenId
-Deformation
-MeasuredStress
-Context
-StrainUnit
-StressUnit
-ObservationCount
-```
+C1:
 
-The canonical global specimen identifier is namespaced by mode and study, while the original specimen identifier remains available. Duplicate identifiers across independent studies therefore do not collide and are not interpreted as paired specimens.
+- accepts unequal specimen counts;
+- preserves negative compression signs;
+- preserves original sampling grids;
+- creates no synthetic pairing;
+- maps engineering and true measures to the maintained constitutive context;
+- validates units, measures, weights, observations, completed-study state, and supported modes.
 
-The normalizer:
+## C2: implemented fixed-model joint fitting
 
-- accepts completed tension and compression studies with unequal specimen counts;
-- reads only records whose status is `processed`;
-- preserves each specimen's original sampling grid;
-- preserves negative compression deformation and stress;
-- removes no finite observations unless required by the explicit finite-observation contract;
-- validates deformation and stress measures against model-evaluable contexts;
-- validates configured strain and stress unit compatibility;
-- creates no synthetic pairing or shared interpolation grid;
-- rejects incomplete studies, empty modes, duplicate mode names, invalid mode weights, and unsupported modes.
-
-Processed measures are mapped to the existing constitutive-model context:
-
-```text
-engineering strain -> engineering-strain
-true strain        -> true-strain
-engineering stress -> nominal
-true stress        -> cauchy
-```
-
-## Implemented mode registry
-
-C1 introduced:
+Maintained fitting entrypoint:
 
 ```matlab
-mode = mechanics.workflow.jointCharacterizationModeRegistry(modeName);
+fit = mechanics.fitting.fitJointModel( ...
+    normalized, modelName, config);
 ```
 
-The initial real mode contracts are:
+C2 fits one registered model to every normalized specimen using one common parameter vector.
+
+### Hierarchical objective
+
+For specimen `s`, the normalized loss is:
 
 ```text
-tension
-compression
+mean((measuredStress - predictedStress).^2 / normalizationScale^2)
 ```
 
-Each contract defines its canonical name, expected study test type, deformation and stress fields, and expected physical signs. Unsupported modes are rejected explicitly. No biaxial, shear, torsion, or synthetic placeholder mode is registered.
-
-## Joint objective
-
-A raw concatenated pointwise RMSE is not acceptable because it allows modes, specimens, or sampling densities to dominate accidentally.
-
-C2 will implement a three-level objective:
-
-1. compute a normalized loss for each specimen;
-2. average specimen losses within each mode;
-3. average mode losses using explicit configured mode weights.
-
-The default must give equal total influence to tension and compression and equal influence to specimens within each mode. Point count must not determine material influence.
-
-The first normalization strategy will be response-range normalization using a finite stress scale per specimen. The result must also retain unnormalized residuals and physical fit metrics.
-
-## Candidate models and selection
-
-C3 will fit every configured registered model. Parameter names, bounds, evaluation functions, and parameter counts must come from the existing model registry. Joint orchestration must not introduce model-specific fitting branches where the registry already provides the shared contract.
-
-For each candidate, retain:
-
-- parameters and convergence status;
-- total joint objective;
-- per-mode normalized loss;
-- per-specimen normalized and physical metrics;
-- mode-specific predictions;
-- parameter count, AIC, and BIC where their sample-size contract is valid;
-- multistart diagnostics.
-
-The exact joint eligibility and ranking contract will be defined in C3 rather than inherited implicitly from individual model selection.
-
-## Planned result contract
-
-The complete result is planned to contain:
+The initial normalization scale is the specimen response range:
 
 ```text
-result.modeNames
-result.specimens
-result.candidates
-result.selectedModelName
-result.selectedFit
-result.modeSummary
-result.specimenSummary
-result.config
-result.createdAt
+max(measuredStress) - min(measuredStress)
 ```
 
-`selectedFit` will contain one common parameter set and predictions separated by mode and specimen.
+A configured positive floor is used when the response range is too small.
 
-## Planned driver and outputs
+Specimen losses are averaged within each mode. Mode losses are then combined using explicit positive mode weights normalized to sum to one. Weights are resolved by configured mode name, not by input position.
 
-The maintained experiment driver will be:
+Consequences:
+
+- point count does not determine specimen influence;
+- specimen count does not automatically determine mode influence;
+- tension and compression have equal total influence by default;
+- studies may be supplied in a different order without exchanging their configured weights.
+
+### Reused fitting contracts
+
+C2 reuses:
+
+- `mechanics.models.modelRegistry`;
+- `mechanics.models.evaluateModel`;
+- `mechanics.fitting.resolveFitConfig`;
+- initial-guess generation;
+- bound transformations;
+- multistart `fminsearch` configuration.
+
+The joint objective is implemented separately because its specimen-mode hierarchy is not the same contract as pointwise individual fitting.
+
+### C2 result
+
+```text
+fit.modelName
+fit.parameterNames
+fit.parameters
+fit.objective
+fit.exitFlag
+fit.converged
+fit.starts
+fit.modeNames
+fit.modeWeights
+fit.specimens
+fit.specimenSummary
+fit.modeSummary
+fit.normalization
+fit.fitConfig
+fit.config
+fit.createdAt
+```
+
+Each fitted specimen retains predictions, residuals, and normalization scale.
+
+The specimen summary reports observation count, physical RMSE, normalized RMSE, and maximum absolute error. The mode summary reports configured weight, specimen count, mean physical RMSE, mean normalized RMSE, and normalized loss.
+
+### C2 validation
+
+Synthetic Neo-Hookean tension and compression data verified:
+
+- recovery of a known common parameter;
+- unequal specimen counts;
+- duplicate original identifiers across modes;
+- different sampling densities;
+- explicit and reordered mode weights;
+- retained predictions and residuals;
+- rejection of unsupported normalization and invalid weights.
+
+Focused tests passed for:
+
+```matlab
+focusedResults = runtests([
+    "tests/test_joint_fixed_model_fitting.m"
+    "tests/test_joint_characterization_input_contract.m"
+    "tests/test_constitutive_models.m"
+]);
+```
+
+The complete repository suite also passed. `tests/test_model_fitting.m` is not a repository test file; attempting to run that path produces a suite-construction error and is not an implementation failure.
+
+## C3: next phase
+
+C3 will:
+
+- fit every model listed in `config.candidateModelNames` using the C2 objective;
+- retain candidate parameters, convergence, starts, joint objective, mode diagnostics, and specimen diagnostics;
+- define joint eligibility and deterministic ranking explicitly;
+- use practical fit equivalence and parsimony without altering individual selections from A and B;
+- test failed candidates, ties, and generating-model recovery.
+
+Adding a future constitutive model should require model registration and model-specific tests, not changes to joint orchestration.
+
+## C4: driver and outputs
+
+C4 will add:
 
 ```text
 studies/joint-characterization/run_joint_material_characterization.m
 ```
 
-It will load completed tensile and compression MAT studies or accept already loaded results. It will not re-import raw data or duplicate the individual study drivers.
-
-The planned nonredundant bundle is:
+It will load completed tension and compression MAT studies without reprocessing raw data and export:
 
 ```text
 joint_material_characterization.mat
@@ -227,84 +214,6 @@ joint_fit_compression.png
 joint_fit_compression.fig
 ```
 
-Additional mode figures will follow the same naming rule only when real mode contracts are added. The joint bundle must not copy complete tensile or compression study outputs.
+## C5: robustness audit
 
-## Implementation phases
-
-### C1 — Input normalization and mode registry: completed
-
-Implemented:
-
-- `mechanics.config.jointMaterialCharacterizationConfig`;
-- `mechanics.workflow.jointCharacterizationModeRegistry`;
-- `mechanics.workflow.normalizeJointCharacterizationStudies`;
-- synthetic behavioral tests for unpaired counts, duplicate IDs, physical signs, units, measures, mode weights, incomplete studies, and unsupported modes.
-
-C1 performs no fitting, model selection, driver execution, or export.
-
-### C2 — Fixed-model joint fitting: next
-
-- Fit one configured registered model to all normalized specimens.
-- Reuse model evaluation and multistart optimization where contracts match.
-- Implement equal-mode and equal-specimen weighting with explicit response-range normalization.
-- Retain total, per-mode, and per-specimen normalized and physical diagnostics.
-- Test parameter recovery using synthetic tension and compression generated from known parameters.
-
-C2 establishes the physical and numerical objective before model comparison is introduced.
-
-### C3 — Multi-model fitting and joint selection
-
-- Fit all configured registered models using the C2 contract.
-- Define joint eligibility and ranking explicitly.
-- Select the best joint model without altering individual specimen selections.
-- Test deterministic tie-breaking, failed candidates, parsimony, and generating-model recovery.
-
-Adding another constitutive model later should require registration and model-specific tests, not changes to joint orchestration.
-
-### C4 — Maintained driver and result bundle
-
-- Add `studies/joint-characterization/run_joint_material_characterization.m`.
-- Load completed tensile and compression MAT studies without reprocessing raw data.
-- Add maintained CSV, MAT, Markdown, and figure exports.
-- Document driver configuration and output ownership.
-- Validate with available real independent tensile and compression studies.
-
-### C5 — Robustness and extensibility audit
-
-- Audit sensitivity to mode weights, specimen normalization, sampling density, and deformation range.
-- Add alternative weighting or normalization only when evidence supports it.
-- Verify that a new real mode can be added through the mode contract without editing unrelated fitting and reporting code.
-- Review whether joint selection requires window sensitivity or cross-validation.
-
-C5 must not add unsupported experimental modes merely to demonstrate extensibility.
-
-## C1 validation
-
-Focused tests passed:
-
-```matlab
-focusedResults = runtests([
-    "tests/test_joint_characterization_input_contract.m"
-    "tests/test_tensile_study.m"
-    "tests/test_compression_study.m"
-    "tests/test_constitutive_models.m"
-]);
-```
-
-The complete suite also passed:
-
-```matlab
-results = run_all_tests();
-assert(all([results.Passed]), "Repository tests failed.")
-```
-
-Validation is synthetic because C1 is a structural input contract and performs no material fitting. Real-study execution becomes relevant in C2 and C4.
-
-## Current limitation
-
-Only uniaxial tension and compression are currently available. Therefore:
-
-- the implementation supports exactly those two real mode contracts;
-- extensibility remains structural rather than claimed experimentally;
-- biaxial, shear, torsion, and other modes remain deferred until data and physical contracts exist;
-- full validation will combine synthetic recovery tests with the available independent tension and compression studies.
+C5 will audit sensitivity to mode weights, normalization, sampling density, and deformation range. Alternatives will only be added when evidence supports them. Unsupported experimental modes will not be implemented merely to demonstrate extensibility.
