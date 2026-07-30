@@ -31,15 +31,10 @@ for recordIndex = 1:numel(records)
             isfield(selection.selection, "bestModel")
         bestModel = string(selection.selection.bestModel);
     end
-    stabilityThreshold = NaN;
-    if isfield(selection, "selectionConfig") && ...
-            isfield(selection.selectionConfig, "maximumRelativeParameterCV")
-        stabilityThreshold = ...
-            selection.selectionConfig.maximumRelativeParameterCV;
-    end
 
     if isfield(selection, "summary") && ~isempty(selection.summary)
         summary = selection.summary;
+        variables = string(summary.Properties.VariableNames);
         selectedMask = string(summary.Model) == bestModel;
         selectedRMSE = NaN;
         if any(selectedMask)
@@ -61,16 +56,21 @@ for recordIndex = 1:numel(records)
             modelRows(modelRowIndex).FullWindowBIC = summary.FullWindowBIC(row);
             modelRows(modelRowIndex).MaximumRelativeParameterCV = ...
                 summary.MaximumRelativeParameterCV(row);
-            modelRows(modelRowIndex).StabilityThreshold = stabilityThreshold;
-            modelRows(modelRowIndex).StabilityMargin = stabilityThreshold - ...
-                summary.MaximumRelativeParameterCV(row);
-            modelRows(modelRowIndex).NearStabilityThreshold = ...
-                localNearThreshold(summary.MaximumRelativeParameterCV(row), ...
-                stabilityThreshold);
+            modelRows(modelRowIndex).DominantCVParameter = ...
+                localOptionalValue(summary, variables, ...
+                "DominantCVParameter", row, "");
+            modelRows(modelRowIndex).HasParameterSignChange = ...
+                localOptionalValue(summary, variables, ...
+                "HasParameterSignChange", row, false);
+            modelRows(modelRowIndex).MaximumSharedDomainNormalizedRMSE = ...
+                localOptionalValue(summary, variables, ...
+                "MaximumSharedDomainNormalizedRMSE", row, NaN);
+            modelRows(modelRowIndex).MaximumSharedDomainNormalizedMaxError = ...
+                localOptionalValue(summary, variables, ...
+                "MaximumSharedDomainNormalizedMaxError", row, NaN);
             modelRows(modelRowIndex).LowerRMSEThanSelected = ...
                 isfinite(selectedRMSE) && ...
                 summary.FullWindowRMSE(row) < selectedRMSE;
-            modelRows(modelRowIndex).ParameterStable = summary.ParameterStable(row);
             modelRows(modelRowIndex).Eligible = summary.Eligible(row);
             modelRows(modelRowIndex).Selected = ...
                 string(summary.Model(row)) == bestModel;
@@ -137,10 +137,14 @@ else
 end
 end
 
-function value = localNearThreshold(parameterCV, threshold)
-value = false;
-if isfinite(parameterCV) && isfinite(threshold) && threshold > 0
-    value = abs(parameterCV - threshold) <= 0.10 .* threshold;
+function value = localOptionalValue(summary, variables, name, row, fallback)
+value = fallback;
+if ismember(name, variables)
+    raw = summary.(name)(row);
+    if iscell(raw) && isscalar(raw)
+        raw = raw{1};
+    end
+    value = raw;
 end
 end
 

@@ -84,7 +84,6 @@ fitting.selectionConfig.windowFractions = [0.50, 0.75, 1.00];
 fitting.selectionConfig.minimumObservations = 20;
 fitting.selectionConfig.rankingMetric = "BIC";
 fitting.selectionConfig.requireConvergence = true;
-fitting.selectionConfig.maximumRelativeParameterCV = 0.50;
 
 % Measurement Monte Carlo remains disabled until uncertainties are available.
 mc = fitting.measurementMonteCarlo;
