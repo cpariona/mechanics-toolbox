@@ -1,14 +1,23 @@
 function figureHandle = plotJointModeFit(result, modeName)
-%PLOTJOINTMODEFIT Plot measured and selected joint-model curves for one mode.
+%PLOTJOINTMODEFIT Plot measured specimens and one selected joint-model curve.
 arguments
     result (1,1) struct
     modeName (1,1) string
 end
 
 required = ["selectedModelName","selectedFit"];
-if ~all(isfield(result, required)) || ~isfield(result.selectedFit, "specimens")
+if ~all(isfield(result, required)) || ...
+        ~all(isfield(result.selectedFit, ...
+        ["specimens","parameterNames","parameters"]))
     error("mechanics:plotting:InvalidJointCharacterizationResult", ...
         "Provide a completed joint material-characterization result.");
+end
+
+parameterNames = string(result.selectedFit.parameterNames(:));
+parameters = result.selectedFit.parameters(:);
+if numel(parameterNames) ~= numel(parameters)
+    error("mechanics:plotting:InvalidJointParameterSummary", ...
+        "Selected parameter names and values must have matching lengths.");
 end
 
 modeName = lower(strtrim(modeName));
@@ -19,23 +28,105 @@ if ~any(mask)
         "No selected-fit specimens exist for mode %s.", modeName);
 end
 
-figureHandle = figure("Color", "w");
-hold on
 indices = find(mask);
-for index = 1:numel(indices)
-    specimen = specimens(indices(index));
-    measuredLabel = specimen.OriginalSpecimenId + " measured";
-    predictedLabel = specimen.OriginalSpecimenId + " selected fit";
-    plot(specimen.Deformation, specimen.MeasuredStress, ".", ...
-        "DisplayName", measuredLabel);
-    plot(specimen.Deformation, specimen.PredictedStress, "-", ...
-        "LineWidth", 1.4, "DisplayName", predictedLabel);
+modeSpecimens = specimens(indices);
+localValidateModeContexts(modeSpecimens, modeName);
+
+figureHandle = figure("Color", "w");
+axesHandle = axes(figureHandle);
+hold(axesHandle, "on")
+colors = lines(numel(modeSpecimens));
+maximumDisplayedPoints = 250;
+for index = 1:numel(modeSpecimens)
+    specimen = modeSpecimens(index);
+    displayIndices = localDisplayIndices( ...
+        specimen.ObservationCount, maximumDisplayedPoints);
+    plot(axesHandle, specimen.Deformation(displayIndices), ...
+        specimen.MeasuredStress(displayIndices), "o", ...
+        "LineStyle", "none", ...
+        "MarkerSize", 3, ...
+        "MarkerEdgeColor", colors(index, :), ...
+        "DisplayName", specimen.OriginalSpecimenId + " measured");
 end
-xlabel("Deformation")
-ylabel("Stress")
-title("Joint material characterization: " + modeName + ...
+
+minimumDeformation = min(arrayfun(@(item) min(item.Deformation), modeSpecimens));
+maximumDeformation = max(arrayfun(@(item) max(item.Deformation), modeSpecimens));
+referenceDeformation = linspace(minimumDeformation, maximumDeformation, 600)';
+referenceStress = mechanics.models.evaluateModel( ...
+    string(result.selectedModelName), referenceDeformation, parameters, ...
+    modeSpecimens(1).Context);
+plot(axesHandle, referenceDeformation, referenceStress, "k-", ...
+    "LineWidth", 2.6, ...
+    "DisplayName", "Joint selected fit (" + ...
+    string(result.selectedModelName) + ")");
+
+xlabel(axesHandle, "Deformation")
+ylabel(axesHandle, "Stress")
+title(axesHandle, "Joint material characterization: " + modeName + ...
     " (" + string(result.selectedModelName) + ")")
-legend("Location", "best", "Interpreter", "none")
-grid on
-box on
+if modeName == "compression"
+    legendLocation = "southeast";
+    textPosition = [0.03, 0.97];
+    horizontalAlignment = "left";
+else
+    legendLocation = "northwest";
+    textPosition = [0.97, 0.04];
+    horizontalAlignment = "right";
+end
+legend(axesHandle, "Location", legendLocation, "Interpreter", "none")
+text(axesHandle, textPosition(1), textPosition(2), ...
+    localParameterText(parameterNames, parameters, modeSpecimens(1).StressUnit), ...
+    "Units", "normalized", ...
+    "HorizontalAlignment", horizontalAlignment, ...
+    "VerticalAlignment", localVerticalAlignment(modeName), ...
+    "Interpreter", "none", ...
+    "BackgroundColor", "w", ...
+    "EdgeColor", [0.4, 0.4, 0.4], ...
+    "Margin", 5, ...
+    "FontSize", 9);
+grid(axesHandle, "on")
+box(axesHandle, "on")
+hold(axesHandle, "off")
+end
+
+function indices = localDisplayIndices(observationCount, maximumDisplayedPoints)
+if observationCount <= maximumDisplayedPoints
+    indices = (1:observationCount)';
+else
+    indices = unique(round(linspace(1, observationCount, ...
+        maximumDisplayedPoints)))';
+end
+end
+
+function output = localParameterText(parameterNames, parameters, stressUnit)
+lines = "Selected parameters:";
+for index = 1:numel(parameterNames)
+    line = parameterNames(index) + " = " + compose("%.6g", parameters(index));
+    if strlength(string(stressUnit)) > 0
+        line = line + " " + string(stressUnit);
+    end
+    lines(end+1, 1) = line; %#ok<AGROW>
+end
+output = join(lines, newline);
+end
+
+function alignment = localVerticalAlignment(modeName)
+if modeName == "compression"
+    alignment = "top";
+else
+    alignment = "bottom";
+end
+end
+
+function localValidateModeContexts(specimens, modeName)
+contexts = {specimens.Context};
+reference = contexts{1};
+for index = 2:numel(contexts)
+    current = contexts{index};
+    if current.deformationMeasure ~= reference.deformationMeasure || ...
+            current.stressMeasure ~= reference.stressMeasure
+        error("mechanics:plotting:InconsistentJointModeContext", ...
+            "Mode %s contains incompatible constitutive contexts.", modeName);
+    end
+end
 end
