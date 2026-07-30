@@ -12,70 +12,33 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Validated merged baseline
 
-The current merged baseline is PR #36:
+The current merged baseline is PR #37:
 
 ```text
-5b111e5c9029a98855c9434b8ca28b3f993bba5c
+e545862f7a16fed489cd9c72dc2f03609f20b3df
 ```
 
 It includes:
 
-- maintained tensile and compression study workflows and drivers;
-- shared uniaxial processing, constitutive fitting, diagnostics, and reporting;
+- maintained tensile and compression studies and drivers;
+- shared uniaxial processing, fitting, diagnostics, populations, and reporting;
 - specimen-specific model selection;
-- consensus-model population refitting as a distinct optional workflow;
-- fitting-window audit and predictive-sensitivity diagnostics;
-- small-sample population summaries that report non-estimable dispersion as `NaN` when `SpecimenCount < 2`;
-- cleaned repository branches and maintained documentation structure.
+- consensus-model population refitting as a separate optional workflow;
+- small-sample population summaries with non-estimable dispersion reported as `NaN`;
+- tensile-study comparison export and reporting;
+- the canonical phased plan for joint material characterization.
 
-## Current branch and completed scope
+## Current branch
 
 The active branch is:
 
 ```text
-audit/tensile-comparison-report
+feature/joint-characterization-input-contract
 ```
 
-It implements Issue #25 through:
+It implements phase C1 only: joint-characterization configuration, registered tension/compression mode contracts, normalization of completed studies, and behavioral tests. It does not perform fitting, model selection, export, or driver execution.
 
-```matlab
-files = mechanics.io.exportTensileStudyComparison( ...
-    comparison, outputFolder);
-```
-
-The exporter consumes an existing result from:
-
-```matlab
-comparison = mechanics.workflow.compareTensileStudies( ...
-    studies, groupLabels, config);
-```
-
-It writes:
-
-```text
-study_summary.csv
-study_compatibility.csv
-pairwise_metric_comparison.csv
-pairwise_curve_comparison.csv
-tensile_study_comparison.png
-tensile_study_comparison.fig
-tensile_study_comparison.mat
-tensile_study_comparison.md
-```
-
-The exporter does not recalculate comparison statistics, duplicate individual study bundles, or include constitutive-parameter and consensus-model reporting.
-
-Focused tests and the complete `run_all_tests()` suite passed. Validation used synthetic completed tensile studies. A representative pair of real tensile study datasets is not currently available, so real two-study comparison validation remains explicitly pending and is not required to close this limited implementation.
-
-Documentation updated on this branch:
-
-```text
-docs/README.md
-docs/development/context-handoff.md
-docs/development/repository-structure.md
-docs/workflows/tensile-study.md
-docs/workflows/joint-material-characterization.md
-```
+Focused tests and the complete `run_all_tests()` suite passed.
 
 ## Maintained individual-study entrypoints
 
@@ -118,13 +81,13 @@ tension:     displacement > 0, strain > 0, stress > 0, stretch > 1
 compression: displacement < 0, strain < 0, stress < 0, 0 < stretch < 1
 ```
 
-Instrument polarity may vary. Compression processing normalizes processed results to the physical negative-compression contract. Presentation may show compression magnitudes without changing stored values.
+Instrument polarity may vary. Compression processing normalizes processed results to the physical negative-compression contract. Presentation may show positive magnitudes without changing stored state.
 
 ## Constitutive fitting and model selection
 
-The standard individual workflow fits every configured model over nested fitting windows, stores every result, and uses the full-window fit for final RMSE, R-squared, AIC, and BIC.
+The standard individual workflow fits every configured model over nested fitting windows, stores every fitting result, and uses the full-window fit for final RMSE, R-squared, AIC, and BIC.
 
-Current default candidate models:
+Current registered models:
 
 ```text
 neo-hookean
@@ -138,11 +101,9 @@ The current `yeoh` model is Yeoh-3:
 C10, C20, C30
 ```
 
-Do not silently redefine it as Yeoh-2. Additional models must be explicit model-registry entries with independent tests and documentation.
+Do not silently redefine it as Yeoh-2. Additional constitutive models must be explicit model-registry entries with their own tests and documentation.
 
-Parameter CV and sign changes are diagnostics. They do not independently determine eligibility. Shared-domain prediction sensitivity across fitting windows is retained as a secondary ranking diagnostic.
-
-The selected individual model is conditional on candidate models, bounds, preprocessing, deformation range, and the observed specimen response. It is not presented as a uniquely proven constitutive law.
+Parameter CV and sign changes are diagnostics. They do not independently determine model eligibility. Shared-domain prediction sensitivity across fitting windows remains a secondary ranking diagnostic.
 
 ## A, B, and C responsibilities
 
@@ -152,7 +113,7 @@ Tension and compression retain:
 
 - processed curves and mechanical metrics per specimen;
 - individual constitutive fits and selected models;
-- fitting audit results;
+- fitting-audit results;
 - per-study population summaries;
 - CSV, MAT, figures, and reports.
 
@@ -165,15 +126,15 @@ Model selection remains specimen-specific within each mode.
 The optional consensus-model workflow remains distinct:
 
 1. read individual selections;
-2. determine a majority model with deterministic configured ordering;
+2. determine a majority model using deterministic configured ordering;
 3. refit every retained specimen with that model;
 4. summarize common-model parameters and equivalent initial shear modulus.
 
 This is not joint tension-compression characterization.
 
-### C. Joint material characterization — next substantive objective
+### C. Joint material characterization — in progress
 
-C will estimate one constitutive parameter set from independent experimental modes. The initial real modes are uniaxial tension and uniaxial compression. Specimens are not paired.
+C estimates one constitutive parameter set from independent experimental modes. The initial real modes are uniaxial tension and uniaxial compression. Specimens are independent and unpaired.
 
 Canonical design document:
 
@@ -181,7 +142,7 @@ Canonical design document:
 docs/workflows/joint-material-characterization.md
 ```
 
-Planned public entrypoint:
+Planned final entrypoint:
 
 ```matlab
 result = mechanics.workflow.runJointMaterialCharacterization( ...
@@ -207,47 +168,145 @@ C must:
 - preserve A and B outputs without duplication;
 - remain structurally extensible to future real modes and registered constitutive models.
 
-Only tension and compression are currently supported by real data. Do not add unsupported biaxial, shear, torsion, or other mode implementations merely to demonstrate extensibility.
+Only tension and compression are currently supported by real physical contracts. Do not add unsupported biaxial, shear, torsion, or other implementations merely to demonstrate extensibility.
 
-## C implementation phases
+## C1 — Input normalization and mode contract: completed
 
-### C1 — Input normalization and mode contract
+Implemented configuration:
 
-- Add `jointMaterialCharacterizationConfig` with candidate models, normalization, weighting, fitting, and export sections.
-- Normalize completed studies into one canonical observation structure.
-- Define the minimum registered mode adapter contract required for tension and compression.
-- Preserve mode, study, and specimen identities without synthetic pairing.
-- Validate signs, measures, units, duplicate IDs, unpaired counts, and unsupported modes.
+```matlab
+config = mechanics.config.jointMaterialCharacterizationConfig();
+```
+
+Implemented mode registry:
+
+```matlab
+mode = mechanics.workflow.jointCharacterizationModeRegistry(modeName);
+```
+
+Implemented normalizer:
+
+```matlab
+normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    studies, modeNames, config);
+```
+
+Accepted initial use:
+
+```matlab
+studies = {tensileStudy, compressionStudy};
+modeNames = ["tension"; "compression"];
+normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    studies, modeNames, config);
+```
+
+The normalizer:
+
+- consumes completed studies only;
+- reads processed specimen records without reprocessing;
+- accepts unequal numbers of tension and compression specimens;
+- preserves each specimen's sampling grid;
+- preserves negative compression deformation and stress;
+- maps processed engineering/true measures to the existing constitutive-model context;
+- validates configured strain and stress unit compatibility;
+- namespaces global specimen identifiers while retaining original identifiers;
+- creates no synthetic pairing;
+- rejects incomplete studies, unsupported modes, invalid weights, empty modes, and invalid observations.
+
+The normalized result contains:
+
+```text
+normalized.modeNames
+normalized.modeWeights
+normalized.specimens
+normalized.modeSummary
+normalized.specimenCount
+normalized.observationCount
+normalized.config
+normalized.createdAt
+```
+
+Each normalized specimen contains:
+
+```text
+Mode
+StudyIndex
+OriginalSpecimenId
+SpecimenId
+Deformation
+MeasuredStress
+Context
+StrainUnit
+StressUnit
+ObservationCount
+```
 
 C1 does not perform joint fitting.
 
-### C2 — Fixed-model joint fitting
+## C1 validation
 
-- Fit one configured registered model to all normalized specimens.
-- Reuse model evaluation and multistart optimization where contracts match.
-- Use a hierarchical objective: normalized loss per specimen, average within mode, then weighted average across modes.
-- Default to equal influence per specimen within mode and equal total influence for tension and compression.
-- Retain normalized and physical residual metrics by specimen and mode.
-- Validate parameter recovery with synthetic tension and compression generated from known parameters.
+Focused tests passed:
 
-C2 establishes the numerical and physical objective before model comparison.
+```matlab
+focusedResults = runtests([
+    "tests/test_joint_characterization_input_contract.m"
+    "tests/test_tensile_study.m"
+    "tests/test_compression_study.m"
+    "tests/test_constitutive_models.m"
+]);
+```
+
+The complete suite also passed:
+
+```matlab
+results = run_all_tests();
+assert(all([results.Passed]), "Repository tests failed.")
+```
+
+C1 validation is synthetic because it defines a structural input contract and does not estimate material parameters.
+
+## C2 — Fixed-model joint fitting: next objective
+
+C2 must remain limited to fitting one configured registered model to the C1 normalized input.
+
+Required behavior:
+
+- reuse registered model evaluation and existing optimization infrastructure where contracts match;
+- implement a hierarchical objective:
+  1. normalized loss per specimen;
+  2. average across specimens within each mode;
+  3. weighted average across modes;
+- default to equal influence per specimen within each mode and equal total influence for tension and compression;
+- begin with response-range normalization using a finite stress scale per specimen;
+- retain unnormalized residuals and physical RMSE alongside normalized objective values;
+- retain total, per-mode, and per-specimen diagnostics and predictions;
+- validate recovery of known parameters using synthetic tension and compression generated by the existing model registry.
+
+C2 must not add:
+
+- multi-model fitting or model selection;
+- driver scripts;
+- CSV, MAT, report, or figure exports;
+- new constitutive models;
+- unsupported experimental modes.
+
+C2 establishes the physical and numerical objective before C3 introduces comparison across all registered models.
+
+## Later C phases
 
 ### C3 — Multi-model fitting and joint selection
 
-- Fit every configured registered candidate model using the C2 objective.
-- Define joint eligibility, practical equivalence, parsimony, information-criterion use, and deterministic tie-breaking.
-- Select one joint model without changing individual selections from A and B.
-- Test failed candidates, ties, parameter recovery, and cases where the generating model is present or absent.
-
-Adding a future constitutive model should require model registration and model-specific tests, not changes to joint orchestration.
+- fit every configured registered model using the C2 objective;
+- define joint eligibility, practical equivalence, parsimony, information-criterion use, and deterministic tie-breaking;
+- select one joint model without changing individual selections from A and B;
+- test failed candidates, ties, and generating-model recovery.
 
 ### C4 — Maintained driver, reporting, and outputs
 
-- Add `studies/joint-characterization/run_joint_material_characterization.m`.
-- Load completed tensile and compression studies.
-- Export a nonredundant bundle under `results/joint-material-characterization/`.
-- Add mode-specific joint-fit figures, CSV summaries, MAT persistence, and a Markdown report.
-- Validate against the available independent real tensile and compression studies.
+- add `studies/joint-characterization/run_joint_material_characterization.m`;
+- load completed tensile and compression MAT studies;
+- export nonredundant CSV, MAT, Markdown, and mode-specific figures under `results/joint-material-characterization/`;
+- validate against the available independent real tension and compression studies.
 
 Planned bundle:
 
@@ -266,16 +325,12 @@ joint_fit_compression.fig
 
 ### C5 — Robustness and extensibility audit
 
-- Audit sensitivity to mode weights, specimen normalization, sampling density, and deformation range.
-- Add alternative weighting or normalization only when evidence supports it.
-- Verify that a future mode can be added through the mode contract without editing unrelated fitting, ranking, export, and plotting code.
-- Review whether joint selection needs window sensitivity or cross-validation.
+- audit sensitivity to mode weights, normalization, sampling density, and deformation range;
+- add alternatives only when evidence supports them;
+- verify that a future real mode can be added through the mode contract without editing unrelated fitting, ranking, export, and plotting code;
+- review whether joint selection requires window sensitivity or cross-validation.
 
-C5 must not implement experimental modes for which no physical contract or data exist.
-
-## Remaining deferred decisions
-
-These are not part of the initial C1 implementation:
+## Deferred decisions outside C2
 
 1. whether the existing single-mode consensus policy should remain majority-based;
 2. whether Yeoh-2 should be added as a separate registered model;
@@ -283,24 +338,7 @@ These are not part of the initial C1 implementation:
 4. real validation of two-study tensile comparison export when suitable data become available;
 5. additional experimental modes beyond tension and compression.
 
-Do not combine these objectives with C1.
-
-## Validation protocol
-
-For each C phase:
-
-1. run focused behavioral tests;
-2. run the complete repository suite;
-3. inspect generated tables, MAT structures, reports, and figures when outputs are introduced;
-4. validate with synthetic recovery data before interpreting real-data results;
-5. record limitations explicitly when representative real data are unavailable.
-
-Current branch validation already completed:
-
-```matlab
-results = run_all_tests();
-assert(all([results.Passed]), "Repository tests failed.")
-```
+Do not combine these objectives with C2.
 
 ## Read first
 
@@ -312,7 +350,7 @@ assert(all([results.Passed]), "Repository tests failed.")
 6. `docs/workflows/compression-study.md`
 7. `docs/workflows/constitutive-analysis.md`
 8. `docs/reference/constitutive-models.md`
-9. implementation required by the selected C phase only
+9. implementation required by the active C phase only
 
 ## Repository verification
 
@@ -326,7 +364,7 @@ git rev-parse origin/main
 git log -5 --oneline --decorate
 ```
 
-Confirm local `main` matches `origin/main` and the working tree is clean. Do not continue work on a branch after its PR has been merged.
+Confirm local `main` matches `origin/main` and the working tree is clean. Do not continue work on a branch after its pull request has been merged.
 
 Repository checks:
 
@@ -343,20 +381,19 @@ git ls-files --others --exclude-standard
 - Keep import normalization, stored mechanics, fitting-window direction, and presentation conventions separate.
 - Keep reusable code under `src/+mechanics`, experiment drivers under `studies`, examples under `examples`, and tests under `tests`.
 - Do not preserve obsolete APIs through wrappers or aliases.
-- Do not create bridge files merely to make two workflows look symmetrical.
+- Do not create bridge files merely to make workflows appear symmetrical.
 - Add files only when they represent a distinct maintained contract.
 - Maintain relevant, nonredundant outputs by default.
 - Do not extract shared driver helpers merely because scripts have similar syntax.
 - Use the model registry rather than model-name conditionals when parameter and evaluation contracts are shared.
 - Do not merge a pull request unless explicitly requested.
 
-## Closing the current phase
+## Closing C1
 
-Before merging the tensile-comparison export branch:
+Before merging this branch:
 
 1. review the final diff;
 2. open a PR against `main`;
-3. state that focused and complete tests passed using synthetic completed studies;
-4. state that real paired-study validation was unavailable;
-5. close Issue #25 after the PR is merged;
-6. update local `main`, remove the merged branch, and create a new branch for C1.
+3. state that focused and complete MATLAB suites passed;
+4. state explicitly that C1 performs no fitting;
+5. after merge, update local `main`, remove the merged branch, and create a separate C2 branch.
