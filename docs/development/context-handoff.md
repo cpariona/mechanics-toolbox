@@ -12,23 +12,30 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Validated merged baseline
 
-The current merged baseline is PR #41:
+The current merged baseline is PR #42:
 
 ```text
-1104d05c2c4ee76ce26f875570654f1f998bc4d2
+8a056db15b7060a4807bccea769710ff8c1e026b
 ```
 
-It includes the maintained tension and compression workflows, individual model selection, consensus-model population analysis, study reporting, tensile-study comparison export, and C1-C4 joint material characterization.
+It includes the maintained tension and compression workflows, individual model selection, consensus-model population analysis, reporting and comparison utilities, and C1-C5 joint material characterization with robustness auditing.
 
 ## Active branch and scope
 
 ```text
-audit/joint-characterization-robustness
+fix/joint-sign-tolerance
 ```
 
-This branch implements C5 only: a controlled robustness audit for the completed joint-characterization workflow and an optional audit section in the maintained driver.
+This branch addresses one real-data incompatibility discovered during the first maintained joint tension-compression run: isolated tensile stress observations slightly below zero were rejected as sign violations even though their magnitude was negligible relative to specimen response.
 
-Focused C5 tests and the complete `run_all_tests()` suite passed.
+The branch is limited to:
+
+- configurable scale-aware sign-validation tolerances;
+- preservation of all stored observations without clipping or zeroing;
+- tests for accepted near-zero noise and rejected material sign violations;
+- documentation of the first real joint characterization and robustness results.
+
+Focused tests and the complete `run_all_tests()` suite passed.
 
 ## A and B responsibilities
 
@@ -40,45 +47,13 @@ Tension and compression preserve processed curves, mechanical metrics, individua
 
 Individual model selection remains specimen-specific. The optional consensus workflow chooses a majority model within one study mode and refits retained specimens with that model. It is not joint tension-compression characterization.
 
-## C. Joint material characterization
-
-C estimates one constitutive parameter set from independent experimental modes. Initial real modes are uniaxial tension and uniaxial compression. Specimens are independent and unpaired.
+## C. Joint material characterization — implemented and run on real data
 
 Canonical documentation:
 
 ```text
 docs/workflows/joint-material-characterization.md
 ```
-
-### C1 — completed
-
-```matlab
-normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
-    studies, modeNames, config);
-```
-
-C1 consumes completed studies, preserves physical signs and sampling grids, accepts unequal specimen counts, namespaces duplicate identifiers, maps measures to model contexts, validates units and weights, and creates no synthetic pairing.
-
-### C2 — completed
-
-```matlab
-fit = mechanics.fitting.fitJointModel( ...
-    normalized, modelName, config);
-```
-
-C2 fits one registered model using one common parameter vector. It computes a response-range-normalized loss per specimen, averages specimen losses within each mode, and combines mode losses using explicit positive weights resolved by mode name.
-
-C2 retains predictions, physical residuals, physical and normalized RMSE, maximum absolute error, mode and specimen summaries, convergence metadata, and multistart results.
-
-### C3 — completed
-
-```matlab
-selection = mechanics.workflow.selectJointModel(normalized, config);
-```
-
-C3 fits all configured registered models, retains completed and failed candidates, defines eligibility and practical equivalence, prefers parsimonious equivalent models, and preserves pooled SSE, AIC, and BIC as diagnostics rather than replacements for the hierarchical objective.
-
-### C4 — completed
 
 Public workflow:
 
@@ -93,80 +68,127 @@ Maintained driver:
 studies/joint-characterization/run_joint_material_characterization.m
 ```
 
-Maintained exporter:
+Real input files:
 
-```matlab
-outputFiles = mechanics.io.exportJointMaterialCharacterization( ...
-    result, outputFolder);
+```text
+results/real-tensile-study/tensile_study.mat
+results/real-compression-study/compression_study.mat
 ```
 
-C4 provides the public orchestration workflow, one mode-specific selected-fit figure per real mode, and the nonredundant MAT/CSV/Markdown/PNG/FIG bundle. It does not copy the complete A/B study exports.
+Both files contain one completed study variable named `study`.
 
-### C5 — implemented on the active branch
+### Sign-tolerance evidence
+
+The tensile studies contained isolated negative stress observations near the zero reference:
+
+```text
+minimum values: approximately -4.3e-5 to -2.0e-4 MPa
+maximum specimen stresses: approximately 1.49 to 1.73 MPa
+negative points: 0 to 4 per specimen
+```
+
+These excursions are at most approximately `0.011 %` of specimen maximum stress and are interpreted as acquisition or zero-reference noise, not physical compression.
 
 Configuration:
 
 ```matlab
-auditConfig = mechanics.config.jointCharacterizationAuditConfig();
+config.signTolerance.deformationRelative = 1e-8;
+config.signTolerance.stressRelative = 1e-3;
+config.signTolerance.absolute = 100 * eps;
 ```
 
-Workflow:
+The tolerances validate sign conventions only. Stored deformation and stress vectors remain unchanged and are passed directly to fitting. Larger sign reversals remain errors.
 
-```matlab
-audit = mechanics.workflow.auditJointMaterialCharacterization( ...
-    normalized, config, auditConfig);
-```
+### Real selected model
 
-C5 performs a one-factor-at-a-time audit of:
+The first real joint run used four tensile and four compression specimens and 22,006 total observations.
 
-- configured mode weights;
-- sampling density;
-- retained deformation range;
-- specimens retained per mode.
-
-The default audit contains one baseline and limited perturbations. It does not form a Cartesian product of scenarios and does not add alternative normalization methods without evidence.
-
-The result contains the complete baseline and scenario results plus:
+Selected model:
 
 ```text
-audit.scenarioSummary
+yeoh
 ```
 
-with scenario name, perturbation type, selected model, objective, model agreement with baseline, relative parameter change where physically comparable, specimen count, and observation count.
+Selected parameters:
 
-The maintained driver exposes the audit through an optional `runRobustnessAudit` section. No second driver was added.
+```text
+C10 = 0.0524808 MPa
+C20 = 1.98662e-4 MPa
+C30 = 4.04826e-6 MPa
+```
 
-## C5 validation
+Joint objective:
 
-Focused tests passed:
+```text
+0.00093633
+```
+
+Neo-Hookean and Mooney-Rivlin each had objectives of approximately `0.016832`, so Yeoh was clearly preferred rather than selected through a marginal practical-equivalence decision.
+
+Mean normalized RMSE:
+
+```text
+tension:     approximately 3.94 %
+compression: approximately 1.66 %
+```
+
+### Real robustness audit
+
+The maintained driver stores the optional audit result as:
 
 ```matlab
-focusedResults = runtests([
-    "tests/test_joint_characterization_robustness.m"
-    "tests/test_joint_material_characterization_workflow.m"
-    "tests/test_joint_model_selection.m"
-    "tests/test_joint_fixed_model_fitting.m"
-    "tests/test_joint_characterization_input_contract.m"
-]);
+robustnessAudit
 ```
 
-The complete `run_all_tests()` suite also passed.
+Yeoh remained selected for every default one-factor-at-a-time scenario.
 
-Synthetic validation covered known-parameter stability, asymmetric mode weights, reduced sampling density, reduced deformation range, reduced specimen count, input immutability, and invalid audit configuration.
+```text
+baseline                     parameter change 0
+asymmetric mode weights      maximum parameter change 2.2449 %
+50 % sampling density        parameter change 0.0113 %
+75 % deformation range       parameter change 1.1781 %
+one specimen per mode        parameter change 0.8677 %
+```
 
-## Current status after C5
+Model identity was stable in all scenarios. The largest parameter change occurred under heavier tensile weighting and remained below 2.3 %. Halving observation density produced negligible change, supporting the hierarchical objective rather than pooled point-count weighting.
 
-The planned C1-C5 implementation is complete in code and synthetic tests.
+The present evidence supports the equal-specimen, equal-mode, response-range-normalized contract for this dataset. It does not justify adding alternative weighting or normalization methods automatically.
 
-Still pending:
+## Maintained result bundle
 
-- merge of the active C5 pull request;
-- confirmation of actual completed tensile and compression MAT paths;
-- one real joint-characterization run;
-- interpretation of robustness results on real data;
-- real validation of the two-study tensile comparison export.
+```text
+joint_material_characterization.mat
+candidate_model_summary.csv
+selected_joint_parameters.csv
+mode_fit_summary.csv
+specimen_fit_summary.csv
+joint_material_characterization.md
+joint_fit_tension.png
+joint_fit_tension.fig
+joint_fit_compression.png
+joint_fit_compression.fig
+```
 
-No additional implementation phase should be started automatically after C5. The next repository action should be selected from evidence obtained during real execution or from a separately approved model/workflow objective.
+The robustness audit is currently retained in the MATLAB workspace and printed by the driver; it is not included in the base exported bundle.
+
+## Current status
+
+Completed:
+
+- C1-C5 implementation;
+- synthetic validation;
+- first real tension-compression characterization;
+- real robustness interpretation;
+- sign-tolerance correction and tests.
+
+Pending:
+
+- merge of the active sign-tolerance pull request;
+- separately scoped decision on whether robustness results should be exported persistently;
+- real validation of the two-study tensile comparison export;
+- any future model or experimental-mode extension supported by actual need.
+
+Do not start another implementation phase automatically. Select the next objective from real evidence and keep it limited.
 
 ## Deferred decisions
 
@@ -175,15 +197,10 @@ No additional implementation phase should be started automatically after C5. The
 - Ogden or other additional models;
 - modes beyond tension and compression;
 - alternative joint normalization or weighting strategies;
-- cross-validation or fitting-window sensitivity.
+- cross-validation or fitting-window sensitivity;
+- persistent robustness-audit export.
 
-Do not implement these without a limited approved phase and supporting need.
-
-## Extension policy
-
-A future experimental mode may be added only when real data and a physical contract exist. Extension should use the mode registry and normalized specimen contract without editing unrelated fitting, selection, plotting, reporting, and export code.
-
-A future constitutive model should be added through the model registry and model-specific tests. Joint orchestration should not add model-name conditionals where the registry contract is sufficient.
+Do not implement these without an approved limited phase and supporting evidence.
 
 ## Validation protocol
 
@@ -193,7 +210,7 @@ For each future phase:
 2. run `run_all_tests()`;
 3. inspect generated artifacts when outputs exist;
 4. use synthetic recovery before interpreting real fits;
-5. record unavailable real-data validation explicitly.
+5. record real-data evidence and unavailable validation explicitly.
 
 ## Repository verification
 

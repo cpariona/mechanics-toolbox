@@ -24,6 +24,7 @@ if numel(configuredModes) ~= numel(configuredWeights) || ...
     error("mechanics:workflow:InvalidJointModeWeights", ...
         "Configure one finite positive weight per configured mode.");
 end
+signTolerance = localSignTolerance(config);
 
 specimens = struct('Mode',{},'StudyIndex',{},'OriginalSpecimenId',{}, ...
     'SpecimenId',{},'Deformation',{},'MeasuredStress',{},'Context',{}, ...
@@ -58,7 +59,7 @@ for index = 1:numel(studyList)
                 ~isfield(record.specimen, "processed")
             continue;
         end
-        item = localNormalizeRecord(record, modeContract, index, config);
+        item = localNormalizeRecord(record, modeContract, index, config, signTolerance);
         specimens(end+1,1) = item; %#ok<AGROW>
         specimenCount(index) = specimenCount(index) + 1;
         observationCount(index) = observationCount(index) + item.ObservationCount;
@@ -131,7 +132,7 @@ if string(study.populationStatus) ~= "completed"
 end
 end
 
-function item = localNormalizeRecord(record, mode, studyIndex, config)
+function item = localNormalizeRecord(record, mode, studyIndex, config, signTolerance)
 processed = record.specimen.processed;
 required = [mode.deformationField, mode.stressField, "units", "mechanicsConfig"];
 if ~all(isfield(processed, required))
@@ -153,7 +154,7 @@ if config.requireFiniteObservations && ...
         "Processed specimen %s contains nonfinite observations.", ...
         string(record.specimenId));
 end
-localValidateSigns(deformation, stress, mode, string(record.specimenId));
+localValidateSigns(deformation, stress, mode, string(record.specimenId), signTolerance);
 
 units = processed.units;
 if ~isfield(units, "strain") || ~isfield(units, "stress")
@@ -203,23 +204,50 @@ switch stressMeasure
 end
 end
 
-function localValidateSigns(deformation, stress, mode, specimenId)
-tolerance = 100 * eps(max([1; abs(deformation); abs(stress)]));
-if mode.expectedDeformationSign == "nonnegative" && any(deformation < -tolerance)
-    error("mechanics:workflow:InvalidJointModeSign", ...
-        "Tension specimen %s contains negative stored deformation.", specimenId);
+function tolerance = localSignTolerance(config)
+if ~isfield(config, "signTolerance") || ~isstruct(config.signTolerance)
+    error("mechanics:workflow:MissingJointSignTolerance", ...
+        "Joint characterization config must contain signTolerance settings.");
 end
-if mode.expectedDeformationSign == "nonpositive" && any(deformation > tolerance)
-    error("mechanics:workflow:InvalidJointModeSign", ...
-        "Compression specimen %s contains positive stored deformation.", specimenId);
+required = ["deformationRelative", "stressRelative", "absolute"];
+if ~all(isfield(config.signTolerance, required))
+    error("mechanics:workflow:InvalidJointSignTolerance", ...
+        "signTolerance must define deformationRelative, stressRelative, and absolute.");
 end
-if mode.expectedStressSign == "nonnegative" && any(stress < -tolerance)
-    error("mechanics:workflow:InvalidJointModeSign", ...
-        "Tension specimen %s contains negative stored stress.", specimenId);
+tolerance = config.signTolerance;
+values = [tolerance.deformationRelative, tolerance.stressRelative, tolerance.absolute];
+if any(~isfinite(values)) || any(values < 0)
+    error("mechanics:workflow:InvalidJointSignTolerance", ...
+        "Joint sign tolerances must be finite and nonnegative.");
 end
-if mode.expectedStressSign == "nonpositive" && any(stress > tolerance)
+end
+
+function localValidateSigns(deformation, stress, mode, specimenId, config)
+deformationTolerance = max(config.absolute, ...
+    config.deformationRelative * max(abs(deformation)));
+stressTolerance = max(config.absolute, ...
+    config.stressRelative * max(abs(stress)));
+if mode.expectedDeformationSign == "nonnegative" && ...
+        any(deformation < -deformationTolerance)
     error("mechanics:workflow:InvalidJointModeSign", ...
-        "Compression specimen %s contains positive stored stress.", specimenId);
+        "Tension specimen %s contains negative stored deformation beyond tolerance.", ...
+        specimenId);
+end
+if mode.expectedDeformationSign == "nonpositive" && ...
+        any(deformation > deformationTolerance)
+    error("mechanics:workflow:InvalidJointModeSign", ...
+        "Compression specimen %s contains positive stored deformation beyond tolerance.", ...
+        specimenId);
+end
+if mode.expectedStressSign == "nonnegative" && any(stress < -stressTolerance)
+    error("mechanics:workflow:InvalidJointModeSign", ...
+        "Tension specimen %s contains negative stored stress beyond tolerance.", ...
+        specimenId);
+end
+if mode.expectedStressSign == "nonpositive" && any(stress > stressTolerance)
+    error("mechanics:workflow:InvalidJointModeSign", ...
+        "Compression specimen %s contains positive stored stress beyond tolerance.", ...
+        specimenId);
 end
 end
 

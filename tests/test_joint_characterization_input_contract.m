@@ -70,6 +70,35 @@ verifyError(testCase, @() mechanics.workflow.normalizeJointCharacterizationStudi
     "mechanics:workflow:InvalidJointModeSign");
 end
 
+function testSmallOppositeStressNoiseIsPreserved(testCase)
+study = localStudy("tension", "t1", 1);
+stress = study.analysis.records(1).specimen.processed.stress;
+stress(1) = -5e-5;
+study.analysis.records(1).specimen.processed.stress = stress;
+normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    {study}, "tension", localSingleModeConfig("tension"));
+verifyEqual(testCase, normalized.specimens.MeasuredStress(1), -5e-5, ...
+    "AbsTol", eps);
+end
+
+function testMaterialOppositeStressIsRejected(testCase)
+study = localStudy("tension", "t1", 1);
+stress = study.analysis.records(1).specimen.processed.stress;
+stress(1) = -0.01;
+study.analysis.records(1).specimen.processed.stress = stress;
+verifyError(testCase, @() mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    {study}, "tension", localSingleModeConfig("tension")), ...
+    "mechanics:workflow:InvalidJointModeSign");
+end
+
+function testInvalidSignToleranceIsRejected(testCase)
+config = localSingleModeConfig("tension");
+config.signTolerance.stressRelative = -1;
+verifyError(testCase, @() mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    {localStudy("tension", "t1", 1)}, "tension", config), ...
+    "mechanics:workflow:InvalidJointSignTolerance");
+end
+
 function testCrossModeStressUnitMismatchIsRejected(testCase)
 tension = localStudy("tension", "t1", 1);
 compression = localStudy("compression", "c1", 1);
