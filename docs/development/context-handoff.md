@@ -12,23 +12,23 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Validated merged baseline
 
-The current merged baseline is PR #39:
+The current merged baseline is PR #40:
 
 ```text
-582f2f75b656da0dcc2dd85751e970a4c8eb1caf
+d42bafe54e8fe884a0f6b282f827628c3c3906a6
 ```
 
-It includes the maintained tension and compression workflows, individual model selection, consensus-model population analysis, study reporting, tensile-study comparison export, C1 joint input normalization, and C2 fixed-model joint fitting.
+It includes the maintained tension and compression workflows, individual model selection, consensus-model population analysis, study reporting, tensile-study comparison export, C1 joint input normalization, C2 fixed-model joint fitting, and C3 multi-model joint selection.
 
 ## Active branch and scope
 
 ```text
-feature/joint-model-selection
+feature/joint-characterization-driver-outputs
 ```
 
-This branch implements C3 only: fitting all configured registered models through the C2 objective, retaining every candidate, and selecting one joint constitutive model using explicit eligibility, practical equivalence, parsimony, exact objective, and deterministic configured ordering.
+This branch implements C4 only: the public joint-characterization workflow, maintained driver, mode plotting, and nonredundant result bundle.
 
-Focused C3 tests and the complete `run_all_tests()` suite passed.
+Focused C4 tests and the complete `run_all_tests()` suite passed.
 
 ## A and B responsibilities
 
@@ -48,19 +48,6 @@ Canonical documentation:
 
 ```text
 docs/workflows/joint-material-characterization.md
-```
-
-Planned final workflow:
-
-```matlab
-result = mechanics.workflow.runJointMaterialCharacterization( ...
-    studies, modeNames, config);
-```
-
-Planned maintained driver:
-
-```text
-studies/joint-characterization/run_joint_material_characterization.m
 ```
 
 ## C1 — completed
@@ -89,60 +76,75 @@ C2 fits one registered model using one common parameter vector. It computes a re
 
 C2 retains predictions, physical residuals, physical and normalized RMSE, maximum absolute error, mode and specimen summaries, convergence metadata, and multistart results.
 
-## C3 — implemented on the active branch
+## C3 — completed
 
 Implemented:
 
 ```matlab
-result = mechanics.workflow.selectJointModel(normalized, config);
+selection = mechanics.workflow.selectJointModel(normalized, config);
 ```
 
 C3:
 
 - fits every unique model in `config.candidateModelNames` through `fitJointModel`;
 - retains completed and failed candidates;
-- records error identifiers and messages without interrupting remaining fits;
 - defines eligibility from completed finite fits and optional convergence requirements;
 - defines practical equivalence from `config.selection.practicalObjectiveTolerance`;
 - selects the lowest-parameter equivalent model;
 - breaks remaining ties by exact joint objective and `config.selection.tieBreakOrder`;
-- retains pooled physical SSE, AIC, and BIC as diagnostics rather than replacing the hierarchical objective;
-- preserves the complete selected C2 fit as `result.selectedFit`.
+- retains pooled physical SSE, AIC, and BIC as diagnostics;
+- preserves the complete selected C2 fit.
 
-The result contains:
+## C4 — implemented on the active branch
+
+Public workflow:
+
+```matlab
+result = mechanics.workflow.runJointMaterialCharacterization( ...
+    studies, modeNames, config);
+```
+
+C4 composes the C1 normalizer and C3 selector. It returns:
 
 ```text
 result.modeNames
+result.modeWeights
+result.specimens
+result.modeInputSummary
 result.candidates
 result.candidateSummary
 result.selectedModelName
 result.selectedFit
+result.modeSummary
+result.specimenSummary
 result.selection
 result.config
 result.createdAt
+result.outputFiles
 ```
 
-Synthetic tests verified Neo-Hookean parsimony, nonlinear Yeoh recovery, failed-candidate retention, deterministic ordering, configuration validation, and finite AIC/BIC diagnostics.
+Maintained driver:
 
-C3 does not add the public orchestration workflow, driver, reports, figures, exports, new constitutive models, or unsupported modes.
+```text
+studies/joint-characterization/run_joint_material_characterization.m
+```
 
-## C4 — next objective
+The driver loads completed tensile and compression MAT studies, configures the joint workflow, and exports results. It does not import raw data or rerun the individual studies.
 
-C4 must remain limited to public orchestration, the maintained driver, and the nonredundant result bundle.
+Maintained exporter:
 
-Required behavior:
+```matlab
+outputFiles = mechanics.io.exportJointMaterialCharacterization( ...
+    result, outputFolder);
+```
 
-- add `mechanics.workflow.runJointMaterialCharacterization`;
-- call the C1 normalizer and C3 selector rather than duplicating their logic;
-- return one coherent material-level result while preserving normalized inputs and selected/candidate fits;
-- add `studies/joint-characterization/run_joint_material_characterization.m`;
-- load completed tensile and compression MAT files without reprocessing raw data;
-- allow experiment-specific paths, exclusions and output folders in the driver;
-- export candidate summary, selected parameters, selected mode/specimen summaries, MAT persistence, Markdown report, and mode-specific PNG/FIG files;
-- state explicitly that specimens are independent and unpaired;
-- preserve A and B outputs without copying their complete bundles.
+Maintained plotting entrypoint:
 
-Planned outputs:
+```matlab
+figureHandle = mechanics.plotting.plotJointModeFit(result, modeName);
+```
+
+Output bundle:
 
 ```text
 joint_material_characterization.mat
@@ -157,11 +159,40 @@ joint_fit_compression.png
 joint_fit_compression.fig
 ```
 
-C4 must not add new constitutive models, unsupported experimental modes, or robustness alternatives that belong to C5.
+The bundle preserves joint candidate, selected-model, mode, and specimen diagnostics without copying the complete A/B study bundles. Reports state explicitly that tension and compression specimens are independent and unpaired.
 
-## C5 — later robustness and extensibility audit
+## C4 validation
 
-Audit mode weights, normalization, sampling density, specimen count, and deformation range. Add alternatives only when supported by evidence. Do not implement modes without real data and physical contracts.
+Focused tests passed:
+
+```matlab
+focusedResults = runtests([
+    "tests/test_joint_material_characterization_workflow.m"
+    "tests/test_joint_model_selection.m"
+    "tests/test_joint_fixed_model_fitting.m"
+    "tests/test_joint_characterization_input_contract.m"
+    "tests/test_constitutive_models.m"
+]);
+```
+
+The complete `run_all_tests()` suite also passed.
+
+Synthetic end-to-end validation covered workflow composition, known-response recovery, export enable/disable behavior, CSV/MAT/Markdown/PNG/FIG creation, selected-parameter content, persisted MAT loading, and invalid export inputs.
+
+Real joint execution remains pending. Before running the maintained driver, confirm the actual completed MAT paths for the tensile and compression studies.
+
+## C5 — next objective
+
+C5 is a limited robustness and extensibility audit. It must evaluate:
+
+- sensitivity to configured mode weights;
+- response-range normalization behavior;
+- sampling-density changes;
+- unequal specimen counts;
+- deformation-range differences;
+- whether a real future mode can be added through the mode registry without editing unrelated fitting, selection, plotting, reporting, and export code.
+
+Alternative weighting or normalization strategies must only be added when evidence supports them. Do not add unsupported experimental modes.
 
 ## Deferred decisions
 
@@ -171,7 +202,7 @@ Audit mode weights, normalization, sampling density, specimen count, and deforma
 - real validation of two-study tensile comparison export;
 - modes beyond tension and compression.
 
-Do not combine these with C4.
+Do not combine these with C5 unless directly required by evidence from the robustness audit.
 
 ## Validation protocol
 
