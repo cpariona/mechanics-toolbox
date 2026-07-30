@@ -91,9 +91,9 @@ parameters = mechanics.fitting.unconstrainedToParameters( ...
     unconstrained, lowerBounds, upperBounds);
 try
     modeLoss = zeros(numel(normalized.modeNames), 1);
+    specimenModes = string({normalized.specimens.Mode})';
     for modeIndex = 1:numel(normalized.modeNames)
-        modeName = normalized.modeNames(modeIndex);
-        specimenIndices = find(string({normalized.specimens.Mode})' == modeName);
+        specimenIndices = find(specimenModes == normalized.modeNames(modeIndex));
         specimenLoss = zeros(numel(specimenIndices), 1);
         for localIndex = 1:numel(specimenIndices)
             specimenIndex = specimenIndices(localIndex);
@@ -197,11 +197,22 @@ normalization.scale = scale;
 end
 
 function weights = localModeWeights(modeNames, config)
-weights = reshape(double(config.modeWeights), [], 1);
-if numel(weights) ~= numel(modeNames) || ...
-        any(~isfinite(weights)) || any(weights <= 0)
+configuredNames = lower(strtrim(string(config.modeNames(:))));
+configuredWeights = reshape(double(config.modeWeights), [], 1);
+if numel(configuredNames) ~= numel(configuredWeights) || ...
+        numel(unique(configuredNames)) ~= numel(configuredNames) || ...
+        any(~isfinite(configuredWeights)) || any(configuredWeights <= 0)
     error("mechanics:fitting:InvalidJointModeWeights", ...
-        "Provide one finite positive mode weight per normalized mode.");
+        "Configure one unique finite positive weight per mode.");
+end
+weights = zeros(numel(modeNames), 1);
+for modeIndex = 1:numel(modeNames)
+    match = configuredNames == lower(string(modeNames(modeIndex)));
+    if nnz(match) ~= 1
+        error("mechanics:fitting:InvalidJointModeWeights", ...
+            "No unique configured weight exists for mode %s.", modeNames(modeIndex));
+    end
+    weights(modeIndex) = configuredWeights(match);
 end
 weights = weights ./ sum(weights);
 end
