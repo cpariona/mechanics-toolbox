@@ -34,6 +34,7 @@ for recordIndex = 1:numel(records)
 
     if isfield(selection, "summary") && ~isempty(selection.summary)
         summary = selection.summary;
+        variables = string(summary.Properties.VariableNames);
         selectedMask = string(summary.Model) == bestModel;
         selectedRMSE = NaN;
         if any(selectedMask)
@@ -56,13 +57,17 @@ for recordIndex = 1:numel(records)
             modelRows(modelRowIndex).MaximumRelativeParameterCV = ...
                 summary.MaximumRelativeParameterCV(row);
             modelRows(modelRowIndex).DominantCVParameter = ...
-                string(summary.DominantCVParameter(row));
+                localOptionalValue(summary, variables, ...
+                "DominantCVParameter", row, "");
             modelRows(modelRowIndex).HasParameterSignChange = ...
-                summary.HasParameterSignChange(row);
+                localOptionalValue(summary, variables, ...
+                "HasParameterSignChange", row, false);
             modelRows(modelRowIndex).MaximumSharedDomainNormalizedRMSE = ...
-                summary.MaximumSharedDomainNormalizedRMSE(row);
+                localOptionalValue(summary, variables, ...
+                "MaximumSharedDomainNormalizedRMSE", row, NaN);
             modelRows(modelRowIndex).MaximumSharedDomainNormalizedMaxError = ...
-                summary.MaximumSharedDomainNormalizedMaxError(row);
+                localOptionalValue(summary, variables, ...
+                "MaximumSharedDomainNormalizedMaxError", row, NaN);
             modelRows(modelRowIndex).LowerRMSEThanSelected = ...
                 isfinite(selectedRMSE) && ...
                 summary.FullWindowRMSE(row) < selectedRMSE;
@@ -129,6 +134,17 @@ if isempty(modelRows) && isempty(windowRows)
     audit.status = "unavailable";
 else
     audit.status = "completed";
+end
+end
+
+function value = localOptionalValue(summary, variables, name, row, fallback)
+value = fallback;
+if ismember(name, variables)
+    raw = summary.(name)(row);
+    if iscell(raw) && isscalar(raw)
+        raw = raw{1};
+    end
+    value = raw;
 end
 end
 
