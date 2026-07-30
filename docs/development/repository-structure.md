@@ -13,12 +13,15 @@ Configuration functions under `mechanics.config` are organized by level:
 - specimen-level processing: import, tension, compression, segmentation, and peak analysis;
 - fitting and diagnostics: fitting, uncertainty, identifiability, residuals, reliability, window stability, and model selection;
 - dataset and population analysis;
+- joint material characterization across completed experimental modes;
 - end-to-end workflow orchestration;
 - report and export presentation.
 
 A workflow configuration may contain lower-level configuration structs. It does not replace them. For example, `compressionConfig` controls one processed compression curve, while `compressionStudyConfig` coordinates file input, cycle selection, processing, fitting, and export for a complete study.
 
 Retain a configuration function only when it is consumed by maintained implementation, a supported example, an executable study driver, or a behavioral test. A test that only instantiates a configuration is not sufficient evidence by itself.
+
+Joint material characterization must consume completed study results through one explicit workflow contract. Mode-specific extraction belongs in a small registered adapter or mode contract only when the physical data representation differs. Constitutive model evaluation and parameter metadata remain owned by the model registry. Do not scatter tension/compression conditionals across fitting, ranking, export, and plotting code.
 
 ## Executable study drivers
 
@@ -32,7 +35,11 @@ They are not library implementation and are not simplified demonstrations. Study
 
 ```text
 studies/tension/run_tensile_experiment.m
+studies/compression/run_compression_experiment.m
+studies/joint-characterization/run_joint_material_characterization.m
 ```
+
+The joint-characterization driver consumes completed tensile and compression study MAT files or in-memory study results. It must not re-import raw workbooks or duplicate the individual study drivers. Future additional modes should be added only after a maintained mode contract exists.
 
 Experiment-specific raw data and generated results remain under ignored `data/` and `results/` paths.
 
@@ -59,6 +66,8 @@ tests/
 ```
 
 Test files are named by behavior or subsystem. Tests are maintained source files, not generated output. Temporary migration tests should be removed after the canonical API has functional coverage; tests should not preserve removed aliases or obsolete contracts.
+
+Joint characterization tests should be organized by behavior rather than phase. Synthetic parameter-recovery tests belong in the fitting or workflow test that owns the contract. Real-data validation remains outside committed test fixtures unless an explicitly managed small dataset is later approved.
 
 ## Documentation
 

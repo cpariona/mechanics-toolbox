@@ -1,5 +1,5 @@
 function tests = test_tensile_study_comparison
-tests = functiontests(localfunctions);
+ tests = functiontests(localfunctions);
 end
 
 function setupOnce(~)
@@ -53,6 +53,49 @@ verifyError(testCase, @() mechanics.workflow.compareTensileStudies( ...
     "mechanics:workflow:StudyLabelCountMismatch");
 end
 
+function testComparisonExportCreatesMaintainedOutputs(testCase)
+studies = [localStudy("a", 2), localStudy("b", 4)];
+comparison = mechanics.workflow.compareTensileStudies( ...
+    studies, ["first", "second"], localConfig());
+folder = string(tempname);
+cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
+
+files = mechanics.io.exportTensileStudyComparison(comparison, folder);
+
+verifyTrue(testCase, isfile(files.studySummary));
+verifyTrue(testCase, isfile(files.compatibility));
+verifyTrue(testCase, isfile(files.metricComparison));
+verifyTrue(testCase, isfile(files.curveComparison));
+verifyTrue(testCase, isfile(files.figure));
+verifyTrue(testCase, isfile(files.figureFig));
+verifyTrue(testCase, isfile(files.comparison));
+verifyTrue(testCase, isfile(files.report));
+
+compatibility = readtable(files.compatibility, 'TextType', 'string');
+verifyEqual(testCase, compatibility.Group, ["first"; "second"]);
+verifyEqual(testCase, compatibility.StressUnit, ["MPa"; "MPa"]);
+
+curve = readtable(files.curveComparison);
+verifyEqual(testCase, curve.MeanDifference(end), -2, 'AbsTol', 1e-12);
+
+report = string(fileread(files.report));
+verifyTrue(testCase, contains(report, "# Tensile study comparison"));
+verifyTrue(testCase, contains(report, "## Compatibility"));
+verifyTrue(testCase, contains(report, "## Scalar metric comparison"));
+verifyTrue(testCase, contains(report, "## Curve comparison"));
+end
+
+function testComparisonExportRejectsWrongTestType(testCase)
+comparison.testType = "compression";
+comparison.groupLabels = ["first"; "second"];
+comparison.studySummaries = table();
+comparison.compatibility = struct();
+comparison.groupComparison = struct();
+verifyError(testCase, @() mechanics.io.exportTensileStudyComparison( ...
+    comparison, string(tempname)), ...
+    "mechanics:io:InvalidTensileStudyComparison");
+end
+
 function config = localConfig()
 config = mechanics.config.tensileStudyComparisonConfig();
 config.groupComparison.minimumSpecimensPerGroup = 2;
@@ -98,4 +141,10 @@ record.specimen = specimen;
 record.errorIdentifier = "";
 record.errorMessage = "";
 record.group = "";
+end
+
+function localRemove(folder)
+if isfolder(folder)
+    rmdir(folder, 's');
+end
 end

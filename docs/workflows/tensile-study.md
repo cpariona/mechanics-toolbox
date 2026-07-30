@@ -138,6 +138,15 @@ comparison = mechanics.workflow.compareTensileStudies( ...
     [studyA, studyB], ...
     ["Condition A", "Condition B"], ...
     mechanics.config.tensileStudyComparisonConfig());
+
+files = mechanics.io.exportTensileStudyComparison( ...
+    comparison, "results/tensile-study-comparison");
 ```
 
-The comparison reuses maintained population and group-comparison logic. Dedicated comparison export and reporting remain deferred in issue #25.
+The comparison reuses maintained population and group-comparison logic. The dedicated exporter writes study and compatibility summaries, pairwise scalar metrics, mean curves and curve differences with available confidence intervals, a maintained PNG/FIG figure pair, the complete MAT result, and a concise Markdown report.
+
+The exporter does not recalculate statistics and does not duplicate individual study bundles or constitutive-parameter reporting. Automated tests use synthetic completed studies. Real two-study validation remains pending because no representative pair of tensile study datasets is currently available.
+
+## Relationship to joint material characterization
+
+Comparing two tensile studies evaluates differences between experimental groups within one mode. It is not joint material characterization. The planned joint tension-compression workflow is documented in [`joint-material-characterization.md`](joint-material-characterization.md) and will estimate one constitutive parameter set from independent modes.
