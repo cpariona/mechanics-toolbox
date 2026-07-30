@@ -61,6 +61,20 @@ disp(result.modeSummary)
 disp(result.specimenSummary)
 disp(result.outputFiles)
 
+%% 4. OPTIONAL ROBUSTNESS AUDIT
+runRobustnessAudit = true;
+if runRobustnessAudit
+    auditConfig = mechanics.config.jointCharacterizationAuditConfig();
+    auditInput.modeNames = result.modeNames;
+    auditInput.specimens = result.specimens;
+    auditInput.specimenCount = numel(result.specimens);
+    auditInput.observationCount = sum([result.specimens.ObservationCount]);
+    robustnessAudit = ...
+        mechanics.workflow.auditJointMaterialCharacterization( ...
+        auditInput, config, auditConfig);
+    disp(robustnessAudit.scenarioSummary)
+end
+
 %% LOCAL DRIVER UTILITY
 function study = localLoadStudy(filePath, preferredNames)
 if ~isfile(filePath)

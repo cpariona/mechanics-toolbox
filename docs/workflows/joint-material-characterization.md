@@ -32,34 +32,13 @@ result = mechanics.workflow.runJointMaterialCharacterization( ...
     studies, modeNames, config);
 ```
 
-The workflow composes the maintained C1 normalizer and C3 selector. It does not duplicate preprocessing, fitting, or ranking logic.
+The workflow composes the maintained input normalizer and joint selector. It does not duplicate preprocessing, fitting, or ranking logic.
 
-The returned result contains:
-
-```text
-result.modeNames
-result.modeWeights
-result.specimens
-result.modeInputSummary
-result.candidates
-result.candidateSummary
-result.selectedModelName
-result.selectedFit
-result.modeSummary
-result.specimenSummary
-result.selection
-result.config
-result.createdAt
-result.outputFiles
-```
+The returned result contains normalized specimens, candidate fits, the selected model and fit, mode and specimen summaries, selection metadata, configuration, creation time, and exported files.
 
 ## C1: input contract
 
-C1 introduced:
-
 ```matlab
-config = mechanics.config.jointMaterialCharacterizationConfig();
-mode = mechanics.workflow.jointCharacterizationModeRegistry(modeName);
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, modeNames, config);
 ```
@@ -75,13 +54,13 @@ fit = mechanics.fitting.fitJointModel( ...
 
 C2 fits one registered model to every normalized specimen using one common parameter vector.
 
-For each specimen, the initial normalized loss is:
+For each specimen, the normalized loss is:
 
 ```text
 mean((measuredStress - predictedStress).^2 / normalizationScale^2)
 ```
 
-The initial normalization scale is the specimen response range with a configured positive floor. Specimen losses are averaged within each mode. Mode losses are then combined using explicit positive weights normalized to sum to one and resolved by configured mode name.
+The normalization scale is the specimen response range with a configured positive floor. Specimen losses are averaged within each mode. Mode losses are then combined using explicit positive weights normalized to sum to one and resolved by configured mode name.
 
 The fit retains predictions, physical residuals, physical RMSE, normalized RMSE, maximum absolute error, mode summaries, specimen summaries, convergence metadata, and all multistart attempts.
 
@@ -135,26 +114,74 @@ joint_fit_compression.png
 joint_fit_compression.fig
 ```
 
-The selected-parameter table is derived from the selected model registry definition and selected common parameter vector. Candidate, mode, and specimen tables preserve the C2-C3 diagnostics rather than recomputing them.
+The bundle preserves joint candidate, selected-model, mode, and specimen diagnostics without copying the complete tensile or compression study exports. Reports state explicitly that tension and compression specimens are independent and unpaired.
 
-Mode figures are generated through:
+## C5: robustness audit
+
+Configuration:
 
 ```matlab
-figureHandle = mechanics.plotting.plotJointModeFit(result, modeName);
+auditConfig = mechanics.config.jointCharacterizationAuditConfig();
 ```
 
-Each figure contains the experimental observations and selected joint-model prediction for the specimens of one real mode. Additional figures are generated only when another real registered mode exists.
+Workflow:
 
-The Markdown report records:
+```matlab
+audit = mechanics.workflow.auditJointMaterialCharacterization( ...
+    normalized, config, auditConfig);
+```
 
-- the selected model and common parameters;
-- candidate eligibility and ranking diagnostics;
-- per-mode and per-specimen fit summaries;
-- links to mode-specific figures;
-- the independent and unpaired nature of the input specimens;
-- the distinction between the joint material result and the retained A/B study outputs.
+The audit is one-factor-at-a-time. It evaluates one baseline and independent perturbations of:
 
-The bundle does not copy the complete tensile or compression study exports.
+- configured mode weights;
+- sampling density;
+- retained deformation range;
+- specimens retained per mode.
+
+The default scenarios are:
+
+```matlab
+auditConfig.modeWeightSets = [
+    1, 1
+    3, 1
+    1, 3
+];
+auditConfig.samplingFractions = [1; 0.5];
+auditConfig.deformationFractions = [1; 0.75];
+auditConfig.specimensPerMode = [Inf; 1];
+```
+
+The audit deliberately does not form a Cartesian product of perturbations. Each result remains attributable to one changed factor and the computational cost remains bounded.
+
+The response-range normalization contract is preserved. C5 does not add alternative normalizations merely to demonstrate configurability.
+
+The returned audit contains:
+
+```text
+audit.baseline
+audit.scenarios
+audit.scenarioSummary
+audit.config
+audit.auditConfig
+audit.createdAt
+```
+
+The scenario summary reports:
+
+```text
+Scenario
+Perturbation
+SelectedModel
+Objective
+SameModelAsBaseline
+ParameterRelativeChange
+SpecimenCount
+ObservationCount
+```
+
+`ParameterRelativeChange` is reported only when the selected model is unchanged. Parameters from different constitutive models are not compared as if they had the same physical meaning.
+
+The maintained driver exposes the audit as an optional section through `runRobustnessAudit`. A second driver is not maintained.
 
 ## Validation
 
@@ -162,30 +189,30 @@ Focused tests passed for:
 
 ```matlab
 focusedResults = runtests([
+    "tests/test_joint_characterization_robustness.m"
     "tests/test_joint_material_characterization_workflow.m"
     "tests/test_joint_model_selection.m"
     "tests/test_joint_fixed_model_fitting.m"
     "tests/test_joint_characterization_input_contract.m"
-    "tests/test_constitutive_models.m"
 ]);
 ```
 
 The complete `run_all_tests()` suite also passed.
 
-Synthetic end-to-end tests verified:
+Synthetic validation covers:
 
-- C1-C3 composition through the public workflow;
-- recovery and selection of a known common constitutive response;
-- enabled and disabled export behavior;
-- creation of all maintained CSV, MAT, Markdown, PNG, and FIG outputs;
-- selected-parameter and report content;
-- persisted MAT loading;
-- rejection of incomplete export inputs.
+- known common-parameter recovery;
+- asymmetric mode weights;
+- reduced sampling density;
+- reduced deformation range;
+- reduced specimen count;
+- preservation of the normalized input;
+- invalid sampling and mode-weight configuration.
 
-Real joint execution remains pending until the available completed tensile and compression MAT files are selected and their driver paths are confirmed.
+Real joint execution and real-data robustness interpretation remain pending until completed tensile and compression MAT files are selected and their driver paths are confirmed.
 
-## C5: robustness and extensibility audit
+## Extension policy
 
-C5 will audit sensitivity to mode weights, normalization, sampling density, specimen count, and deformation range. Alternatives will only be added when evidence supports them.
+A future experimental mode may be added only when real data and a physical contract exist. Extension should occur through the mode registry and normalized specimen contract. Unsupported modes are not implemented as placeholders.
 
-C5 must also verify that another real experimental mode can be added through the mode contract without editing unrelated fitting, selection, reporting, and export code. Unsupported modes must not be implemented merely to demonstrate extensibility.
+New constitutive models remain model-registry responsibilities. Joint orchestration, ranking, reporting, and robustness code should not require model-name branches when the registered contract is sufficient.
