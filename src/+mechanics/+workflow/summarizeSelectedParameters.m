@@ -127,6 +127,8 @@ minimumValue = splitapply(@min, input.Value, groups);
 maximumValue = splitapply(@max, input.Value, groups);
 coefficientOfVariation = standardDeviation ./ max(abs(meanValue), sqrt(eps));
 validSummary = count >= config.minimumSpecimensPerSummary;
+standardDeviation(~validSummary) = NaN;
+coefficientOfVariation(~validSummary) = NaN;
 
 if byGroup
     output = table(groupName, modelName, parameterName, count, meanValue, ...
