@@ -15,28 +15,45 @@ The first supported modes are uniaxial tension and uniaxial compression. Specime
 - Preserve individual-study and consensus outputs without duplication.
 - Do not add wrappers, aliases, bridge files, or placeholder modes.
 
-## Final planned workflow
+## Maintained public workflow
 
 ```matlab
 result = mechanics.workflow.runJointMaterialCharacterization( ...
     studies, modeNames, config);
 ```
 
-Initial inputs use heterogeneous completed studies:
+Initial use accepts heterogeneous completed studies:
 
 ```matlab
 studies = {tensileStudy, compressionStudy};
 modeNames = ["tension"; "compression"];
 config = mechanics.config.jointMaterialCharacterizationConfig();
+result = mechanics.workflow.runJointMaterialCharacterization( ...
+    studies, modeNames, config);
 ```
 
-The maintained driver remains planned for:
+The workflow composes the maintained C1 normalizer and C3 selector. It does not duplicate preprocessing, fitting, or ranking logic.
+
+The returned result contains:
 
 ```text
-studies/joint-characterization/run_joint_material_characterization.m
+result.modeNames
+result.modeWeights
+result.specimens
+result.modeInputSummary
+result.candidates
+result.candidateSummary
+result.selectedModelName
+result.selectedFit
+result.modeSummary
+result.specimenSummary
+result.selection
+result.config
+result.createdAt
+result.outputFiles
 ```
 
-## C1: implemented input contract
+## C1: input contract
 
 C1 introduced:
 
@@ -49,9 +66,7 @@ normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
 
 The normalized result preserves mode, study and specimen identity, physical signs, original sampling grids, constitutive context, units, and observation counts. It accepts unequal specimen counts and creates no synthetic pairing.
 
-## C2: implemented fixed-model joint fitting
-
-Maintained fitting entrypoint:
+## C2: fixed-model joint fitting
 
 ```matlab
 fit = mechanics.fitting.fitJointModel( ...
@@ -59,8 +74,6 @@ fit = mechanics.fitting.fitJointModel( ...
 ```
 
 C2 fits one registered model to every normalized specimen using one common parameter vector.
-
-### Hierarchical objective
 
 For each specimen, the initial normalized loss is:
 
@@ -70,134 +83,44 @@ mean((measuredStress - predictedStress).^2 / normalizationScale^2)
 
 The initial normalization scale is the specimen response range with a configured positive floor. Specimen losses are averaged within each mode. Mode losses are then combined using explicit positive weights normalized to sum to one and resolved by configured mode name.
 
-The result retains predictions, physical residuals, physical RMSE, normalized RMSE, maximum absolute error, mode summaries, specimen summaries, convergence metadata, and all multistart attempts.
+The fit retains predictions, physical residuals, physical RMSE, normalized RMSE, maximum absolute error, mode summaries, specimen summaries, convergence metadata, and all multistart attempts.
 
-## C3: implemented multi-model fitting and joint selection
-
-Maintained selection entrypoint:
+## C3: multi-model fitting and joint selection
 
 ```matlab
-result = mechanics.workflow.selectJointModel(normalized, config);
+selection = mechanics.workflow.selectJointModel(normalized, config);
 ```
 
-C3 fits every unique model listed in:
+Every unique model in `config.candidateModelNames` is fitted through `mechanics.fitting.fitJointModel`. Candidate parameter names, bounds, evaluation functions, and parameter counts remain owned by the model registry.
 
-```matlab
-config.candidateModelNames
-```
+Every candidate is retained, including failures. Eligibility requires a completed finite fit and, when configured, convergence.
 
-through `mechanics.fitting.fitJointModel`. Candidate parameter names, bounds, evaluation functions, and parameter counts remain owned by the model registry.
-
-### Candidate retention
-
-Every candidate is retained, including failed candidates. A candidate record contains its status, fit when available, error identifier and message when unavailable, convergence, eligibility, objective, parameter count, physical SSE, observation count, AIC, BIC, and configured order.
-
-One candidate failure does not interrupt the remaining candidates.
-
-### Eligibility
-
-A candidate is eligible when:
-
-- its joint fit completed;
-- its joint objective is finite;
-- it converged when `config.selection.requireConvergence` is enabled.
-
-If no candidate is eligible, selection fails explicitly rather than returning a partial material characterization.
-
-### Practical equivalence and ranking
-
-The best eligible joint objective defines a practical-equivalence threshold using:
-
-```matlab
-config.selection.practicalObjectiveTolerance
-```
-
-Eligible candidates inside that threshold are practically equivalent. Selection within the equivalent set follows:
+Practical equivalence is defined by `config.selection.practicalObjectiveTolerance`. Selection within the equivalent set follows:
 
 1. fewer constitutive parameters;
 2. lower exact joint objective;
 3. deterministic configured order from `config.selection.tieBreakOrder`.
 
-This preserves parsimony when a more complex nested model only improves the hierarchical objective marginally.
+AIC and BIC are retained as pooled physical-residual diagnostics. They do not replace the hierarchical equal-specimen/equal-mode objective.
 
-AIC and BIC are retained as physical residual diagnostics. They do not replace the hierarchical objective because they are based on the pooled physical SSE rather than the equal-specimen/equal-mode material objective.
+## C4: maintained driver and result bundle
 
-### C3 result
-
-```text
-result.modeNames
-result.candidates
-result.candidateSummary
-result.selectedModelName
-result.selectedFit
-result.selection
-result.config
-result.createdAt
-```
-
-The candidate summary contains:
+The maintained driver is:
 
 ```text
-ModelName
-Status
-Converged
-Eligible
-PracticallyEquivalent
-ParameterCount
-Objective
-PhysicalSSE
-ObservationCount
-AIC
-BIC
-ConfiguredOrder
+studies/joint-characterization/run_joint_material_characterization.m
 ```
 
-The selected fit remains the complete C2 fit result, including parameters, predictions, residuals, specimen diagnostics, mode diagnostics, normalization and multistart results.
+It loads completed tensile and compression MAT studies, configures the joint workflow, executes the public entrypoint, and displays the selected model and summaries. It does not import raw workbooks or rerun the individual study workflows.
 
-### C3 validation
-
-Synthetic tests verified:
-
-- Neo-Hookean selection by parsimony when nested candidates are practically equivalent;
-- Yeoh selection and parameter recovery when nonlinear synthetic data require the higher-order model;
-- retention and exclusion of a failed unknown candidate;
-- deterministic configured ordering;
-- rejection of duplicate candidates and invalid selection tolerance;
-- finite AIC and BIC diagnostics.
-
-Focused tests passed:
+The maintained exporter is:
 
 ```matlab
-focusedResults = runtests([
-    "tests/test_joint_model_selection.m"
-    "tests/test_joint_fixed_model_fitting.m"
-    "tests/test_joint_characterization_input_contract.m"
-    "tests/test_constitutive_models.m"
-]);
+outputFiles = mechanics.io.exportJointMaterialCharacterization( ...
+    result, outputFolder);
 ```
 
-The complete `run_all_tests()` suite also passed.
-
-## C4: next phase — public workflow, driver and outputs
-
-C4 will add the final orchestration entrypoint:
-
-```matlab
-result = mechanics.workflow.runJointMaterialCharacterization( ...
-    studies, modeNames, config);
-```
-
-It will:
-
-- normalize completed studies through C1;
-- fit and select candidates through C3;
-- expose one coherent material-level result;
-- add the maintained driver at `studies/joint-characterization/run_joint_material_characterization.m`;
-- load completed tensile and compression MAT studies without reprocessing raw data;
-- export a nonredundant result bundle;
-- generate separate joint-fit figures for each real mode.
-
-Planned outputs:
+The nonredundant bundle is:
 
 ```text
 joint_material_characterization.mat
@@ -212,8 +135,57 @@ joint_fit_compression.png
 joint_fit_compression.fig
 ```
 
-C4 must not copy complete tensile or compression study bundles. It must preserve links to input studies and state that specimens are independent and unpaired.
+The selected-parameter table is derived from the selected model registry definition and selected common parameter vector. Candidate, mode, and specimen tables preserve the C2-C3 diagnostics rather than recomputing them.
 
-## C5: robustness audit
+Mode figures are generated through:
 
-C5 will audit sensitivity to mode weights, normalization, sampling density, specimen count, and deformation range. Alternatives will only be added when evidence supports them. Unsupported experimental modes will not be implemented merely to demonstrate extensibility.
+```matlab
+figureHandle = mechanics.plotting.plotJointModeFit(result, modeName);
+```
+
+Each figure contains the experimental observations and selected joint-model prediction for the specimens of one real mode. Additional figures are generated only when another real registered mode exists.
+
+The Markdown report records:
+
+- the selected model and common parameters;
+- candidate eligibility and ranking diagnostics;
+- per-mode and per-specimen fit summaries;
+- links to mode-specific figures;
+- the independent and unpaired nature of the input specimens;
+- the distinction between the joint material result and the retained A/B study outputs.
+
+The bundle does not copy the complete tensile or compression study exports.
+
+## Validation
+
+Focused tests passed for:
+
+```matlab
+focusedResults = runtests([
+    "tests/test_joint_material_characterization_workflow.m"
+    "tests/test_joint_model_selection.m"
+    "tests/test_joint_fixed_model_fitting.m"
+    "tests/test_joint_characterization_input_contract.m"
+    "tests/test_constitutive_models.m"
+]);
+```
+
+The complete `run_all_tests()` suite also passed.
+
+Synthetic end-to-end tests verified:
+
+- C1-C3 composition through the public workflow;
+- recovery and selection of a known common constitutive response;
+- enabled and disabled export behavior;
+- creation of all maintained CSV, MAT, Markdown, PNG, and FIG outputs;
+- selected-parameter and report content;
+- persisted MAT loading;
+- rejection of incomplete export inputs.
+
+Real joint execution remains pending until the available completed tensile and compression MAT files are selected and their driver paths are confirmed.
+
+## C5: robustness and extensibility audit
+
+C5 will audit sensitivity to mode weights, normalization, sampling density, specimen count, and deformation range. Alternatives will only be added when evidence supports them.
+
+C5 must also verify that another real experimental mode can be added through the mode contract without editing unrelated fitting, selection, reporting, and export code. Unsupported modes must not be implemented merely to demonstrate extensibility.
