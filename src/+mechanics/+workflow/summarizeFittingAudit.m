@@ -31,12 +31,6 @@ for recordIndex = 1:numel(records)
             isfield(selection.selection, "bestModel")
         bestModel = string(selection.selection.bestModel);
     end
-    stabilityThreshold = NaN;
-    if isfield(selection, "selectionConfig") && ...
-            isfield(selection.selectionConfig, "maximumRelativeParameterCV")
-        stabilityThreshold = ...
-            selection.selectionConfig.maximumRelativeParameterCV;
-    end
 
     if isfield(selection, "summary") && ~isempty(selection.summary)
         summary = selection.summary;
@@ -61,16 +55,17 @@ for recordIndex = 1:numel(records)
             modelRows(modelRowIndex).FullWindowBIC = summary.FullWindowBIC(row);
             modelRows(modelRowIndex).MaximumRelativeParameterCV = ...
                 summary.MaximumRelativeParameterCV(row);
-            modelRows(modelRowIndex).StabilityThreshold = stabilityThreshold;
-            modelRows(modelRowIndex).StabilityMargin = stabilityThreshold - ...
-                summary.MaximumRelativeParameterCV(row);
-            modelRows(modelRowIndex).NearStabilityThreshold = ...
-                localNearThreshold(summary.MaximumRelativeParameterCV(row), ...
-                stabilityThreshold);
+            modelRows(modelRowIndex).DominantCVParameter = ...
+                string(summary.DominantCVParameter(row));
+            modelRows(modelRowIndex).HasParameterSignChange = ...
+                summary.HasParameterSignChange(row);
+            modelRows(modelRowIndex).MaximumSharedDomainNormalizedRMSE = ...
+                summary.MaximumSharedDomainNormalizedRMSE(row);
+            modelRows(modelRowIndex).MaximumSharedDomainNormalizedMaxError = ...
+                summary.MaximumSharedDomainNormalizedMaxError(row);
             modelRows(modelRowIndex).LowerRMSEThanSelected = ...
                 isfinite(selectedRMSE) && ...
                 summary.FullWindowRMSE(row) < selectedRMSE;
-            modelRows(modelRowIndex).ParameterStable = summary.ParameterStable(row);
             modelRows(modelRowIndex).Eligible = summary.Eligible(row);
             modelRows(modelRowIndex).Selected = ...
                 string(summary.Model(row)) == bestModel;
@@ -134,13 +129,6 @@ if isempty(modelRows) && isempty(windowRows)
     audit.status = "unavailable";
 else
     audit.status = "completed";
-end
-end
-
-function value = localNearThreshold(parameterCV, threshold)
-value = false;
-if isfinite(parameterCV) && isfinite(threshold) && threshold > 0
-    value = abs(parameterCV - threshold) <= 0.10 .* threshold;
 end
 end
 
