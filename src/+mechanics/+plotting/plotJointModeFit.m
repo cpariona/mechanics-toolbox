@@ -1,5 +1,5 @@
 function figureHandle = plotJointModeFit(result, modeName)
-%PLOTJOINTMODEFIT Plot measured specimens and one selected joint-model curve.
+%PLOTJOINTMODEFIT Plot measured specimens, population median, and joint fit.
 arguments
     result (1,1) struct
     modeName (1,1) string
@@ -20,6 +20,10 @@ if numel(parameterNames) ~= numel(parameters)
         "Selected parameter names and values must have matching lengths.");
 end
 
+model = mechanics.models.modelRegistry(string(result.selectedModelName));
+derivedNames = string(model.derivedQuantityNames(:));
+derivedValues = localDerivedValues(model, parameters);
+
 modeName = lower(strtrim(modeName));
 specimens = result.selectedFit.specimens;
 mask = string({specimens.Mode})' == modeName;
@@ -36,18 +40,20 @@ figureHandle = figure("Color", "w");
 axesHandle = axes(figureHandle);
 hold(axesHandle, "on")
 colors = lines(numel(modeSpecimens));
-maximumDisplayedPoints = 160;
 for index = 1:numel(modeSpecimens)
     specimen = modeSpecimens(index);
-    displayIndices = localDisplayIndices( ...
-        specimen.ObservationCount, maximumDisplayedPoints);
-    plot(axesHandle, specimen.Deformation(displayIndices), ...
-        specimen.MeasuredStress(displayIndices), ".", ...
-        "LineStyle", "none", ...
-        "MarkerSize", 6, ...
+    plot(axesHandle, specimen.Deformation, specimen.MeasuredStress, "-", ...
+        "LineWidth", 0.8, ...
         "Color", colors(index, :), ...
         "DisplayName", specimen.OriginalSpecimenId + " measured");
 end
+
+[populationDeformation, populationMedian] = ...
+    localPopulationMedian(modeSpecimens, 400);
+plot(axesHandle, populationDeformation, populationMedian, "-", ...
+    "Color", [0.35, 0.35, 0.35], ...
+    "LineWidth", 2.2, ...
+    "DisplayName", "Population median");
 
 minimumDeformation = min(arrayfun(@(item) min(item.Deformation), modeSpecimens));
 maximumDeformation = max(arrayfun(@(item) max(item.Deformation), modeSpecimens));
@@ -75,7 +81,8 @@ else
 end
 legend(axesHandle, "Location", legendLocation, "Interpreter", "none")
 text(axesHandle, textPosition(1), textPosition(2), ...
-    localParameterText(parameterNames, parameters, modeSpecimens(1).StressUnit), ...
+    localParameterText(parameterNames, parameters, derivedNames, ...
+    derivedValues, modeSpecimens(1).StressUnit), ...
     "Units", "normalized", ...
     "HorizontalAlignment", horizontalAlignment, ...
     "VerticalAlignment", localVerticalAlignment(modeName), ...
@@ -89,25 +96,68 @@ box(axesHandle, "on")
 hold(axesHandle, "off")
 end
 
-function indices = localDisplayIndices(observationCount, maximumDisplayedPoints)
-if observationCount <= maximumDisplayedPoints
-    indices = (1:observationCount)';
-else
-    indices = unique(round(linspace(1, observationCount, ...
-        maximumDisplayedPoints)))';
+function values = localDerivedValues(model, parameters)
+if isempty(model.evaluateDerivedQuantities)
+    values = zeros(0, 1);
+    return
+end
+values = model.evaluateDerivedQuantities(parameters);
+values = values(:);
+if numel(values) ~= numel(model.derivedQuantityNames)
+    error("mechanics:plotting:InvalidDerivedQuantitySummary", ...
+        "Derived quantity names and values must have matching lengths.");
 end
 end
 
-function output = localParameterText(parameterNames, parameters, stressUnit)
+function [commonDeformation, populationMedian] = ...
+        localPopulationMedian(specimens, pointCount)
+minimumCommon = max(arrayfun(@(item) min(item.Deformation), specimens));
+maximumCommon = min(arrayfun(@(item) max(item.Deformation), specimens));
+if minimumCommon >= maximumCommon
+    error("mechanics:plotting:NoCommonJointModeDomain", ...
+        "Joint-mode specimens do not share a deformation interval.");
+end
+commonDeformation = linspace(minimumCommon, maximumCommon, pointCount)';
+interpolatedStress = nan(pointCount, numel(specimens));
+for index = 1:numel(specimens)
+    deformation = specimens(index).Deformation(:);
+    stress = specimens(index).MeasuredStress(:);
+    [deformation, order] = sort(deformation);
+    stress = stress(order);
+    [deformation, uniqueIndices] = unique(deformation, "stable");
+    stress = stress(uniqueIndices);
+    interpolatedStress(:, index) = interp1( ...
+        deformation, stress, commonDeformation, "linear");
+end
+if any(~isfinite(interpolatedStress), "all")
+    error("mechanics:plotting:InvalidPopulationInterpolation", ...
+        "Population interpolation produced nonfinite values in the common domain.");
+end
+populationMedian = median(interpolatedStress, 2);
+end
+
+function output = localParameterText(parameterNames, parameters, ...
+        derivedNames, derivedValues, stressUnit)
 lines = "Selected parameters:";
 for index = 1:numel(parameterNames)
-    line = parameterNames(index) + " = " + compose("%.6g", parameters(index));
-    if strlength(string(stressUnit)) > 0
-        line = line + " " + string(stressUnit);
+    lines(end+1, 1) = localQuantityLine( ...
+        parameterNames(index), parameters(index), stressUnit); %#ok<AGROW>
+end
+if ~isempty(derivedNames)
+    lines(end+1, 1) = "Derived quantities:"; %#ok<AGROW>
+    for index = 1:numel(derivedNames)
+        lines(end+1, 1) = localQuantityLine( ...
+            derivedNames(index), derivedValues(index), stressUnit); %#ok<AGROW>
     end
-    lines(end+1, 1) = line; %#ok<AGROW>
 end
 output = join(lines, newline);
+end
+
+function line = localQuantityLine(name, value, unit)
+line = name + " = " + compose("%.6g", value);
+if strlength(string(unit)) > 0
+    line = line + " " + string(unit);
+end
 end
 
 function alignment = localVerticalAlignment(modeName)
