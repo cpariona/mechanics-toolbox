@@ -15,6 +15,8 @@ switch normalizedName
         model.lowerBounds = 0;
         model.upperBounds = Inf;
         model.description = "Incompressible one-parameter Neo-Hookean model.";
+        model.derivedQuantityNames = strings(0, 1);
+        model.evaluateDerivedQuantities = [];
 
     case {"mooney-rivlin", "mooneyrivlin"}
         model.name = "mooney-rivlin";
@@ -24,6 +26,9 @@ switch normalizedName
         model.lowerBounds = [0, 0];
         model.upperBounds = [Inf, Inf];
         model.description = "Incompressible two-parameter Mooney-Rivlin model.";
+        model.derivedQuantityNames = "mu0";
+        model.evaluateDerivedQuantities = ...
+            @(parameters) 2 * (parameters(1) + parameters(2));
 
     case "yeoh"
         model.name = "yeoh";
@@ -33,6 +38,8 @@ switch normalizedName
         model.lowerBounds = [0, -Inf, -Inf];
         model.upperBounds = [Inf, Inf, Inf];
         model.description = "Incompressible third-order Yeoh model.";
+        model.derivedQuantityNames = "mu0";
+        model.evaluateDerivedQuantities = @(parameters) 2 * parameters(1);
 
     otherwise
         error("mechanics:models:UnknownModel", ...
