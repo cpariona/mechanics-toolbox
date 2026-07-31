@@ -38,8 +38,10 @@ for object = reshape(lineObjects(measuredMask), 1, [])
     verifyEqual(testCase, object.LineWidth, 0.8, "AbsTol", 1e-12);
 end
 
-textContent = localTextContent(figureHandle);
-verifyTrue(testCase, any(contains(textContent, "mu = 0.18 MPa")));
+[textContent, textInterpreters] = localTextContent(figureHandle);
+verifyTrue(testCase, any(contains(textContent, "\mu = 0.18 MPa")));
+verifyTrue(testCase, any(textInterpreters == "tex" & ...
+    contains(textContent, "\mu = 0.18 MPa")));
 verifyFalse(testCase, any(contains(textContent, "mu0")));
 verifyFalse(testCase, any(contains(textContent, "C10")));
 end
@@ -73,12 +75,15 @@ result = localResult("yeoh", parameterNames, parameters, 40);
 figureHandle = mechanics.plotting.plotJointModeFit(result, "compression");
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 
-textContent = localTextContent(figureHandle);
+[textContent, textInterpreters] = localTextContent(figureHandle);
 for index = 1:numel(parameterNames)
     verifyTrue(testCase, any(contains(textContent, parameterNames(index) + " =")));
 end
 verifyTrue(testCase, any(contains(textContent, "Derived quantities:")));
-verifyTrue(testCase, any(contains(textContent, "mu0 = 0.104 MPa")));
+verifyTrue(testCase, any(contains(textContent, "\mu_0 = 0.104 MPa")));
+verifyTrue(testCase, any(textInterpreters == "tex" & ...
+    contains(textContent, "\mu_0 = 0.104 MPa")));
+verifyFalse(testCase, any(contains(textContent, "mu0 =")));
 verifyFalse(testCase, any(contains(textContent, "C01")));
 end
 
@@ -134,14 +139,16 @@ specimen.StressUnit = "MPa";
 specimen.ObservationCount = pointCount;
 end
 
-function output = localTextContent(figureHandle)
+function [output, interpreters] = localTextContent(figureHandle)
 objects = findall(figureHandle, "Type", "text");
 output = strings(0, 1);
+interpreters = strings(0, 1);
 for index = 1:numel(objects)
     value = objects(index).String;
     if iscell(value)
         value = join(string(value), newline);
     end
     output(end+1, 1) = string(value); %#ok<AGROW>
+    interpreters(end+1, 1) = string(objects(index).Interpreter); %#ok<AGROW>
 end
 end
