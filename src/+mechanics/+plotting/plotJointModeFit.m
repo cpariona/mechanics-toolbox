@@ -86,7 +86,7 @@ text(axesHandle, textPosition(1), textPosition(2), ...
     "Units", "normalized", ...
     "HorizontalAlignment", horizontalAlignment, ...
     "VerticalAlignment", localVerticalAlignment(modeName), ...
-    "Interpreter", "none", ...
+    "Interpreter", "tex", ...
     "BackgroundColor", "w", ...
     "EdgeColor", [0.4, 0.4, 0.4], ...
     "Margin", 5, ...
@@ -154,9 +154,22 @@ output = join(lines, newline);
 end
 
 function line = localQuantityLine(name, value, unit)
-line = name + " = " + compose("%.6g", value);
+displayName = localDisplayQuantityName(name);
+line = displayName + " = " + compose("%.6g", value);
 if strlength(string(unit)) > 0
     line = line + " " + string(unit);
+end
+end
+
+function displayName = localDisplayQuantityName(name)
+normalizedName = lower(strtrim(string(name)));
+switch normalizedName
+    case "mu"
+        displayName = "\mu";
+    case "mu0"
+        displayName = "\mu_0";
+    otherwise
+        displayName = string(name);
 end
 end
 
