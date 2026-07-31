@@ -24,12 +24,14 @@ measuredMask = endsWith(displayNames, " measured");
 
 verifyEqual(testCase, nnz(fitMask), 1);
 verifyEqual(testCase, nnz(measuredMask), 2);
-verifyGreaterThanOrEqual(testCase, lineObjects(fitMask).LineWidth, 2.5);
+verifyEqual(testCase, string(lineObjects(fitMask).LineStyle), "--");
+verifyEqual(testCase, lineObjects(fitMask).LineWidth, 1.8, "AbsTol", 1e-12);
 verifyEqual(testCase, numel(lineObjects(fitMask).XData), 600);
 for object = reshape(lineObjects(measuredMask), 1, [])
-    verifyLessThanOrEqual(testCase, numel(object.XData), 250);
+    verifyLessThanOrEqual(testCase, numel(object.XData), 160);
     verifyEqual(testCase, string(object.LineStyle), "none");
-    verifyLessThanOrEqual(testCase, object.MarkerSize, 3);
+    verifyEqual(testCase, string(object.Marker), ".");
+    verifyEqual(testCase, object.MarkerSize, 6, "AbsTol", 1e-12);
 end
 
 textContent = localTextContent(figureHandle);
