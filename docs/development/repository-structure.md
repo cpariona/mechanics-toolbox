@@ -13,6 +13,7 @@ Configuration functions under `mechanics.config` are organized by level:
 - specimen-level processing: import, tension, compression, segmentation, and peak analysis;
 - fitting and diagnostics: fitting, uncertainty, identifiability, residuals, reliability, window stability, and model selection;
 - dataset and population analysis;
+- completed-study add-ons such as tensile application-range characterization;
 - joint material characterization across completed experimental modes;
 - end-to-end workflow orchestration;
 - report and export presentation.
@@ -21,7 +22,11 @@ A workflow configuration may contain lower-level configuration structs. It does 
 
 Retain a configuration function only when it is consumed by maintained implementation, a supported example, an executable study driver, or a behavioral test. A test that only instantiates a configuration is not sufficient evidence by itself.
 
+A completed-study add-on must consume the canonical study result rather than re-importing or reprocessing raw data. It may specialize an existing study to a new analysis contract, but it must not duplicate the study workflow. Tensile application-range characterization is subordinate to the completed tensile study and should reuse maintained fitting, model-selection, registry, plotting, and export contracts whenever they are physically identical.
+
 Joint material characterization must consume completed study results through one explicit workflow contract. Mode-specific extraction belongs in a small registered adapter or mode contract only when the physical data representation differs. Constitutive model evaluation and parameter metadata remain owned by the model registry. Do not scatter tension/compression conditionals across fitting, ranking, export, and plotting code.
+
+Extract a shared lower-level function only when at least two maintained callers use the same physical and data contract. Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
 
 ## Executable study drivers
 
@@ -35,9 +40,12 @@ They are not library implementation and are not simplified demonstrations. Study
 
 ```text
 studies/tension/run_tensile_experiment.m
+studies/tension/run_tensile_application_range_characterization.m
 studies/compression/run_compression_experiment.m
 studies/joint-characterization/run_joint_material_characterization.m
 ```
+
+The tensile application-range driver must consume a completed tensile study MAT file or in-memory study result. It must not re-import raw workbooks or reproduce the tensile experiment driver.
 
 The joint-characterization driver consumes completed tensile and compression study MAT files or in-memory study results. It must not re-import raw workbooks or duplicate the individual study drivers. Future additional modes should be added only after a maintained mode contract exists.
 
@@ -66,6 +74,8 @@ tests/
 ```
 
 Test files are named by behavior or subsystem. Tests are maintained source files, not generated output. Temporary migration tests should be removed after the canonical API has functional coverage; tests should not preserve removed aliases or obsolete contracts.
+
+Completed-study add-on tests should validate source-study contracts, range restriction, shared fitting, model selection, registry-derived quantities, and optional external validation without duplicating raw-data workflow tests.
 
 Joint characterization tests should be organized by behavior rather than phase. Synthetic parameter-recovery tests belong in the fitting or workflow test that owns the contract. Real-data validation remains outside committed test fixtures unless an explicitly managed small dataset is later approved.
 
