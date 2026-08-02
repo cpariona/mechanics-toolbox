@@ -139,6 +139,7 @@ end
 end
 
 function [item, exclusion] = localNormalizeRecord(record, recordIndex, config)
+item = localEmptySpecimen();
 exclusion = localEmptyExclusion();
 exclusion.SourceRecordIndex = recordIndex;
 exclusion.SourceSpecimenId = localSpecimenId(record, recordIndex);
@@ -184,8 +185,7 @@ localValidateTensionSigns(deformation, stress, exclusion.SourceSpecimenId, ...
 included = deformation >= config.fitRange(1) & ...
     deformation <= config.fitRange(2);
 availableRange = [min(deformation), max(deformation)];
-if config.requireRangeMaximum && ...
-        availableRange(2) < config.fitRange(2)
+if config.requireRangeMaximum && availableRange(2) < config.fitRange(2)
     exclusion.Reason = "requested-maximum-unavailable";
     exclusion.AvailableRange = availableRange;
     exclusion.IncludedObservationCount = nnz(included);
@@ -198,7 +198,6 @@ if nnz(included) < config.minimumObservationsPerSpecimen
     return
 end
 
-item = localEmptySpecimen();
 item.SourceRecordIndex = recordIndex;
 item.SourceSpecimenId = exclusion.SourceSpecimenId;
 item.SourceSheetName = localSheetName(record);
@@ -270,10 +269,12 @@ end
 function localValidateCommonMetadata(specimens, config)
 strainUnits = string({specimens.StrainUnit})';
 stressUnits = string({specimens.StressUnit})';
-deformationMeasures = arrayfun( ...
-    @(item) string(item.Context.deformationMeasure), specimens);
-stressMeasures = arrayfun( ...
-    @(item) string(item.Context.stressMeasure), specimens);
+deformationMeasures = strings(numel(specimens), 1);
+stressMeasures = strings(numel(specimens), 1);
+for index = 1:numel(specimens)
+    deformationMeasures(index) = specimens(index).Context.deformationMeasure;
+    stressMeasures(index) = specimens(index).Context.stressMeasure;
+end
 if config.requireMatchingStrainUnits && numel(unique(strainUnits)) ~= 1
     error("mechanics:workflow:InconsistentTensileApplicationRangeMetadata", ...
         "Retained tensile specimens must use matching strain units.");
