@@ -129,7 +129,25 @@ Standard figures include individual curves, population response, peak metrics, s
 
 ## Downstream constitutive workflows
 
-Selected-parameter population analysis, group comparison, parameter inference, consensus-model selection, and constitutive reporting consume completed results. They remain optional and should not re-import or reprocess specimens.
+Selected-parameter population analysis, group comparison, parameter inference, consensus-model selection, constitutive reporting, and future application-range characterization consume completed results. They remain optional and should not re-import or reprocess specimens.
+
+## Tensile application-range characterization
+
+The planned maintained add-on is documented in [`tensile-application-range-characterization.md`](tensile-application-range-characterization.md).
+
+Its purpose is to estimate one shared hyperelastic parameter set from the already processed tensile loading curves inside a configured interval, such as engineering strain from `0` to `0.30`.
+
+It will:
+
+- consume one completed tensile study;
+- reuse maintained fitting, model-registry, ranking, plotting, and export contracts where physically identical;
+- preserve equal influence per specimen;
+- select parsimoniously when candidate models are practically equivalent;
+- expose registry-derived reference properties such as `mu0`;
+- audit sensitivity to the fit-range boundary;
+- optionally evaluate a fixed tensile-calibrated model on compression data without refitting.
+
+It will not re-import raw files, duplicate the tensile workflow, perform wave or incremental analysis, or replace joint material characterization.
 
 ## Study comparison
 
@@ -149,4 +167,6 @@ The exporter does not recalculate statistics and does not duplicate individual s
 
 ## Relationship to joint material characterization
 
-Comparing two tensile studies evaluates differences between experimental groups within one mode. It is not joint material characterization. The planned joint tension-compression workflow is documented in [`joint-material-characterization.md`](joint-material-characterization.md) and will estimate one constitutive parameter set from independent modes.
+Comparing two tensile studies evaluates differences between experimental groups within one mode. Tensile application-range characterization specializes one completed tensile study to a configured loading interval. Neither is joint material characterization.
+
+Joint tension-compression characterization estimates one constitutive parameter set from independent modes and is documented in [`joint-material-characterization.md`](joint-material-characterization.md).
