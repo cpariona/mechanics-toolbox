@@ -315,14 +315,19 @@ end
 end
 
 function output = localSpecimenSummary(specimens)
-sourceRecordIndex = [specimens.SourceRecordIndex]';
-sourceSpecimenId = string({specimens.SourceSpecimenId})';
-availableMinimum = arrayfun(@(item) item.AvailableRange(1), specimens)';
-availableMaximum = arrayfun(@(item) item.AvailableRange(2), specimens)';
-fittedMinimum = arrayfun(@(item) item.FittedRange(1), specimens)';
-fittedMaximum = arrayfun(@(item) item.FittedRange(2), specimens)';
-includedObservationCount = [specimens.ObservationCount]';
-excludedObservationCount = [specimens.ExcludedObservationCount]';
+sourceRecordIndex = reshape([specimens.SourceRecordIndex], [], 1);
+sourceSpecimenId = reshape(string({specimens.SourceSpecimenId}), [], 1);
+availableMinimum = reshape(arrayfun( ...
+    @(item) item.AvailableRange(1), specimens), [], 1);
+availableMaximum = reshape(arrayfun( ...
+    @(item) item.AvailableRange(2), specimens), [], 1);
+fittedMinimum = reshape(arrayfun( ...
+    @(item) item.FittedRange(1), specimens), [], 1);
+fittedMaximum = reshape(arrayfun( ...
+    @(item) item.FittedRange(2), specimens), [], 1);
+includedObservationCount = reshape([specimens.ObservationCount], [], 1);
+excludedObservationCount = reshape( ...
+    [specimens.ExcludedObservationCount], [], 1);
 output = table(sourceRecordIndex, sourceSpecimenId, availableMinimum, ...
     availableMaximum, fittedMinimum, fittedMaximum, ...
     includedObservationCount, excludedObservationCount, ...
@@ -339,11 +344,13 @@ if isempty(exclusions)
         'AvailableMaximum','IncludedObservationCount'});
     return
 end
-sourceRecordIndex = [exclusions.SourceRecordIndex]';
-sourceSpecimenId = string({exclusions.SourceSpecimenId})';
-reason = string({exclusions.Reason})';
-availableMaximum = arrayfun(@(item) item.AvailableRange(2), exclusions)';
-includedObservationCount = [exclusions.IncludedObservationCount]';
+sourceRecordIndex = reshape([exclusions.SourceRecordIndex], [], 1);
+sourceSpecimenId = reshape(string({exclusions.SourceSpecimenId}), [], 1);
+reason = reshape(string({exclusions.Reason}), [], 1);
+availableMaximum = reshape(arrayfun( ...
+    @(item) item.AvailableRange(2), exclusions), [], 1);
+includedObservationCount = reshape( ...
+    [exclusions.IncludedObservationCount], [], 1);
 output = table(sourceRecordIndex, sourceSpecimenId, reason, ...
     availableMaximum, includedObservationCount, ...
     'VariableNames', {'SourceRecordIndex','SourceSpecimenId','Reason', ...
