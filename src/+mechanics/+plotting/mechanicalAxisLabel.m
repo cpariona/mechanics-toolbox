@@ -7,7 +7,7 @@ arguments
 end
 quantity = lower(strtrim(quantity));
 measure = lower(strtrim(measure));
-unit = strtrim(unit);
+unit = localDisplayUnit(quantity, unit);
 switch quantity
     case "deformation"
         switch measure
@@ -36,6 +36,15 @@ switch quantity
             otherwise
                 base = "Stress residual";
         end
+    case "compression-magnitude-residual"
+        switch measure
+            case "nominal"
+                base = "Nominal compressive-stress magnitude residual";
+            case "cauchy"
+                base = "Cauchy compressive-stress magnitude residual";
+            otherwise
+                base = "Compressive-stress magnitude residual";
+        end
     otherwise
         error("mechanics:plotting:UnknownMechanicalAxisQuantity", ...
             "Unsupported mechanical axis quantity: %s.", quantity);
@@ -44,5 +53,12 @@ if strlength(unit) > 0
     label = base + " [" + unit + "]";
 else
     label = base;
+end
+end
+
+function unit = localDisplayUnit(quantity, unit)
+unit = strtrim(string(unit));
+if quantity == "deformation" && ismember(lower(unit), ["", "1", "-", "dimensionless"])
+    unit = "mm/mm";
 end
 end
