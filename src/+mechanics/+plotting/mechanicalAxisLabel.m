@@ -7,7 +7,11 @@ arguments
 end
 quantity = lower(strtrim(quantity));
 measure = lower(strtrim(measure));
-unit = localDisplayUnit(quantity, unit);
+if quantity == "deformation"
+    displayUnit = mechanics.plotting.mechanicalDisplayUnit("deformation", unit);
+else
+    displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
+end
 switch quantity
     case "deformation"
         switch measure
@@ -49,16 +53,9 @@ switch quantity
         error("mechanics:plotting:UnknownMechanicalAxisQuantity", ...
             "Unsupported mechanical axis quantity: %s.", quantity);
 end
-if strlength(unit) > 0
-    label = base + " [" + unit + "]";
+if strlength(displayUnit) > 0
+    label = base + " [" + displayUnit + "]";
 else
     label = base;
-end
-end
-
-function unit = localDisplayUnit(quantity, unit)
-unit = strtrim(string(unit));
-if quantity == "deformation" && ismember(lower(unit), ["", "1", "-", "dimensionless"])
-    unit = "mm/mm";
 end
 end
