@@ -8,215 +8,164 @@ Use this document as the persistent starting point for future repository work.
 cpariona/mechanics-toolbox
 ```
 
-Do not modify `main`, open a pull request, or merge changes unless explicitly requested. The documentation updates that prepared this handoff were explicitly authorized as direct `main` changes.
+Do not modify `main`, open a pull request, or merge changes unless explicitly requested.
 
-## Validated merged implementation baseline
+## Current merged baseline
 
-The latest merged implementation baseline is PR #43:
-
-```text
-e767e379ac91ca5a6820139d6b8aefff9c0ccb84
-```
-
-It includes maintained tension and compression workflows, specimen-specific model selection, consensus-model population analysis, reporting and comparison utilities, C1-C5 joint material characterization, robustness auditing, and scale-aware joint sign validation.
-
-Direct documentation commits after this baseline define the next approved planning target. They do not implement that target.
-
-## Validated but unmerged plotting branch
+PR #44 is merged on `main`:
 
 ```text
-fix/fitting-plot-clarity
+50fffe271a2ca2f0f5aad632fcfde9288405552d
 ```
 
-This branch contains accepted joint-characterization plotting improvements:
+It includes the previously validated joint-characterization plotting improvements. The old statement that `fix/fitting-plot-clarity` remained unmerged is obsolete.
 
-- measured specimens as thin continuous curves;
-- one population median over the common observed domain;
-- one black dashed selected joint fit;
-- dynamic model parameters;
-- registry-derived reference quantities;
-- TeX rendering of `mu` and `mu0` as `\mu` and `\mu_0`;
-- behavioral plotting tests.
+The merged repository includes maintained tension and compression workflows, individual and population model selection, reporting and comparison utilities, C1-C5 joint material characterization, robustness auditing, scale-aware sign validation, and the improved joint fit figures.
 
-The user reported that focused and complete tests passed and that the real tension and compression figures look correct.
-
-The branch was not merged in the previous session. Do not assume its code is on `main`. Before starting implementation of the next phase, inspect the branch and repository status. Do not merge it without explicit user instruction, and do not continue unrelated implementation on it.
-
-## Implemented responsibilities
-
-### A. Individual-study workflows
-
-Tension and compression preserve processed curves, mechanical metrics, individual fits and selections, population summaries, CSV, MAT, figures, and reports.
-
-### B. Individual selection and consensus population
-
-Individual model selection remains specimen-specific. The optional consensus workflow chooses a majority model within one study mode and refits retained specimens with that model. It is not joint tension-compression characterization.
-
-### C. Joint material characterization
-
-Canonical documentation:
+## Active branch
 
 ```text
-docs/workflows/joint-material-characterization.md
+feature/tensile-application-range-contracts
 ```
 
-Public workflow:
-
-```matlab
-result = mechanics.workflow.runJointMaterialCharacterization( ...
-    studies, modeNames, config);
-```
-
-Maintained driver:
+Purpose:
 
 ```text
-studies/joint-characterization/run_joint_material_characterization.m
+D1 — tensile application-range input and range contracts
 ```
 
-Real input files:
+Do not continue D2 work on this branch after its PR is merged. Create a new branch from the updated `main` baseline.
+
+## D1 implementation status
+
+Implemented:
 
 ```text
-results/real-tensile-study/tensile_study.mat
-results/real-compression-study/compression_study.mat
+src/+mechanics/+config/tensileApplicationRangeCharacterizationConfig.m
+src/+mechanics/+workflow/normalizeTensileApplicationRangeStudy.m
+tests/test_tensile_application_range_input_contract.m
 ```
 
-Both files contain one completed study variable named `study`.
-
-The first real joint run used four tensile and four compression specimens and 22,006 observations. Yeoh was selected with:
-
-```text
-C10 = 0.0524808 MPa
-C20 = 1.98662e-4 MPa
-C30 = 4.04826e-6 MPa
-objective = 0.00093633
-```
-
-Mean normalized RMSE was approximately `3.94 %` for tension and `1.66 %` for compression. Yeoh remained selected throughout the default one-factor robustness audit, with a maximum parameter change below `2.3 %`.
-
-## Next approved planning target: D
-
-### D. Tensile application-range characterization
-
-Canonical design:
+Canonical workflow documentation:
 
 ```text
 docs/workflows/tensile-application-range-characterization.md
 ```
 
-Status:
-
-```text
-approved for future implementation; no implementation exists yet
-```
-
-Purpose:
-
-> Estimate one shared hyperelastic parameter set from a completed tensile study inside a configured loading interval, with parsimonious model selection, registry-derived reference properties, fit-range sensitivity, and optional compression validation without refitting.
-
-This is a maintained add-on to the tensile study, not a replacement for it and not a peer with the same scope as joint material characterization.
-
-Architecture:
-
-```text
-runTensileStudy
-    -> completed tensile study
-    -> runTensileApplicationRangeCharacterization
-```
-
-Preferred planned entrypoint:
-
-```matlab
-result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
-    tensileStudy, config);
-```
-
-Preferred planned configuration:
+Configuration contract:
 
 ```matlab
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-config.fitRange.deformationMeasure = "engineering-strain";
-config.fitRange.minimum = 0;
-config.fitRange.maximum = 0.30;
-config.candidateModelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
+config.deformationMeasure = "engineering-strain";
+config.fitRange = [0, 0.30];
+config.minimumObservationsPerSpecimen = 10;
+config.minimumSpecimens = 2;
+config.requireRangeMaximum = false;
+config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
 ```
 
-Names may be refined during D1 only if existing repository conventions support a simpler contract.
+A two-element vector is the repository convention for a closed interval. Separate minimum and maximum fields are not used.
 
-### Required architectural principles for D
+D1 normalizer:
 
-- Consume a completed tensile study; never re-import raw workbooks.
-- Reuse all existing tensile preparation and constitutive infrastructure whose physical and data contracts are identical.
-- Reuse solver, multistart, bounds, model registry, diagnostics, practical-equivalence ranking, plotting, export, and reporting where contracts match.
-- Preserve equal influence per specimen; do not use pooled pointwise SSE that rewards denser sampling.
-- Fit one shared parameter vector per candidate model across retained tensile specimens.
-- Preserve the full source curves and record the exact fitted interval and included/excluded observations.
-- Select parsimoniously when limited-range data do not distinguish models materially.
-- Derive reference quantities such as `mu0` through the model registry, not workflow or plotting conditionals.
-- Treat estimates from different calibration contracts as protocol-dependent estimates of one reference property, not separate intrinsic tensile and compression moduli.
-- Audit sensitivity only to the application-range boundary unless real evidence supports more.
-- Allow compression only as optional prediction validation with fixed tensile-calibrated parameters and no refitting.
-- Extract a shared lower-level helper only when at least two maintained callers use the same contract.
-- Do not create wrappers, aliases, compatibility shims, bridge files, or one-caller helpers for superficial symmetry.
+```matlab
+normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
+    tensileStudy, config);
+```
 
-### Explicit exclusions for D
+The normalizer consumes one completed tensile study and:
 
-Do not implement:
+- uses only processed specimen records;
+- does not require population analysis or individual fitting outputs;
+- reads existing processed strain, stress, units, and mechanics metadata;
+- validates finite observations, tensile signs, units, measures, and registered candidates;
+- restricts observations to the configured interval without changing source data;
+- preserves full curves and original observation indices;
+- records available, requested, and actual fitted ranges;
+- records specimen exclusions and observation counts;
+- rejects the analysis when too few valid specimens remain.
 
-- OCE or OCT concepts;
-- Lamb waves or any wave propagation;
-- acoustoelasticity or small-on-large theory;
-- incremental elasticity tensors or directional moduli;
-- dispersion inversion;
-- viscoelasticity;
-- a separate fit at each deformation state;
-- new constitutive models without evidence;
-- duplicated tension or joint workflows.
+No fitting, selection, audit, validation, plotting, export, report, or study driver is implemented in D1.
 
-These topics are outside the maintained repository scope for this phase.
+## D1 reuse decision
 
-### Proposed D phases
+Direct reuse:
 
-#### D1 — Reuse audit and contracts
+```text
+mechanics.models.modelRegistry
+existing mechanics metadata conventions
+existing scale-aware sign-validation principle
+existing unit and finite-observation contracts
+```
 
-- inspect completed tensile-study structures and existing fitting, ranking, registry, plotting, and export functions;
-- identify direct reuse and any genuinely shared lower-level contract;
-- finalize config, input validation, result structure, error identifiers, and tests;
-- do not implement fitting until the reuse decision is explicit.
+Not reused directly:
 
-#### D2 — Range-limited shared fitting
+```text
+mechanics.workflow.normalizeJointCharacterizationStudies
+```
 
-- extract retained processed tensile loading curves;
-- restrict observations to the configured interval without modifying data;
-- fit one shared parameter vector per candidate model;
-- preserve equal-specimen influence;
-- validate with synthetic recovery and sampling-density tests.
+Reason: the joint normalizer requires modes, mode weights, and multi-mode normalization. Adding those concepts to a tensile-only add-on would create unnecessary coupling.
 
-#### D3 — Selection and reference properties
+No shared helper was extracted. Extract lower-level code only when at least two maintained callers share the same physical and data contract.
 
-- reuse or generalize practical-equivalence and parsimonious selection only where contracts match;
-- expose registry-derived reference properties;
-- verify model-agnostic behavior for Neo-Hookean, Mooney-Rivlin, and Yeoh.
+## D1 validation evidence
 
-#### D4 — Range sensitivity and optional validation
+The user reported that both passed on the active branch:
 
-- implement one-factor sensitivity to the maximum fitted deformation;
-- optionally predict compression without refitting;
-- compare calibration-contract estimates without redefining multiple intrinsic `mu0` values.
+```text
+tests/test_tensile_application_range_input_contract.m
+run_all_tests()
+```
 
-#### D5 — Driver, export, documentation, and real validation
+Two implementation issues were corrected before the successful run:
 
-- add the maintained tension add-on driver;
-- export a limited nonredundant result bundle;
-- run focused tests and `run_all_tests()`;
-- execute the real tensile application-range analysis;
-- inspect figures and tables;
-- record supported and inconclusive findings.
+1. summary tables now force every variable to column orientation;
+2. range tests no longer assume an experimental grid contains the requested boundary exactly.
 
-Do not begin D2 automatically after D1. Review each phase before continuing.
+Do not claim additional MATLAB validation beyond this reported evidence.
 
-## Proposed maintained driver and local inputs
+## Next phase: D2
 
-Driver:
+D2 is not yet implemented.
+
+Objective:
+
+> Fit one shared parameter vector per candidate hyperelastic model across all retained tensile specimens inside the D1 application range, with equal specimen influence.
+
+Required D2 behavior:
+
+- consume the D1 normalized contract;
+- reuse model evaluation, fitting configuration, bounds, parameter transforms, multistart, and diagnostics where contracts match;
+- preserve equal specimen influence regardless of sampling density;
+- retain per-specimen predictions and fit metrics;
+- add synthetic parameter-recovery tests;
+- add sampling-density invariance tests;
+- avoid pooled pointwise SSE;
+- avoid artificial mode fields or weights.
+
+Before implementing D2, audit the existing individual and joint fitting internals. Extract a shared solver-only function only when at least two maintained callers genuinely share that contract.
+
+Do not begin D3 automatically.
+
+## Later phases
+
+### D3 — Selection and reference properties
+
+- practical-equivalence and parsimonious model selection;
+- registry-derived `mu0` and other reference quantities;
+- model-agnostic behavior for Neo-Hookean, Mooney-Rivlin, and Yeoh.
+
+The current Neo-Hookean registry metadata does not yet expose `mu0 = mu`; resolve that in D3 rather than adding workflow conditionals.
+
+### D4 — Range sensitivity and optional validation
+
+- one-factor sensitivity to the upper fitted deformation;
+- optional compression prediction using fixed tensile-calibrated parameters;
+- no compression refitting and no influence on tensile selection.
+
+### D5 — Driver, outputs, and real validation
+
+Planned driver:
 
 ```text
 studies/tension/run_tensile_application_range_characterization.m
@@ -234,30 +183,18 @@ Optional validation input:
 results/real-compression-study/compression_study.mat
 ```
 
-Local data and generated outputs remain ignored and must not be committed.
-
-## Existing deferred decisions
-
-- persistent robustness-audit export;
-- real validation of two-study tensile comparison export;
-- single-mode consensus majority policy;
-- Yeoh-2 as a separate registered model;
-- Ogden or other additional models;
-- modes beyond tension and compression;
-- alternative joint normalization or weighting strategies.
-
-Do not implement these inside D unless direct evidence and explicit approval change the phase scope.
+Local data and generated outputs remain ignored.
 
 ## Validation protocol
 
-For each future phase:
+For each phase:
 
-1. run focused behavioral tests using existing file names where possible;
+1. run focused behavioral tests;
 2. run `run_all_tests()`;
 3. inspect generated artifacts when outputs exist;
 4. use synthetic recovery before interpreting real fits;
-5. record real-data evidence and unavailable validation explicitly;
-6. do not claim MATLAB tests passed until the user reports the result;
+5. run `git diff --check`;
+6. verify no generated files are tracked;
 7. do not merge a pull request unless explicitly requested.
 
 ## Repository verification
@@ -273,25 +210,20 @@ git rev-parse HEAD
 git rev-parse origin/main
 ```
 
-Then inspect the unmerged plotting branch:
+If D1 has been merged, create the D2 branch from updated `main`, for example:
 
 ```bash
-git log --oneline --decorate main..origin/fix/fitting-plot-clarity
-git diff --stat main...origin/fix/fitting-plot-clarity
+git switch -c feature/tensile-application-range-fitting
 ```
-
-Do not continue work on a branch after its PR has been merged. Create a new branch for D1 only after the baseline and plotting-branch status are resolved.
 
 ## Maintenance rules
 
 - Favor simplicity, structure, order, and explicit contracts.
+- Represent intervals as two-element vectors where appropriate.
 - Share code only for genuinely shared physical and data contracts.
 - Keep reusable implementation under `src/+mechanics` and real drivers under `studies`.
 - Do not preserve obsolete APIs through wrappers or aliases.
-- Do not add bridge files for superficial symmetry.
+- Do not add bridge files or one-caller helpers for superficial symmetry.
 - Use the model registry instead of model-name conditionals where contracts match.
-- Maintain relevant, nonredundant outputs.
-- Keep tension and compression independently useful.
-- Keep individual model selection specimen-specific.
-- Keep joint tension-compression characterization separate from the tensile application-range add-on.
+- Keep individual, joint, and tensile application-range workflows distinct.
 - Do not merge a pull request unless explicitly requested.
