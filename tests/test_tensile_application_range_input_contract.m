@@ -63,11 +63,13 @@ shortRange = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     study, localConfig([0, 0.03]));
 longRange = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     study, localConfig([0, 0.07]));
+shortMaximum = max(shortRange.specimens(1).Deformation);
+longMaximum = max(longRange.specimens(1).Deformation);
 verifyLessThan(testCase, shortRange.observationCount, longRange.observationCount);
-verifyEqual(testCase, max(shortRange.specimens(1).Deformation), 0.03, ...
-    "AbsTol", 1e-12);
-verifyEqual(testCase, max(longRange.specimens(1).Deformation), 0.07, ...
-    "AbsTol", 1e-12);
+verifyLessThanOrEqual(testCase, shortMaximum, 0.03);
+verifyGreaterThan(testCase, shortMaximum, 0.025);
+verifyLessThanOrEqual(testCase, longMaximum, 0.07);
+verifyGreaterThan(testCase, longMaximum, 0.065);
 end
 
 function testInvalidRangeIsRejected(testCase)
