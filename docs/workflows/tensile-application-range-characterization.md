@@ -43,15 +43,25 @@ specimen.Context.deformationMeasure
 specimen.Context.stressMeasure
 ```
 
-These fields drive tables, reports, and figure labels.
+Stored dimensionless strain units such as `1`, `-`, or `dimensionless` are presented in all human-facing outputs as:
+
+```text
+mm/mm
+```
+
+This is a display convention only; it does not rescale deformation values. The shared utility is:
+
+```matlab
+mechanics.plotting.mechanicalDisplayUnit
+```
+
+It is consumed by `mechanicalAxisLabel` and by application-range export. Joint-characterization plots use the same axis-label contract.
 
 - model parameters and `mu0` use the stress unit;
 - normalization scale, RMSE, and maximum absolute error use the stress unit;
-- deformation limits use the strain unit;
+- deformation limits use `mm/mm` for dimensionless strain;
 - normalized objective, normalized RMSE, and normalized loss are dimensionless;
 - labels distinguish engineering/true strain and nominal/Cauchy stress.
-
-`mechanics.plotting.mechanicalAxisLabel` owns the shared label contract and is used by both application-range and joint-characterization plots.
 
 ## Maintained figures
 
@@ -61,13 +71,15 @@ These fields drive tables, reports, and figure labels.
 mechanics.plotting.plotTensileApplicationRangeFit(result)
 ```
 
-The upper panel compares measured and selected-model stress for every retained tensile specimen. The lower panel shows:
+The upper panel contains one measured curve per retained specimen and one shared selected-model prediction. The shared prediction is evaluated once over the complete retained tensile domain because all specimens use the same fitted parameter vector and constitutive context.
+
+The lower panel recomputes, for every specimen:
 
 ```text
-residual = measured stress - predicted stress
+residual = measured stress - shared prediction
 ```
 
-against deformation.
+at that specimen's deformation observations.
 
 ### Range sensitivity
 
@@ -75,7 +87,7 @@ against deformation.
 mechanics.plotting.plotTensileApplicationRangeSensitivity(result)
 ```
 
-The figure shows `mu0` and normalized objective versus the upper fitted deformation limit, with selected-model annotations.
+The figure shows `mu0` and normalized objective versus the upper fitted deformation limit. When one model is selected for every scenario, its name appears once in the title instead of being repeated at every point.
 
 ### Compression validation
 
@@ -83,7 +95,15 @@ The figure shows `mu0` and normalized objective versus the upper fitted deformat
 mechanics.plotting.plotTensileApplicationRangeCompressionValidation(result)
 ```
 
-The figure is available only when compression validation exists. It compares measured and fixed-parameter predictions and shows residuals versus deformation. The title states that no refitting occurred.
+The upper panel contains one measured curve per compression specimen and one shared tensile-calibrated prediction. The title states that no refitting occurred.
+
+Because compression stresses are negative under the maintained sign convention, the diagnostic lower panel uses the magnitude residual:
+
+```text
+|measured stress| - |shared prediction|
+```
+
+A positive value therefore indicates that the tensile-calibrated model underpredicts the measured compressive-stress magnitude.
 
 ## Export
 
@@ -106,7 +126,7 @@ tensile_application_range_characterization.mat
 tensile_application_range_characterization.md
 ```
 
-CSV files add explicit unit columns for physical quantities. Complete curves, predictions, residuals, candidates, and scenario evidence remain in the MAT result rather than being duplicated into curve CSV files. The Markdown report embeds the PNG figures.
+CSV files add explicit unit columns for physical quantities. Dimensionless strain is written as `mm/mm`. Complete curves, predictions, signed stored residuals, candidates, and scenario evidence remain in the MAT result rather than being duplicated into curve CSV files. The Markdown report embeds the PNG figures and states the compression-figure residual convention explicitly.
 
 ## Compression boundary
 
@@ -116,13 +136,13 @@ Compression remains external validation only:
 validation.refitPerformed = false;
 ```
 
-Compression cannot influence tensile fitting, eligibility, or model selection.
+Compression cannot influence tensile fitting, eligibility, or model selection. The change in figure residual convention does not alter stored validation metrics, RMSE, predictions, fitting, or selection.
 
 ## Validation status
 
 The pre-figure D1-D5 implementation passed all focused tests and `run_all_tests()` according to the user.
 
-The figure and unit-export additions still require local MATLAB validation. Required checks:
+The figure corrections still require local MATLAB validation. Required checks:
 
 1. run `tests/test_tensile_application_range_figures.m`;
 2. run `tests/test_tensile_application_range_workflow.m`;
