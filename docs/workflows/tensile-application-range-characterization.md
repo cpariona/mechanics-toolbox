@@ -2,9 +2,9 @@
 
 ## Status
 
-D1 input and range contracts are implemented on the feature branch. Shared fitting, model selection, range sensitivity, optional compression validation, plotting, export, and the real-study driver remain unimplemented.
+D1 input/range contracts and D2 shared fitting are implemented on the active feature branch. Model selection, registry-derived reference properties, range sensitivity, optional compression validation, plotting, export, and the real-study driver remain unimplemented.
 
-The capability is a maintained add-on to a completed tensile study:
+This capability is a maintained add-on to a completed tensile study:
 
 ```text
 runTensileStudy
@@ -12,17 +12,9 @@ runTensileStudy
     -> runTensileApplicationRangeCharacterization
 ```
 
-It must not re-import workbooks, repeat tensile preprocessing, or become a second tensile-study workflow.
+It must not re-import workbooks or repeat tensile preprocessing.
 
-## Purpose
-
-The completed workflow will answer one limited constitutive question:
-
-> Which supported hyperelastic model and shared reference parameter set best describe the processed tensile loading responses inside a configured application range?
-
-The initial real use case is an engineering-strain interval such as `[0, 0.30]`. The implementation remains independent of OCE, OCT, Lamb waves, acoustoelasticity, incremental elasticity, wave inversion, and dispersion modelling.
-
-## D1 maintained configuration
+## Maintained configuration
 
 ```matlab
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
@@ -32,143 +24,153 @@ config.minimumObservationsPerSpecimen = 10;
 config.minimumSpecimens = 2;
 config.requireRangeMaximum = false;
 config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
+config.specimenWeighting = "equal";
+config.normalization.method = "response-range";
+config.normalization.minimumScale = sqrt(eps);
+config.fitting = mechanics.config.fittingConfig();
 ```
 
-A two-element vector represents every closed interval. Separate `minimum` and `maximum` fields are intentionally not used.
+A two-element vector represents every closed interval. Separate minimum and maximum fields are not used.
 
-D1 also provides finite-observation, matching-unit, and scale-aware sign-validation settings. Fitting, selection, audit, validation, and export configuration are not exposed until a maintained consumer exists.
-
-## D1 maintained normalizer
+## D1 normalized input contract
 
 ```matlab
 normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     tensileStudy, config);
 ```
 
-The input must be one completed tensile-study result containing processed specimen records. Population analysis and individual constitutive fitting are not prerequisites.
+The normalizer consumes one completed tensile-study result and:
 
-The normalizer:
+- uses processed specimen records only;
+- does not require population analysis or individual fitting outputs;
+- validates finite observations, tensile signs, units, measures, and registered candidates;
+- restricts observations to the configured interval without changing source data;
+- preserves full curves and original observation indices;
+- records available, requested, and actual fitted ranges;
+- records specimen exclusions and observation counts;
+- rejects the analysis when too few valid specimens remain.
 
-- ignores records not marked `processed`;
-- reads the already processed strain, stress, units, and mechanics metadata;
-- maps stored engineering and true measures to the maintained constitutive context;
-- validates tensile signs with the same scale-aware principle used by joint characterization;
-- validates registered candidate model names through `mechanics.models.modelRegistry`;
-- restricts observations using the configured closed interval;
-- preserves complete source vectors and original observation indices;
-- records available, requested, and actually fitted ranges;
-- records retained and excluded observation counts;
-- records excluded specimens and explicit exclusion reasons;
-- rejects the analysis when too few valid specimens remain;
-- never clips, zeroes, interpolates, rescales, extrapolates, or mutates source observations.
+The requested boundary need not coincide with a sampled observation. `FittedRange` records the actual retained endpoints.
 
-The requested boundary is not required to coincide with an experimental sample. `FittedRange` reports the actual first and last retained observations.
+## D2 shared fitting contract
 
-## Normalized result contract
+Fit one registered model:
 
 ```matlab
-normalized.sourceStudyMetadata
-normalized.deformationMeasure
-normalized.requestedFitRange
-normalized.specimens
-normalized.excludedSpecimens
-normalized.specimenCount
-normalized.excludedSpecimenCount
-normalized.observationCount
-normalized.specimenSummary
-normalized.exclusionSummary
-normalized.config
-normalized.createdAt
+fit = mechanics.fitting.fitTensileApplicationRangeModel( ...
+    normalized, modelName, config);
 ```
 
-Each retained specimen contains:
+Fit every configured candidate:
+
+```matlab
+candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
+    normalized, config);
+```
+
+For each candidate model, D2 estimates one parameter vector shared by every retained tensile specimen.
+
+The objective is the arithmetic mean of the normalized specimen losses:
 
 ```text
-SourceRecordIndex
-SourceSpecimenId
-SourceSheetName
-FullDeformation
-FullMeasuredStress
-IncludedIndices
-ExcludedIndices
-Deformation
-MeasuredStress
-AvailableRange
-RequestedFitRange
-FittedRange
-Context
-StrainUnit
-StressUnit
-ObservationCount
-ExcludedObservationCount
+candidate objective
+    = mean(normalized loss of each retained specimen)
 ```
+
+This contract gives each specimen equal influence regardless of sampling density. A pooled pointwise SSE is not used.
+
+The maintained normalization is `response-range` per specimen. The response range is used when valid; otherwise the implementation falls back to the maximum absolute response and applies `normalization.minimumScale`.
+
+Each successful fit preserves:
+
+```text
+modelName
+parameterNames
+parameters
+objective
+exitFlag
+output
+converged
+specimenWeighting
+specimens
+specimenSummary
+normalization
+fitConfig
+starts
+createdAt
+```
+
+Each fitted specimen adds:
+
+```text
+PredictedStress
+Residuals
+NormalizationScale
+```
+
+Candidate fitting records failures independently so one failed model does not discard successful candidates. Selection is not performed in D2.
 
 ## Reuse decisions
 
-D1 directly reuses the model registry for candidate validation and preserves the same mechanics metadata, unit, finite-observation, and scale-aware sign concepts used in existing maintained workflows.
+D2 directly reuses:
 
-`normalizeJointCharacterizationStudies` is not reused because its public contract requires modes, mode weights, and multi-mode normalization. Coupling this tensile add-on to those fields would add unnecessary structure and obscure the single-mode contract.
+```text
+mechanics.models.modelRegistry
+mechanics.models.evaluateModel
+mechanics.fitting.resolveFitConfig
+mechanics.fitting.generateInitialGuesses
+mechanics.fitting.parametersToUnconstrained
+mechanics.fitting.unconstrainedToParameters
+```
 
-No shared helper was extracted in D1. A lower-level function should be extracted only when at least two maintained callers use the same physical and data contract.
+`fitJointModel` is not called as a wrapper because its maintained contract includes modes, mode weights, and multi-mode summaries.
 
-## D1 validation
+No generic multistart helper was extracted in D2. That refactor should occur only when at least two maintained callers are proven to share the same solver-only contract and the change can be covered without destabilizing validated fitting behavior.
 
-Behavioral coverage is maintained in:
+## Validation evidence
+
+The user reported successful execution of:
 
 ```text
 tests/test_tensile_application_range_input_contract.m
+tests/test_tensile_application_range_fitting.m
+run_all_tests()
 ```
 
-The focused test and the complete `run_all_tests()` suite were reported passing after correction of summary-table orientation and sampling-grid-independent boundary assertions.
+D2 behavioral coverage includes:
 
-Covered behavior includes:
-
-- source-study immutability;
-- range configurability;
-- inclusive interval filtering;
-- preservation of source indices and curves;
-- independence from population and individual fitting outputs;
-- ignored failed records;
-- insufficient-observation and insufficient-specimen handling;
-- optional requirement that the requested maximum be available;
-- unit, measure, finite-value, sign, and model-registry validation.
+- synthetic Neo-Hookean recovery;
+- synthetic Yeoh recovery;
+- one shared parameter vector across specimens;
+- retained predictions and physical residuals;
+- invariance to duplicated sampling points in one specimen;
+- one result record per configured candidate;
+- rejection of unsupported specimen weighting;
+- rejection of unsupported normalization.
 
 ## Planned public workflow
 
-D2 and later phases will introduce the public entrypoint:
+The final public orchestration entrypoint remains deferred until selection exists:
 
 ```matlab
 result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
     tensileStudy, config);
 ```
 
-Do not add this entrypoint as an empty wrapper before fitting exists.
-
-## D2 — Range-limited shared fitting
-
-D2 should:
-
-- consume the D1 normalized contract;
-- fit one shared parameter vector per candidate model;
-- give each specimen equal influence regardless of sampling density;
-- reuse model evaluation, bounds, parameter transforms, multistart, and diagnostics where contracts match;
-- retain per-specimen predictions and physical fit metrics;
-- validate synthetic recovery and sampling-density invariance.
-
-Do not call the joint fitter directly if doing so requires artificial mode fields or weights. Extract a solver-only lower-level function only when its contract is genuinely shared by at least two maintained callers.
+Do not add an empty orchestration wrapper.
 
 ## D3 — Selection and reference properties
 
 D3 should:
 
 - reject failed or nonfinite candidates;
-- apply reliability and identifiability evidence where maintained;
+- apply maintained convergence and reliability evidence;
 - treat materially negligible objective differences as practical equivalence;
 - prefer fewer parameters among practically equivalent candidates;
 - use configured order only as the final deterministic tie-break;
 - derive reference quantities through the model registry rather than workflow conditionals.
 
-For currently supported incompressible models, the intended reference quantity is:
+Intended reference quantity:
 
 ```text
 Neo-Hookean:   mu0 = mu
@@ -176,15 +178,15 @@ Mooney-Rivlin: mu0 = 2 * (C10 + C01)
 Yeoh:          mu0 = 2 * C10
 ```
 
-The Neo-Hookean registry metadata must be made consistent before D3 exposes `mu0` generically.
+Neo-Hookean registry metadata must expose `mu0 = mu` before D3 reports derived quantities generically.
 
 ## D4 — Range sensitivity and optional validation
 
-D4 should vary only the upper application-range boundary initially. Each scenario must reuse the same normalization, fitting, and selection contract.
+D4 should initially vary only the upper application-range boundary and reuse the same normalization, fitting, and selection contracts.
 
-Compression may be supplied only for prediction with the tensile-selected model and fixed parameters. It must not affect tensile fitting or selection and must not trigger refitting.
+Compression may be supplied only for prediction using the fixed tensile-selected model and parameters. It must not influence tensile fitting or selection and must not trigger refitting.
 
-## D5 — Driver, output, and real validation
+## D5 — Driver, outputs, and real validation
 
 Planned driver:
 
@@ -208,11 +210,10 @@ Generated files remain under ignored `results/` paths.
 
 ## Explicit exclusions
 
-Do not add in this effort:
+Do not add:
 
 - raw workbook import or repeated tensile preprocessing;
-- OCE or OCT concepts;
-- wave propagation, Lamb waves, dispersion inversion, or acoustoelasticity;
+- OCE, OCT, wave propagation, Lamb waves, dispersion inversion, or acoustoelasticity;
 - incremental elasticity tensors or directional moduli;
 - viscoelastic models;
 - a separate model fit for every deformation state;

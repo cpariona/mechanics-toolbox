@@ -53,7 +53,9 @@ config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
 verifyEqual(testCase, config.fitRange, [0, 0.30]);
 verifyFalse(testCase, isfield(config, "minimum"));
 verifyFalse(testCase, isfield(config, "maximum"));
-verifyFalse(testCase, isfield(config, "fitting"));
+verifyTrue(testCase, isfield(config, "fitting"));
+verifyTrue(testCase, isfield(config, "normalization"));
+verifyEqual(testCase, config.specimenWeighting, "equal");
 verifyFalse(testCase, isfield(config, "export"));
 end
 
