@@ -12,47 +12,31 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Current merged baseline
 
-PR #44 is merged on `main`:
+PR #45 is merged on `main`:
 
 ```text
-50fffe271a2ca2f0f5aad632fcfde9288405552d
+459faa5de3768442eb77d1ae45735e87821ba7d3
 ```
 
-It includes the previously validated joint-characterization plotting improvements. The old statement that `fix/fitting-plot-clarity` remained unmerged is obsolete.
-
-The merged repository includes maintained tension and compression workflows, individual and population model selection, reporting and comparison utilities, C1-C5 joint material characterization, robustness auditing, scale-aware sign validation, and the improved joint fit figures.
+It includes D1 input and range contracts for tensile application-range characterization. The repository also includes maintained tension and compression workflows, individual and population model selection, reporting and comparison utilities, C1-C5 joint material characterization, robustness auditing, scale-aware sign validation, and validated joint fitting figures.
 
 ## Active branch
 
 ```text
-feature/tensile-application-range-contracts
+feature/tensile-application-range-fitting
 ```
 
 Purpose:
 
 ```text
-D1 — tensile application-range input and range contracts
+D2 — range-limited shared tensile fitting
 ```
 
-Do not continue D2 work on this branch after its PR is merged. Create a new branch from the updated `main` baseline.
+Do not continue D3 work on this branch after its PR is merged. Create a new branch from updated `main`.
 
-## D1 implementation status
+## D1 maintained contract
 
-Implemented:
-
-```text
-src/+mechanics/+config/tensileApplicationRangeCharacterizationConfig.m
-src/+mechanics/+workflow/normalizeTensileApplicationRangeStudy.m
-tests/test_tensile_application_range_input_contract.m
-```
-
-Canonical workflow documentation:
-
-```text
-docs/workflows/tensile-application-range-characterization.md
-```
-
-Configuration contract:
+Configuration:
 
 ```matlab
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
@@ -64,104 +48,137 @@ config.requireRangeMaximum = false;
 config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
 ```
 
-A two-element vector is the repository convention for a closed interval. Separate minimum and maximum fields are not used.
-
-D1 normalizer:
+Normalizer:
 
 ```matlab
 normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     tensileStudy, config);
 ```
 
-The normalizer consumes one completed tensile study and:
+It consumes a completed tensile study, uses processed records only, preserves full curves and observation indices, restricts observations without mutation, validates physical and metadata contracts, records actual fitted ranges and exclusions, and does not require population or individual fitting outputs.
 
-- uses only processed specimen records;
-- does not require population analysis or individual fitting outputs;
-- reads existing processed strain, stress, units, and mechanics metadata;
-- validates finite observations, tensile signs, units, measures, and registered candidates;
-- restricts observations to the configured interval without changing source data;
-- preserves full curves and original observation indices;
-- records available, requested, and actual fitted ranges;
-- records specimen exclusions and observation counts;
-- rejects the analysis when too few valid specimens remain.
-
-No fitting, selection, audit, validation, plotting, export, report, or study driver is implemented in D1.
-
-## D1 reuse decision
-
-Direct reuse:
-
-```text
-mechanics.models.modelRegistry
-existing mechanics metadata conventions
-existing scale-aware sign-validation principle
-existing unit and finite-observation contracts
-```
-
-Not reused directly:
-
-```text
-mechanics.workflow.normalizeJointCharacterizationStudies
-```
-
-Reason: the joint normalizer requires modes, mode weights, and multi-mode normalization. Adding those concepts to a tensile-only add-on would create unnecessary coupling.
-
-No shared helper was extracted. Extract lower-level code only when at least two maintained callers share the same physical and data contract.
-
-## D1 validation evidence
-
-The user reported that both passed on the active branch:
+D1 validation reported passing:
 
 ```text
 tests/test_tensile_application_range_input_contract.m
 run_all_tests()
 ```
 
-Two implementation issues were corrected before the successful run:
+## D2 implementation status
 
-1. summary tables now force every variable to column orientation;
-2. range tests no longer assume an experimental grid contains the requested boundary exactly.
+Implemented:
 
-Do not claim additional MATLAB validation beyond this reported evidence.
+```text
+src/+mechanics/+fitting/fitTensileApplicationRangeModel.m
+src/+mechanics/+workflow/fitTensileApplicationRangeModels.m
+tests/test_tensile_application_range_fitting.m
+```
 
-## Next phase: D2
+D2 configuration additions:
 
-D2 is not yet implemented.
+```matlab
+config.specimenWeighting = "equal";
+config.normalization.method = "response-range";
+config.normalization.minimumScale = sqrt(eps);
+config.fitting = mechanics.config.fittingConfig();
+```
+
+Fit one model:
+
+```matlab
+fit = mechanics.fitting.fitTensileApplicationRangeModel( ...
+    normalized, modelName, config);
+```
+
+Fit all candidates:
+
+```matlab
+candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
+    normalized, config);
+```
+
+D2 estimates one shared parameter vector per candidate model across all retained specimens. The objective is the mean of the normalized specimen losses, so every specimen has equal influence regardless of sampling density. It does not use pooled pointwise SSE.
+
+Each fit retains multistart diagnostics, convergence state, parameters, objective, per-specimen predictions, residuals, normalization scales, and physical error summaries. Candidate failures are recorded independently. No model is selected in D2.
+
+## D2 reuse decision
+
+Directly reused:
+
+```text
+mechanics.models.modelRegistry
+mechanics.models.evaluateModel
+mechanics.fitting.resolveFitConfig
+mechanics.fitting.generateInitialGuesses
+mechanics.fitting.parametersToUnconstrained
+mechanics.fitting.unconstrainedToParameters
+```
+
+Not reused as a wrapper:
+
+```text
+mechanics.fitting.fitJointModel
+```
+
+Reason: its public and internal contract includes modes, mode weights, and multi-mode summaries that do not belong in a tensile-only add-on.
+
+No generic multistart helper was extracted. Refactor solver-only code only after two maintained callers are proven to share the same contract and tests can protect both paths.
+
+## D2 validation evidence
+
+The user reported successful execution of:
+
+```text
+tests/test_tensile_application_range_input_contract.m
+tests/test_tensile_application_range_fitting.m
+run_all_tests()
+```
+
+Covered D2 behavior includes:
+
+- Neo-Hookean synthetic recovery;
+- Yeoh synthetic recovery;
+- one shared parameter vector across specimens;
+- retained predictions and residuals;
+- invariance to duplicated sampling points in one specimen;
+- one result per candidate model;
+- rejection of unsupported weighting and normalization.
+
+Do not claim additional validation beyond this reported evidence.
+
+## Next phase: D3
+
+D3 is not yet implemented.
 
 Objective:
 
-> Fit one shared parameter vector per candidate hyperelastic model across all retained tensile specimens inside the D1 application range, with equal specimen influence.
+> Select a reliable and parsimonious candidate model and expose model-registry-derived reference properties without workflow model-name conditionals.
 
-Required D2 behavior:
+Required behavior:
 
-- consume the D1 normalized contract;
-- reuse model evaluation, fitting configuration, bounds, parameter transforms, multistart, and diagnostics where contracts match;
-- preserve equal specimen influence regardless of sampling density;
-- retain per-specimen predictions and fit metrics;
-- add synthetic parameter-recovery tests;
-- add sampling-density invariance tests;
-- avoid pooled pointwise SSE;
-- avoid artificial mode fields or weights.
+- reject failed or nonfinite candidates;
+- use convergence and maintained reliability evidence;
+- apply practical-equivalence tolerance;
+- prefer fewer parameters among practically equivalent candidates;
+- use configured candidate order only as final tie-break;
+- preserve all candidate evidence and the selection rationale;
+- expose reference quantities through `modelRegistry`.
 
-Before implementing D2, audit the existing individual and joint fitting internals. Extract a shared solver-only function only when at least two maintained callers genuinely share that contract.
+Before generic `mu0` reporting, update Neo-Hookean metadata to define:
 
-Do not begin D3 automatically.
+```text
+mu0 = mu
+```
+
+Do not begin D4 automatically.
 
 ## Later phases
-
-### D3 — Selection and reference properties
-
-- practical-equivalence and parsimonious model selection;
-- registry-derived `mu0` and other reference quantities;
-- model-agnostic behavior for Neo-Hookean, Mooney-Rivlin, and Yeoh.
-
-The current Neo-Hookean registry metadata does not yet expose `mu0 = mu`; resolve that in D3 rather than adding workflow conditionals.
 
 ### D4 — Range sensitivity and optional validation
 
 - one-factor sensitivity to the upper fitted deformation;
-- optional compression prediction using fixed tensile-calibrated parameters;
-- no compression refitting and no influence on tensile selection.
+- optional compression prediction with fixed tensile-calibrated parameters;
+- no compression refitting or influence on tensile selection.
 
 ### D5 — Driver, outputs, and real validation
 
@@ -210,10 +227,10 @@ git rev-parse HEAD
 git rev-parse origin/main
 ```
 
-If D1 has been merged, create the D2 branch from updated `main`, for example:
+After D2 is merged, create a new D3 branch from updated `main`, for example:
 
 ```bash
-git switch -c feature/tensile-application-range-fitting
+git switch -c feature/tensile-application-range-selection
 ```
 
 ## Maintenance rules
