@@ -2,14 +2,18 @@
 
 ## Status
 
-D1 input/range contracts and D2 shared fitting are implemented on the active feature branch. Model selection, registry-derived reference properties, range sensitivity, optional compression validation, plotting, export, and the real-study driver remain unimplemented.
+D1 input/range contracts, D2 shared fitting, and D3 parsimonious selection with registry-derived reference properties are implemented on the active feature branch.
+
+Range sensitivity, optional compression validation, plotting, export, the public orchestration entrypoint, and the real-study driver remain unimplemented.
 
 This capability is a maintained add-on to a completed tensile study:
 
 ```text
 runTensileStudy
     -> completed tensile study
-    -> runTensileApplicationRangeCharacterization
+    -> normalizeTensileApplicationRangeStudy
+    -> fitTensileApplicationRangeModels
+    -> selectTensileApplicationRangeModel
 ```
 
 It must not re-import workbooks or repeat tensile preprocessing.
@@ -28,6 +32,9 @@ config.specimenWeighting = "equal";
 config.normalization.method = "response-range";
 config.normalization.minimumScale = sqrt(eps);
 config.fitting = mechanics.config.fittingConfig();
+config.selection.requireConvergence = true;
+config.selection.practicalObjectiveTolerance = 0.02;
+config.selection.tieBreakOrder = config.candidateModelNames;
 ```
 
 A two-element vector represents every closed interval. Separate minimum and maximum fields are not used.
@@ -42,7 +49,6 @@ normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
 The normalizer consumes one completed tensile-study result and:
 
 - uses processed specimen records only;
-- does not require population analysis or individual fitting outputs;
 - validates finite observations, tensile signs, units, measures, and registered candidates;
 - restricts observations to the configured interval without changing source data;
 - preserves full curves and original observation indices;
@@ -70,62 +76,77 @@ candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
 
 For each candidate model, D2 estimates one parameter vector shared by every retained tensile specimen.
 
-The objective is the arithmetic mean of the normalized specimen losses:
+The objective is the arithmetic mean of the normalized specimen losses. Each specimen therefore has equal influence regardless of sampling density. A pooled pointwise SSE is not used.
 
-```text
-candidate objective
-    = mean(normalized loss of each retained specimen)
+The maintained normalization is `response-range` per specimen. Each successful fit preserves model metadata, parameters, objective, multistart diagnostics, convergence state, per-specimen predictions, residuals, normalization scales, and physical error summaries.
+
+Candidate failures are recorded independently so one failed model does not discard successful candidates.
+
+## D3 selection contract
+
+```matlab
+selection = mechanics.workflow.selectTensileApplicationRangeModel( ...
+    candidates, config);
 ```
 
-This contract gives each specimen equal influence regardless of sampling density. A pooled pointwise SSE is not used.
+The selector consumes the completed D2 candidate records and does not refit any model.
 
-The maintained normalization is `response-range` per specimen. The response range is used when valid; otherwise the implementation falls back to the maximum absolute response and applies `normalization.minimumScale`.
+Selection order:
 
-Each successful fit preserves:
+1. reject failed candidates;
+2. reject nonfinite objectives;
+3. reject nonconverged candidates when `selection.requireConvergence` is true;
+4. identify the lowest eligible objective;
+5. define practical equivalence using `selection.practicalObjectiveTolerance`;
+6. prefer fewer parameters among practically equivalent candidates;
+7. use objective and then configured order as deterministic tie-breaks.
+
+Candidate names and tie-break names are canonicalized through `mechanics.models.modelRegistry`. Aliases of the same registered model cannot be supplied as distinct candidates.
+
+The result preserves:
 
 ```text
-modelName
-parameterNames
-parameters
-objective
-exitFlag
-output
-converged
-specimenWeighting
-specimens
-specimenSummary
-normalization
-fitConfig
-starts
+candidates
+candidateSummary
+selectedModelName
+selectedFit
+referenceProperties
+selection
+config
 createdAt
 ```
 
-Each fitted specimen adds:
+The candidate summary records status, convergence, eligibility, practical equivalence, parameter count, objective, and configured order.
+
+## Registry-derived reference properties
+
+Reference properties are evaluated through model metadata rather than workflow model-name conditionals:
 
 ```text
-PredictedStress
-Residuals
-NormalizationScale
+Neo-Hookean:   mu0 = mu
+Mooney-Rivlin: mu0 = 2 * (C10 + C01)
+Yeoh:          mu0 = 2 * C10
 ```
 
-Candidate fitting records failures independently so one failed model does not discard successful candidates. Selection is not performed in D2.
+The generic result contains:
+
+```text
+referenceProperties.modelName
+referenceProperties.names
+referenceProperties.values
+referenceProperties.parameterNames
+referenceProperties.parameters
+```
+
+Neo-Hookean now exposes `mu0` consistently through `modelRegistry`.
 
 ## Reuse decisions
 
-D2 directly reuses:
+D2 directly reuses maintained model evaluation, fitting configuration, bounds, multistart generation, and parameter transforms.
 
-```text
-mechanics.models.modelRegistry
-mechanics.models.evaluateModel
-mechanics.fitting.resolveFitConfig
-mechanics.fitting.generateInitialGuesses
-mechanics.fitting.parametersToUnconstrained
-mechanics.fitting.unconstrainedToParameters
-```
+D3 follows the same practical-equivalence and parsimonious ranking policy used by joint characterization, but it operates on already fitted tensile candidates. It does not call `selectJointModel`, because that function owns joint fitting, mode summaries, and multi-mode responsibilities.
 
-`fitJointModel` is not called as a wrapper because its maintained contract includes modes, mode weights, and multi-mode summaries.
-
-No generic multistart helper was extracted in D2. That refactor should occur only when at least two maintained callers are proven to share the same solver-only contract and the change can be covered without destabilizing validated fitting behavior.
+No compatibility wrapper, alias layer, bridge file, or one-caller helper was added.
 
 ## Validation evidence
 
@@ -134,23 +155,24 @@ The user reported successful execution of:
 ```text
 tests/test_tensile_application_range_input_contract.m
 tests/test_tensile_application_range_fitting.m
+tests/test_tensile_application_range_selection.m
 run_all_tests()
 ```
 
-D2 behavioral coverage includes:
+D3 behavioral coverage includes:
 
-- synthetic Neo-Hookean recovery;
-- synthetic Yeoh recovery;
-- one shared parameter vector across specimens;
-- retained predictions and physical residuals;
-- invariance to duplicated sampling points in one specimen;
-- one result record per configured candidate;
-- rejection of unsupported specimen weighting;
-- rejection of unsupported normalization.
+- best-objective selection outside practical equivalence;
+- preference for the simpler model inside practical equivalence;
+- failed and nonconverged candidate exclusion;
+- optional disabling of the convergence requirement;
+- rejection when no eligible candidate exists;
+- tie-break order validation;
+- canonical duplicate-alias rejection;
+- generic `mu0` evaluation for Neo-Hookean, Mooney-Rivlin, and Yeoh.
 
 ## Planned public workflow
 
-The final public orchestration entrypoint remains deferred until selection exists:
+The final public orchestration entrypoint remains deferred until D4 or D5 can return the complete maintained result:
 
 ```matlab
 result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
@@ -158,27 +180,6 @@ result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
 ```
 
 Do not add an empty orchestration wrapper.
-
-## D3 — Selection and reference properties
-
-D3 should:
-
-- reject failed or nonfinite candidates;
-- apply maintained convergence and reliability evidence;
-- treat materially negligible objective differences as practical equivalence;
-- prefer fewer parameters among practically equivalent candidates;
-- use configured order only as the final deterministic tie-break;
-- derive reference quantities through the model registry rather than workflow conditionals.
-
-Intended reference quantity:
-
-```text
-Neo-Hookean:   mu0 = mu
-Mooney-Rivlin: mu0 = 2 * (C10 + C01)
-Yeoh:          mu0 = 2 * C10
-```
-
-Neo-Hookean registry metadata must expose `mu0 = mu` before D3 reports derived quantities generically.
 
 ## D4 — Range sensitivity and optional validation
 
