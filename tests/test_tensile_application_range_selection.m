@@ -35,10 +35,8 @@ verifyEqual(testCase, result.referenceProperties.values, 0.42, ...
     "AbsTol", 1e-12);
 end
 
-function testObjectiveBreaksTieForEqualParameterCount(testCase)
+function testRegistryAliasesCannotCreateDuplicateCandidates(testCase)
 config = localConfig();
-config.candidateModelNames = ["neo-hookean"; "neohookean"];
-config.selection.tieBreakOrder = config.candidateModelNames;
 candidates = [ ...
     localCandidate("neo-hookean", 0.0102, true, 0.3); ...
     localCandidate("neohookean", 0.0100, true, 0.4)];
@@ -47,16 +45,15 @@ verifyError(testCase, @() mechanics.workflow.selectTensileApplicationRangeModel(
     "mechanics:workflow:DuplicateTensileApplicationRangeCandidates");
 end
 
-function testConfiguredOrderBreaksExactTie(testCase)
+function testTieBreakOrderMustContainEveryCandidate(testCase)
 config = localConfig();
-config.candidateModelNames = ["mooney-rivlin"; "neo-hookean"];
-config.selection.tieBreakOrder = ["mooney-rivlin"; "neo-hookean"];
+config.selection.tieBreakOrder = ["neo-hookean"; "mooney-rivlin"];
 candidates = [ ...
-    localCandidate("mooney-rivlin", 0.01, true, [0.1, 0.1]); ...
-    localCandidate("neo-hookean", 0.01, true, 0.4)];
-result = mechanics.workflow.selectTensileApplicationRangeModel( ...
-    candidates, config);
-verifyEqual(testCase, result.selectedModelName, "neo-hookean");
+    localCandidate("neo-hookean", 0.01, true, 0.4); ...
+    localCandidate("yeoh", 0.01, true, [0.1, 0.01, 0.001])];
+verifyError(testCase, @() mechanics.workflow.selectTensileApplicationRangeModel( ...
+    candidates, config), ...
+    "mechanics:workflow:InvalidTensileApplicationRangeTieBreakOrder");
 end
 
 function testFailedAndNonconvergedCandidatesAreIneligible(testCase)
