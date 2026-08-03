@@ -25,7 +25,8 @@ configuredOrder = inf(candidateCount, 1);
 for candidateIndex = 1:candidateCount
     candidate = candidates(candidateIndex);
     localValidateCandidate(candidate, candidateIndex);
-    modelName(candidateIndex) = lower(strtrim(string(candidate.modelName)));
+    model = mechanics.models.modelRegistry(string(candidate.modelName));
+    modelName(candidateIndex) = model.name;
     status(candidateIndex) = string(candidate.status);
     configuredOrder(candidateIndex) = localConfiguredOrder( ...
         modelName(candidateIndex), selection.tieBreakOrder);
@@ -34,7 +35,6 @@ for candidateIndex = 1:candidateCount
         continue
     end
 
-    model = mechanics.models.modelRegistry(modelName(candidateIndex));
     parameterCount(candidateIndex) = numel(model.parameterNames);
     objective(candidateIndex) = double(candidate.objective);
     converged(candidateIndex) = logical(candidate.converged);
@@ -44,7 +44,7 @@ end
 
 if numel(unique(modelName)) ~= candidateCount
     error("mechanics:workflow:DuplicateTensileApplicationRangeCandidates", ...
-        "Candidate model names must be unique.");
+        "Candidate model names must be unique after registry normalization.");
 end
 if ~any(eligible)
     error("mechanics:workflow:NoEligibleTensileApplicationRangeModel", ...
@@ -102,11 +102,15 @@ if ~isfield(selection, "tieBreakOrder") || isempty(selection.tieBreakOrder)
     error("mechanics:workflow:MissingTensileApplicationRangeTieBreakOrder", ...
         "selection.tieBreakOrder must contain every candidate model.");
 end
-selection.tieBreakOrder = lower(strtrim(string(selection.tieBreakOrder(:))));
-if any(strlength(selection.tieBreakOrder) == 0) || ...
-        numel(unique(selection.tieBreakOrder)) ~= numel(selection.tieBreakOrder)
+rawOrder = string(selection.tieBreakOrder(:));
+selection.tieBreakOrder = strings(numel(rawOrder), 1);
+for index = 1:numel(rawOrder)
+    selection.tieBreakOrder(index) = ...
+        mechanics.models.modelRegistry(rawOrder(index)).name;
+end
+if numel(unique(selection.tieBreakOrder)) ~= numel(selection.tieBreakOrder)
     error("mechanics:workflow:InvalidTensileApplicationRangeTieBreakOrder", ...
-        "selection.tieBreakOrder must contain unique nonempty model names.");
+        "selection.tieBreakOrder must contain unique registered models.");
 end
 end
 
