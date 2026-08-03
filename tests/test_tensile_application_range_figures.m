@@ -9,30 +9,53 @@ end
 function testMechanicalAxisLabelsUseMeasuresAndUnits(testCase)
 verifyEqual(testCase, mechanics.plotting.mechanicalAxisLabel( ...
     "deformation", "engineering-strain", "1"), ...
-    "Engineering strain [1]");
+    "Engineering strain [mm/mm]");
+verifyEqual(testCase, mechanics.plotting.mechanicalAxisLabel( ...
+    "deformation", "true-strain", "dimensionless"), ...
+    "True strain [mm/mm]");
 verifyEqual(testCase, mechanics.plotting.mechanicalAxisLabel( ...
     "stress", "nominal", "MPa"), "Nominal stress [MPa]");
 verifyEqual(testCase, mechanics.plotting.mechanicalAxisLabel( ...
     "residual", "cauchy", "kPa"), ...
     "Cauchy stress residual [kPa]");
+verifyEqual(testCase, mechanics.plotting.mechanicalAxisLabel( ...
+    "compression-magnitude-residual", "nominal", "MPa"), ...
+    "Nominal compressive-stress magnitude residual [MPa]");
+end
+
+function testFitFigureUsesOneSharedPrediction(testCase)
+result = localResult();
+figureHandle = mechanics.plotting.plotTensileApplicationRangeFit(result);
+cleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
+axesHandles = findall(figureHandle, "Type", "axes");
+labels = string(get(findall(axesHandles, "Type", "line"), "DisplayName"));
+verifyEqual(testCase, nnz(contains(labels, "Shared prediction")), 1);
+end
+
+function testCompressionFigureUsesOnePredictionAndMagnitudeResidual(testCase)
+result = localResult();
+figureHandle = ...
+    mechanics.plotting.plotTensileApplicationRangeCompressionValidation(result);
+cleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
+axesHandles = findall(figureHandle, "Type", "axes");
+labels = string(get(findall(axesHandles, "Type", "line"), "DisplayName"));
+verifyEqual(testCase, nnz(contains(labels, "Shared tensile-calibrated prediction")), 1);
+titles = string(get(findall(figureHandle, "Type", "axes"), "Title"));
+titleText = strings(numel(titles), 1);
+for index = 1:numel(titles)
+    titleText(index) = string(titles(index).String);
+end
+verifyTrue(testCase, any(contains(titleText, ...
+    "|measured| - |shared prediction|")));
 end
 
 function testExportIncludesUnitAwareFiguresAndTables(testCase)
 folder = string(tempname);
 mkdir(folder);
 cleanup = onCleanup(@() localRemoveFolder(folder)); %#ok<NASGU>
-config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-config.fitRange = [0, 0.30];
-config.rangeSensitivity.maximumDeformations = [0.10; 0.20; 0.30];
-config.candidateModelNames = "neo-hookean";
-config.selection.tieBreakOrder = "neo-hookean";
-config.minimumObservationsPerSpecimen = 8;
-config.minimumSpecimens = 2;
-config.fitting.numberOfStarts = 2;
-config.fitting.randomSeed = 3;
+config = localConfig();
 config.export.enabled = true;
 config.export.outputFolder = folder;
-
 result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
     localStudy("tension", ["t1"; "t2"], 0.4, 51), config, ...
     localStudy("compression", ["c1"; "c2"], 0.4, 41));
@@ -55,15 +78,43 @@ specimenTable = readtable(result.outputFiles.tensileSpecimenSummary, ...
     "TextType", "string");
 verifyTrue(testCase, all(ismember(["StrainUnit","StressUnit"], ...
     string(specimenTable.Properties.VariableNames))));
-verifyEqual(testCase, unique(string(specimenTable.StrainUnit)), "1");
+verifyEqual(testCase, unique(string(specimenTable.StrainUnit)), "mm/mm");
 verifyEqual(testCase, unique(string(specimenTable.StressUnit)), "MPa");
 
+compressionTable = readtable( ...
+    result.outputFiles.compressionValidationSummary, "TextType", "string");
+verifyEqual(testCase, unique(string(compressionTable.StrainUnit)), "mm/mm");
+verifyEqual(testCase, unique(string(compressionTable.StressUnit)), "MPa");
+
 reportText = string(fileread(result.outputFiles.report));
+verifyTrue(testCase, contains(reportText, "Deformation unit: `mm/mm`"));
 verifyTrue(testCase, contains(reportText, ...
     "Stress and parameter unit: `MPa`"));
+verifyTrue(testCase, contains(reportText, ...
+    "|measured| - |prediction|"));
 verifyTrue(testCase, contains(reportText, "tensile_fit_and_residuals.png"));
 verifyTrue(testCase, contains(reportText, "range_sensitivity.png"));
 verifyTrue(testCase, contains(reportText, "compression_validation.png"));
+end
+
+function result = localResult()
+config = localConfig();
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    localStudy("tension", ["t1"; "t2"], 0.4, 51), config, ...
+    localStudy("compression", ["c1"; "c2"], 0.4, 41));
+end
+
+function config = localConfig()
+config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
+config.fitRange = [0, 0.30];
+config.rangeSensitivity.maximumDeformations = [0.10; 0.20; 0.30];
+config.candidateModelNames = "neo-hookean";
+config.selection.tieBreakOrder = "neo-hookean";
+config.minimumObservationsPerSpecimen = 8;
+config.minimumSpecimens = 2;
+config.fitting.numberOfStarts = 2;
+config.fitting.randomSeed = 3;
+config.export.enabled = false;
 end
 
 function study = localStudy(mode, specimenIds, mu, pointCount)
