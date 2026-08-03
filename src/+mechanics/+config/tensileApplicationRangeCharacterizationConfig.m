@@ -1,7 +1,7 @@
 function config = tensileApplicationRangeCharacterizationConfig()
 %TENSILEAPPLICATIONRANGECHARACTERIZATIONCONFIG Configure range-limited tension analysis.
 config.deformationMeasure = "engineering-strain";
-config.fitRange = [0, 0.30];
+config.fitRange = [0, 0.50];
 config.minimumObservationsPerSpecimen = 10;
 config.minimumSpecimens = 2;
 config.requireRangeMaximum = false;
@@ -13,7 +13,7 @@ config.fitting = mechanics.config.fittingConfig();
 config.selection.requireConvergence = true;
 config.selection.practicalObjectiveTolerance = 0.02;
 config.selection.tieBreakOrder = config.candidateModelNames;
-config.rangeSensitivity.maximumDeformations = [0.20; 0.25; 0.30];
+config.rangeSensitivity.maximumDeformations = [0.30; 0.40; 0.50];
 config.compressionValidation.minimumSpecimens = 1;
 config.export.enabled = false;
 config.export.outputFolder = "results/tensile-application-range-characterization";
