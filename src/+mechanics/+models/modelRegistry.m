@@ -15,8 +15,8 @@ switch normalizedName
         model.lowerBounds = 0;
         model.upperBounds = Inf;
         model.description = "Incompressible one-parameter Neo-Hookean model.";
-        model.derivedQuantityNames = strings(0, 1);
-        model.evaluateDerivedQuantities = [];
+        model.derivedQuantityNames = "mu0";
+        model.evaluateDerivedQuantities = @(parameters) parameters(1);
 
     case {"mooney-rivlin", "mooneyrivlin"}
         model.name = "mooney-rivlin";
