@@ -12,137 +12,131 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Current merged baseline
 
-PR #47 is merged on `main`:
+PR #48 is merged on `main`:
 
 ```text
-754259577db38490380a97eaa364b957d346302a
+366aa54ef8b5ddbfbcb77360b84e06f4baf20276
 ```
 
-It includes D1 input/range contracts, D2 shared fitting, and D3 parsimonious selection with registry-derived reference properties.
+It includes D1-D4 for tensile application-range characterization: input/range contracts, shared fitting, parsimonious selection, range-sensitivity auditing, and optional fixed-parameter compression validation.
 
 ## Active branch
 
 ```text
-feature/tensile-application-range-audit
+feature/tensile-application-range-workflow
 ```
 
 Purpose:
 
 ```text
-D4 — upper-range sensitivity and optional fixed-parameter compression validation
+D5 — public workflow, export, real-study driver, and validation closure
 ```
 
-Do not continue D5 work on this branch after its PR is merged. Create a new branch from updated `main`.
-
-## Maintained D1-D3 pipeline
-
-```matlab
-config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-
-normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
-    tensileStudy, config);
-
-candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
-    normalized, config);
-
-selection = mechanics.workflow.selectTensileApplicationRangeModel( ...
-    candidates, config);
-```
-
-D1 consumes a completed tensile study and restricts processed observations without mutation. D2 estimates one shared parameter vector per candidate with equal specimen influence. D3 applies convergence gating, practical equivalence, parsimonious ranking, and registry-derived `mu0` reporting.
-
-## D4 implementation status
+## D5 implementation status
 
 Implemented:
 
 ```text
-src/+mechanics/+workflow/auditTensileApplicationRangeSensitivity.m
-src/+mechanics/+workflow/validateTensileApplicationRangeCompression.m
+src/+mechanics/+workflow/runTensileApplicationRangeCharacterization.m
+src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
+studies/tension/run_tensile_application_range_characterization.m
+tests/test_tensile_application_range_workflow.m
+```
+
+Updated:
+
+```text
 src/+mechanics/+config/tensileApplicationRangeCharacterizationConfig.m
-tests/test_tensile_application_range_audit.m
+tests/test_tensile_application_range_input_contract.m
 ```
 
-D4 configuration:
+## Public workflow
 
 ```matlab
-config.rangeSensitivity.maximumDeformations = [0.20; 0.25; 0.30];
-config.compressionValidation.minimumSpecimens = 1;
-```
-
-## Range-sensitivity contract
-
-```matlab
-audit = mechanics.workflow.auditTensileApplicationRangeSensitivity( ...
+config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
     tensileStudy, config);
 ```
 
-For each configured maximum deformation, the audit reruns the maintained D1-D3 pipeline while changing only:
+Optional compression validation:
 
 ```matlab
-scenarioConfig.fitRange(2)
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    tensileStudy, config, compressionStudy);
 ```
 
-Each scenario records:
+The entrypoint composes D1-D4 directly and does not duplicate their logic.
+
+## Result contract
 
 ```text
-maximumDeformation
-status
 normalized
 candidates
+candidateSummary
+selectedModelName
+selectedFit
+referenceProperties
 selection
-errorIdentifier
-errorMessage
+rangeSensitivity
+compressionValidation
+hasCompressionValidation
+config
+createdAt
+outputFiles
 ```
 
-The summary table records:
-
-```text
-MaximumDeformation
-Status
-SelectedModelName
-Objective
-Mu0
-```
-
-Scenario order is deterministic and follows the configured maximum-deformation vector. Invalid or repeated maxima are rejected.
-
-## Compression-validation contract
+Compression remains prediction-only external validation and records:
 
 ```matlab
-validation = mechanics.workflow.validateTensileApplicationRangeCompression( ...
-    selection, compressionStudy, config);
+result.compressionValidation.refitPerformed = false;
 ```
 
-Compression is prediction-only external validation. The selected tensile model and parameters remain fixed.
+## Export contract
 
-The function reuses:
-
-```text
-mechanics.workflow.normalizeJointCharacterizationStudies
-mechanics.models.evaluateModel
-```
-
-The joint normalizer is called with one `compression` mode only. Joint fitting and joint selection are not called.
-
-The result explicitly records:
+Configuration:
 
 ```matlab
-validation.refitPerformed = false;
+config.export.enabled = false;
+config.export.outputFolder = ...
+    "results/tensile-application-range-characterization";
 ```
 
-Compression data cannot affect tensile normalization, fitting, eligibility, or selection.
+When enabled, export produces:
 
-The validation result includes model/parameter provenance, normalized compression specimens, per-specimen predictions and residuals, RMSE summaries, and mean normalized error.
+```text
+candidate_model_summary.csv
+selected_parameters.csv
+reference_properties.csv
+tensile_specimen_fit_summary.csv
+range_sensitivity_summary.csv
+compression_validation_summary.csv   % optional
+tensile_application_range_characterization.mat
+tensile_application_range_characterization.md
+```
 
-## D4 reuse decision
+Complete curves and diagnostic evidence remain in the MAT result. D5 does not create redundant curve CSV files or new figures.
 
-The sensitivity audit reuses D1-D3 directly rather than duplicating range restriction, fitting, or selection logic.
+## Real-study driver
 
-Compression validation reuses the maintained compression mode normalization contract because the physical data representation and validation requirements match. It does not reuse any joint optimization behavior.
+```text
+studies/tension/run_tensile_application_range_characterization.m
+```
 
-No compatibility wrapper, bridge file, alias layer, or one-caller helper was introduced.
+Primary input:
 
-## D4 validation evidence
+```text
+results/real-tensile-study/tensile_study.mat
+```
+
+Optional input:
+
+```text
+results/real-compression-study/compression_study.mat
+```
+
+The driver loads completed study results only. It does not re-import workbooks or repeat preprocessing.
+
+## Validation evidence
 
 The user reported successful execution of:
 
@@ -151,90 +145,50 @@ tests/test_tensile_application_range_input_contract.m
 tests/test_tensile_application_range_fitting.m
 tests/test_tensile_application_range_selection.m
 tests/test_tensile_application_range_audit.m
+tests/test_tensile_application_range_workflow.m
 run_all_tests()
 ```
 
-Covered D4 behavior includes:
+An obsolete D1 assertion that required the absence of `config.export` was corrected after D5 introduced a maintained consumer. The current test verifies that export exists, is disabled by default, and points to the maintained output folder.
 
-- all configured sensitivity scenarios execute in order;
-- the source tensile study remains unchanged;
-- synthetic selected model and `mu0` remain stable;
-- invalid and repeated sensitivity maxima are rejected;
-- compression predictions use fixed tensile parameters;
-- `refitPerformed` remains false;
-- synthetic compression predictions recover the expected response;
-- minimum validation-specimen requirements are enforced.
+Do not claim real-study or artifact validation beyond this synthetic and repository-wide MATLAB evidence.
 
-Do not claim additional MATLAB validation beyond this reported evidence.
+## Remaining work after D5 merge
 
-## Next phase: D5
+The required algorithmic capability is complete. Remaining work is experimental closure:
 
-D5 is not yet implemented.
+1. execute the real-study driver locally;
+2. inspect selected model, parameters, `mu0`, candidate evidence, and specimen errors;
+3. inspect stability across the configured upper fitting limits;
+4. inspect optional compression predictions and confirm no refitting;
+5. inspect exported CSV, MAT, and Markdown files;
+6. add figures only when real outputs demonstrate a specific nonredundant scientific need;
+7. document scientific interpretation, sensitivity, external validity, and limitations.
 
-Objective:
-
-> Add the maintained public orchestration entrypoint, a real-study driver, limited nonredundant outputs, and real-data validation.
-
-Required work:
-
-- add `mechanics.workflow.runTensileApplicationRangeCharacterization`;
-- compose D1-D4 without duplicating their logic;
-- decide how optional sensitivity and compression validation are enabled;
-- add the real driver under `studies/tension`;
-- add only outputs that are not duplicates of existing tensile or joint reports;
-- keep generated artifacts under ignored `results/` paths;
-- validate with the maintained real tensile study and optional compression study;
-- inspect figures and tables manually before merge.
-
-Planned driver:
-
-```text
-studies/tension/run_tensile_application_range_characterization.m
-```
-
-Primary local input:
-
-```text
-results/real-tensile-study/tensile_study.mat
-```
-
-Optional validation input:
-
-```text
-results/real-compression-study/compression_study.mat
-```
-
-Do not begin unrelated OCE, wave, or acoustoelastic work in D5.
-
-## Validation protocol
-
-For each phase:
-
-1. run focused behavioral tests;
-2. run `run_all_tests()`;
-3. inspect generated artifacts when outputs exist;
-4. use synthetic recovery before interpreting real fits;
-5. run `git diff --check`;
-6. verify no generated files are tracked;
-7. do not merge a pull request unless explicitly requested.
+No new mandatory algorithmic phase is defined. Any later code should respond to concrete evidence from real validation.
 
 ## Repository verification
 
-At the start of the next session:
+Before opening or merging the D5 PR:
 
 ```bash
 git fetch origin --prune
+git switch feature/tensile-application-range-workflow
+git pull --ff-only origin feature/tensile-application-range-workflow
+git diff --check
+git status -sb
+git ls-files --others --exclude-standard
+```
+
+After D5 is merged:
+
+```bash
 git switch main
+git fetch origin --prune
 git pull --ff-only origin main
 git status -sb
 git rev-parse HEAD
 git rev-parse origin/main
-```
-
-After D4 is merged, create a new D5 branch from updated `main`, for example:
-
-```bash
-git switch -c feature/tensile-application-range-workflow
 ```
 
 ## Maintenance rules
@@ -247,4 +201,5 @@ git switch -c feature/tensile-application-range-workflow
 - Do not add bridge files or one-caller helpers for superficial symmetry.
 - Use the model registry instead of model-name conditionals where contracts match.
 - Keep individual, joint, and tensile application-range workflows distinct.
+- Keep generated data and outputs under ignored `results/` paths.
 - Do not merge a pull request unless explicitly requested.
