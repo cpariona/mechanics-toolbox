@@ -12,175 +12,182 @@ Do not modify `main`, open a pull request, or merge changes unless explicitly re
 
 ## Current merged baseline
 
-PR #45 is merged on `main`:
+PR #46 is merged on `main`:
 
 ```text
-459faa5de3768442eb77d1ae45735e87821ba7d3
+4c30cc81283383f2f2789e627b40f741bd9c9a08
 ```
 
-It includes D1 input and range contracts for tensile application-range characterization. The repository also includes maintained tension and compression workflows, individual and population model selection, reporting and comparison utilities, C1-C5 joint material characterization, robustness auditing, scale-aware sign validation, and validated joint fitting figures.
+It includes D1 input/range contracts and D2 shared fitting for tensile application-range characterization.
 
 ## Active branch
 
 ```text
-feature/tensile-application-range-fitting
+feature/tensile-application-range-selection
 ```
 
 Purpose:
 
 ```text
-D2 — range-limited shared tensile fitting
+D3 — parsimonious model selection and registry-derived reference properties
 ```
 
-Do not continue D3 work on this branch after its PR is merged. Create a new branch from updated `main`.
+Do not continue D4 work on this branch after its PR is merged. Create a new branch from updated `main`.
 
-## D1 maintained contract
-
-Configuration:
+## Maintained D1-D2 pipeline
 
 ```matlab
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-config.deformationMeasure = "engineering-strain";
-config.fitRange = [0, 0.30];
-config.minimumObservationsPerSpecimen = 10;
-config.minimumSpecimens = 2;
-config.requireRangeMaximum = false;
-config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
-```
-
-Normalizer:
-
-```matlab
 normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     tensileStudy, config);
-```
-
-It consumes a completed tensile study, uses processed records only, preserves full curves and observation indices, restricts observations without mutation, validates physical and metadata contracts, records actual fitted ranges and exclusions, and does not require population or individual fitting outputs.
-
-D1 validation reported passing:
-
-```text
-tests/test_tensile_application_range_input_contract.m
-run_all_tests()
-```
-
-## D2 implementation status
-
-Implemented:
-
-```text
-src/+mechanics/+fitting/fitTensileApplicationRangeModel.m
-src/+mechanics/+workflow/fitTensileApplicationRangeModels.m
-tests/test_tensile_application_range_fitting.m
-```
-
-D2 configuration additions:
-
-```matlab
-config.specimenWeighting = "equal";
-config.normalization.method = "response-range";
-config.normalization.minimumScale = sqrt(eps);
-config.fitting = mechanics.config.fittingConfig();
-```
-
-Fit one model:
-
-```matlab
-fit = mechanics.fitting.fitTensileApplicationRangeModel( ...
-    normalized, modelName, config);
-```
-
-Fit all candidates:
-
-```matlab
 candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
     normalized, config);
 ```
 
-D2 estimates one shared parameter vector per candidate model across all retained specimens. The objective is the mean of the normalized specimen losses, so every specimen has equal influence regardless of sampling density. It does not use pooled pointwise SSE.
+D1 consumes a completed tensile study, uses processed records only, preserves full curves and source indices, restricts observations without mutation, validates physical and metadata contracts, and records actual fitted ranges and exclusions.
 
-Each fit retains multistart diagnostics, convergence state, parameters, objective, per-specimen predictions, residuals, normalization scales, and physical error summaries. Candidate failures are recorded independently. No model is selected in D2.
+D2 estimates one shared parameter vector per candidate model. The objective is the arithmetic mean of normalized specimen losses, giving every specimen equal influence regardless of sampling density. It retains multistart diagnostics, convergence state, parameters, per-specimen predictions, residuals, normalization scales, and physical fit summaries.
 
-## D2 reuse decision
+## D3 implementation status
 
-Directly reused:
-
-```text
-mechanics.models.modelRegistry
-mechanics.models.evaluateModel
-mechanics.fitting.resolveFitConfig
-mechanics.fitting.generateInitialGuesses
-mechanics.fitting.parametersToUnconstrained
-mechanics.fitting.unconstrainedToParameters
-```
-
-Not reused as a wrapper:
+Implemented:
 
 ```text
-mechanics.fitting.fitJointModel
+src/+mechanics/+workflow/selectTensileApplicationRangeModel.m
+src/+mechanics/+models/modelRegistry.m
+src/+mechanics/+config/tensileApplicationRangeCharacterizationConfig.m
+tests/test_tensile_application_range_selection.m
 ```
 
-Reason: its public and internal contract includes modes, mode weights, and multi-mode summaries that do not belong in a tensile-only add-on.
+Selection configuration:
 
-No generic multistart helper was extracted. Refactor solver-only code only after two maintained callers are proven to share the same contract and tests can protect both paths.
+```matlab
+config.selection.requireConvergence = true;
+config.selection.practicalObjectiveTolerance = 0.02;
+config.selection.tieBreakOrder = config.candidateModelNames;
+```
 
-## D2 validation evidence
+Selector:
+
+```matlab
+selection = mechanics.workflow.selectTensileApplicationRangeModel( ...
+    candidates, config);
+```
+
+The selector consumes D2 candidates and does not refit models.
+
+Selection sequence:
+
+1. exclude failed candidates;
+2. exclude nonfinite objectives;
+3. exclude nonconverged candidates when required;
+4. determine the best eligible objective;
+5. form the practical-equivalence set;
+6. prefer fewer parameters;
+7. use objective and configured order as deterministic tie-breaks.
+
+Candidate names and tie-break names are canonicalized through `modelRegistry`. Registered aliases cannot be supplied as distinct candidates.
+
+## Registry-derived reference properties
+
+The selected result exposes reference properties generically through model metadata:
+
+```text
+Neo-Hookean:   mu0 = mu
+Mooney-Rivlin: mu0 = 2 * (C10 + C01)
+Yeoh:          mu0 = 2 * C10
+```
+
+Neo-Hookean registry metadata now defines:
+
+```text
+derivedQuantityNames = "mu0"
+evaluateDerivedQuantities(parameters) = parameters(1)
+```
+
+No model-name conditional was added to the tensile selection workflow.
+
+## D3 result contract
+
+```text
+candidates
+candidateSummary
+selectedModelName
+selectedFit
+referenceProperties
+selection
+config
+createdAt
+```
+
+The candidate summary records:
+
+```text
+ModelName
+Status
+Converged
+Eligible
+PracticallyEquivalent
+ParameterCount
+Objective
+ConfiguredOrder
+```
+
+## Reuse decision
+
+D3 follows the maintained practical-equivalence and parsimonious ranking policy already used by joint characterization.
+
+`selectJointModel` is not reused as a wrapper because it performs joint fitting and owns mode-specific summaries. The tensile selector operates on already fitted D2 candidate records.
+
+No compatibility wrapper, bridge file, alias layer, or one-caller helper was introduced.
+
+## Validation evidence
 
 The user reported successful execution of:
 
 ```text
 tests/test_tensile_application_range_input_contract.m
 tests/test_tensile_application_range_fitting.m
+tests/test_tensile_application_range_selection.m
 run_all_tests()
 ```
 
-Covered D2 behavior includes:
+Covered D3 behavior includes:
 
-- Neo-Hookean synthetic recovery;
-- Yeoh synthetic recovery;
-- one shared parameter vector across specimens;
-- retained predictions and residuals;
-- invariance to duplicated sampling points in one specimen;
-- one result per candidate model;
-- rejection of unsupported weighting and normalization.
+- best-objective selection outside practical equivalence;
+- simpler-model preference inside practical equivalence;
+- failed and nonconverged candidate exclusion;
+- optional disabling of convergence requirements;
+- rejection when no candidate is eligible;
+- validation of configured tie-break order;
+- canonical duplicate-alias rejection;
+- generic `mu0` evaluation for all three maintained models.
 
 Do not claim additional validation beyond this reported evidence.
 
-## Next phase: D3
+## Next phase: D4
 
-D3 is not yet implemented.
+D4 is not yet implemented.
 
 Objective:
 
-> Select a reliable and parsimonious candidate model and expose model-registry-derived reference properties without workflow model-name conditionals.
+> Audit sensitivity to the upper tensile application-range boundary and optionally evaluate compression predictions using the fixed tensile-selected model and parameters.
 
 Required behavior:
 
-- reject failed or nonfinite candidates;
-- use convergence and maintained reliability evidence;
-- apply practical-equivalence tolerance;
-- prefer fewer parameters among practically equivalent candidates;
-- use configured candidate order only as final tie-break;
-- preserve all candidate evidence and the selection rationale;
-- expose reference quantities through `modelRegistry`.
+- vary only the upper `fitRange` limit initially;
+- reuse D1 normalization, D2 fitting, and D3 selection unchanged;
+- record scenario ranges, selected models, objectives, parameters, and reference properties;
+- preserve deterministic scenario ordering;
+- allow optional compression prediction only after tensile calibration;
+- do not refit on compression;
+- do not allow compression data to influence tensile fitting or selection.
 
-Before generic `mu0` reporting, update Neo-Hookean metadata to define:
+Do not begin D5 automatically.
 
-```text
-mu0 = mu
-```
+## Later phase: D5
 
-Do not begin D4 automatically.
-
-## Later phases
-
-### D4 — Range sensitivity and optional validation
-
-- one-factor sensitivity to the upper fitted deformation;
-- optional compression prediction with fixed tensile-calibrated parameters;
-- no compression refitting or influence on tensile selection.
-
-### D5 — Driver, outputs, and real validation
+D5 should add the maintained public orchestration entrypoint, real-study driver, limited nonredundant outputs, documentation, and real validation.
 
 Planned driver:
 
@@ -227,10 +234,10 @@ git rev-parse HEAD
 git rev-parse origin/main
 ```
 
-After D2 is merged, create a new D3 branch from updated `main`, for example:
+After D3 is merged, create a new D4 branch from updated `main`, for example:
 
 ```bash
-git switch -c feature/tensile-application-range-selection
+git switch -c feature/tensile-application-range-audit
 ```
 
 ## Maintenance rules
