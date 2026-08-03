@@ -56,7 +56,10 @@ verifyFalse(testCase, isfield(config, "maximum"));
 verifyTrue(testCase, isfield(config, "fitting"));
 verifyTrue(testCase, isfield(config, "normalization"));
 verifyEqual(testCase, config.specimenWeighting, "equal");
-verifyFalse(testCase, isfield(config, "export"));
+verifyTrue(testCase, isfield(config, "export"));
+verifyFalse(testCase, logical(config.export.enabled));
+verifyEqual(testCase, string(config.export.outputFolder), ...
+    "results/tensile-application-range-characterization");
 end
 
 function testRangeIsConfigurableAndNotHardcoded(testCase)

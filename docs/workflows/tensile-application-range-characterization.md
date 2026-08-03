@@ -2,28 +2,42 @@
 
 ## Status
 
-D1 input/range contracts, D2 shared fitting, D3 parsimonious selection, and D4 range sensitivity with optional fixed-parameter compression validation are implemented on the active feature branch.
+D1-D5 are implemented on the active feature branch. The maintained capability now includes input/range normalization, shared candidate fitting, parsimonious selection, range-sensitivity auditing, optional fixed-parameter compression validation, a public orchestration entrypoint, nonredundant export, and a real-study driver.
 
-Plotting, export, the public orchestration entrypoint, the real-study driver, and real-data validation remain for D5.
+The remaining work is experimental validation with the maintained real studies and any evidence-driven visualization refinements.
 
-This capability is a maintained add-on to a completed tensile study:
+## Public workflow
+
+```matlab
+config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    tensileStudy, config);
+```
+
+Optional compression validation:
+
+```matlab
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    tensileStudy, config, compressionStudy);
+```
+
+The workflow composes the maintained contracts without duplicating their logic:
 
 ```text
-runTensileStudy
-    -> completed tensile study
+completed tensile study
     -> normalizeTensileApplicationRangeStudy
     -> fitTensileApplicationRangeModels
     -> selectTensileApplicationRangeModel
-    -> optional range-sensitivity audit
-    -> optional fixed-parameter compression validation
+    -> auditTensileApplicationRangeSensitivity
+    -> optional validateTensileApplicationRangeCompression
+    -> optional exportTensileApplicationRangeCharacterization
 ```
 
-It must not re-import workbooks or repeat tensile preprocessing.
+It does not re-import raw workbooks or repeat tensile preprocessing.
 
 ## Maintained configuration
 
 ```matlab
-config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
 config.deformationMeasure = "engineering-strain";
 config.fitRange = [0, 0.30];
 config.minimumObservationsPerSpecimen = 10;
@@ -39,26 +53,34 @@ config.selection.practicalObjectiveTolerance = 0.02;
 config.selection.tieBreakOrder = config.candidateModelNames;
 config.rangeSensitivity.maximumDeformations = [0.20; 0.25; 0.30];
 config.compressionValidation.minimumSpecimens = 1;
+config.export.enabled = false;
+config.export.outputFolder = ...
+    "results/tensile-application-range-characterization";
 ```
 
-A two-element vector represents each closed fitting interval. Sensitivity maxima are stored as one ordered numeric vector.
+Closed fitting intervals use one two-element vector. Sensitivity maxima use one ordered numeric vector.
 
-## D1-D3 maintained pipeline
+## Result contract
 
-```matlab
-normalized = mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
-    tensileStudy, config);
+The public result includes:
 
-candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
-    normalized, config);
-
-selection = mechanics.workflow.selectTensileApplicationRangeModel( ...
-    candidates, config);
+```text
+normalized
+candidates
+candidateSummary
+selectedModelName
+selectedFit
+referenceProperties
+selection
+rangeSensitivity
+compressionValidation
+hasCompressionValidation
+config
+createdAt
+outputFiles
 ```
 
-D1 restricts existing processed tensile observations without mutating source data. D2 estimates one shared parameter vector per candidate model, using equal influence per specimen. D3 rejects ineligible candidates, applies practical equivalence, prefers fewer parameters, and derives reference quantities through `modelRegistry`.
-
-Registry-derived reference properties are:
+The selected reference quantity is evaluated through `modelRegistry`:
 
 ```text
 Neo-Hookean:   mu0 = mu
@@ -66,28 +88,15 @@ Mooney-Rivlin: mu0 = 2 * (C10 + C01)
 Yeoh:          mu0 = 2 * C10
 ```
 
-## D4 range-sensitivity audit
+## Range sensitivity
+
+Each configured upper range limit reruns the maintained D1-D3 pipeline while changing only:
 
 ```matlab
-audit = mechanics.workflow.auditTensileApplicationRangeSensitivity( ...
-    tensileStudy, config);
+scenarioConfig.fitRange(2)
 ```
 
-For each configured upper deformation limit, D4 reuses the full D1-D3 contract with only `scenarioConfig.fitRange(2)` changed.
-
-Each scenario records:
-
-```text
-maximumDeformation
-status
-normalized
-candidates
-selection
-errorIdentifier
-errorMessage
-```
-
-The summary table records:
+The audit preserves complete scenario evidence and exposes a summary with:
 
 ```text
 MaximumDeformation
@@ -97,109 +106,48 @@ Objective
 Mu0
 ```
 
-Scenario order follows `config.rangeSensitivity.maximumDeformations`. Invalid or repeated maxima are rejected. A failed scenario is recorded independently and does not erase other scenario evidence.
+Failed scenarios are retained independently.
 
-## D4 optional compression validation
+## Compression validation
 
-```matlab
-validation = mechanics.workflow.validateTensileApplicationRangeCompression( ...
-    selection, compressionStudy, config);
-```
+Compression is external validation only. The tensile-selected model and parameters remain fixed.
 
-Compression is external validation only. The selected tensile model and fitted parameter vector are held fixed.
+The implementation reuses the maintained compression normalization contract and evaluates predictions through `mechanics.models.evaluateModel`.
 
-The implementation reuses the maintained compression mode contract through:
-
-```matlab
-mechanics.workflow.normalizeJointCharacterizationStudies
-```
-
-with one `compression` mode. This preserves existing validation of signs, units, measures, finite observations, and completed-study structure.
-
-Predictions are evaluated with:
-
-```matlab
-mechanics.models.evaluateModel( ...
-    selection.selectedModelName, ...
-    compressionDeformation, ...
-    selection.selectedFit.parameters, ...
-    compressionContext)
-```
-
-The result declares:
+The result explicitly records:
 
 ```matlab
 validation.refitPerformed = false;
 ```
 
-Compression data cannot influence tensile normalization, fitting, candidate eligibility, or selection.
+Compression cannot influence tensile normalization, fitting, candidate eligibility, or selection.
 
-The validation result includes:
+## Export
 
-```text
-modelName
-parameters
-refitPerformed
-normalizedCompression
-specimens
-specimenSummary
-meanRMSE
-meanNormalizedRMSE
-config
-createdAt
-```
-
-Each compression specimen retains predictions, residuals, and its normalization scale.
-
-## Reuse decisions
-
-D4 reuses D1 normalization, D2 candidate fitting, and D3 selection directly for every sensitivity scenario. It does not introduce a parallel fitting or ranking implementation.
-
-Compression validation reuses the existing joint-mode normalizer because its single-mode compression contract is physically identical to the required external-validation input contract. It does not call joint fitting or joint selection.
-
-No compatibility wrapper, bridge file, alias layer, or one-caller helper was added.
-
-## Validation evidence
-
-The user reported successful execution of:
+When `config.export.enabled` is true, the maintained exporter writes:
 
 ```text
-tests/test_tensile_application_range_input_contract.m
-tests/test_tensile_application_range_fitting.m
-tests/test_tensile_application_range_selection.m
-tests/test_tensile_application_range_audit.m
-run_all_tests()
+candidate_model_summary.csv
+selected_parameters.csv
+reference_properties.csv
+tensile_specimen_fit_summary.csv
+range_sensitivity_summary.csv
+compression_validation_summary.csv   % only when compression is supplied
+tensile_application_range_characterization.mat
+tensile_application_range_characterization.md
 ```
 
-D4 behavioral coverage includes:
+Complete observations, predictions, residuals, candidates, and scenario evidence remain in the MAT result. Curves are not duplicated into additional CSV files.
 
-- execution of every configured upper-range scenario;
-- source tensile-study immutability;
-- stable synthetic model and `mu0` recovery across scenarios;
-- rejection of invalid or repeated sensitivity maxima;
-- fixed-parameter compression prediction;
-- explicit evidence that no compression refitting occurred;
-- near-exact synthetic compression recovery;
-- minimum compression-specimen enforcement.
+No new figures are generated in D5. Plotting should be added only after real-result inspection demonstrates a nonredundant scientific need.
 
-Do not claim additional MATLAB validation beyond this user-reported evidence.
-
-## D5 — Public workflow, outputs, and real validation
-
-D5 should add the maintained public orchestration entrypoint:
-
-```matlab
-result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
-    tensileStudy, config);
-```
-
-Planned real driver:
+## Real-study driver
 
 ```text
 studies/tension/run_tensile_application_range_characterization.m
 ```
 
-Primary local input:
+Primary input:
 
 ```text
 results/real-tensile-study/tensile_study.mat
@@ -211,7 +159,34 @@ Optional validation input:
 results/real-compression-study/compression_study.mat
 ```
 
-D5 should add only nonredundant plotting/export outputs and perform real-data validation. Generated files remain under ignored `results/` paths.
+Generated files remain under ignored `results/` paths.
+
+## Validation evidence
+
+The user reported successful execution of:
+
+```text
+tests/test_tensile_application_range_input_contract.m
+tests/test_tensile_application_range_fitting.m
+tests/test_tensile_application_range_selection.m
+tests/test_tensile_application_range_audit.m
+tests/test_tensile_application_range_workflow.m
+run_all_tests()
+```
+
+The D5 validation also confirmed that the default export configuration is present, disabled, and points to the maintained output folder.
+
+Do not claim real-data validation until the driver has been executed and its generated outputs have been inspected.
+
+## Remaining work
+
+The required algorithmic workflow is complete. Remaining work is:
+
+1. execute the real-study driver;
+2. inspect selected model, parameters, `mu0`, specimen errors, sensitivity, and optional compression prediction;
+3. inspect exported CSV, MAT, and Markdown artifacts;
+4. add plotting only if the real outputs reveal a specific nonredundant need;
+5. document scientific interpretation and limitations from the real analysis.
 
 ## Explicit exclusions
 
@@ -228,11 +203,9 @@ Do not add:
 
 ## Validation gate
 
-For every phase:
-
 1. run focused behavioral tests;
 2. run `run_all_tests()`;
-3. inspect generated artifacts when outputs exist;
-4. use synthetic recovery before interpreting real fits;
-5. run `git diff --check` and verify no generated files are tracked;
+3. run `git diff --check`;
+4. verify no generated files are tracked;
+5. inspect real generated artifacts before interpreting results;
 6. do not merge unless explicitly requested.
