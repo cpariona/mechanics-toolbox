@@ -39,11 +39,11 @@ figureHandle = ...
 cleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
 axesHandles = findall(figureHandle, "Type", "axes");
 labels = string(get(findall(axesHandles, "Type", "line"), "DisplayName"));
-verifyEqual(testCase, nnz(contains(labels, "Shared tensile-calibrated prediction")), 1);
-titles = string(get(findall(figureHandle, "Type", "axes"), "Title"));
-titleText = strings(numel(titles), 1);
-for index = 1:numel(titles)
-    titleText(index) = string(titles(index).String);
+verifyEqual(testCase, ...
+    nnz(contains(labels, "Shared tensile-calibrated prediction")), 1);
+titleText = strings(numel(axesHandles), 1);
+for index = 1:numel(axesHandles)
+    titleText(index) = string(axesHandles(index).Title.String);
 end
 verifyTrue(testCase, any(contains(titleText, ...
     "|measured| - |shared prediction|")));
