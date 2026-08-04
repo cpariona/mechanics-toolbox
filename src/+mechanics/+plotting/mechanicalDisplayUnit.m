@@ -13,6 +13,9 @@ switch quantity
         end
     case "stress"
         % Stress units are already explicit and are preserved.
+    case {"objective", "normalized", "normalized-objective", ...
+            "normalized-rmse", "normalized-loss"}
+        unit = "-";
     otherwise
         error("mechanics:plotting:UnknownMechanicalDisplayQuantity", ...
             "Unsupported mechanical display quantity: %s.", quantity);
