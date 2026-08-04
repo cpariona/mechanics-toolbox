@@ -33,7 +33,7 @@ referencePrediction = mechanics.models.evaluateModel( ...
 colors = lines(numel(specimens));
 figureHandle = figure("Color", "w");
 layout = tiledlayout(figureHandle, 2, 1, ...
-    "TileSpacing", "compact", "Padding", "compact");
+    "TileSpacing", "loose", "Padding", "compact");
 fitAxes = nexttile(layout, 1);
 hold(fitAxes, "on")
 for index = 1:numel(specimens)
