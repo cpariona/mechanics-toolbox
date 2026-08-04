@@ -1,5 +1,5 @@
 function label = mechanicalAxisLabel(quantity, measure, unit)
-%MECHANICALAXISLABEL Build consistent mechanical axis labels with units.
+%MECHANICALAXISLABEL Build concise mechanical axis labels with units.
 arguments
     quantity (1,1) string
     measure (1,1) string = ""
@@ -9,6 +9,8 @@ quantity = lower(strtrim(quantity));
 measure = lower(strtrim(measure));
 if quantity == "deformation"
     displayUnit = mechanics.plotting.mechanicalDisplayUnit("deformation", unit);
+elseif quantity == "objective"
+    displayUnit = mechanics.plotting.mechanicalDisplayUnit("objective", unit);
 else
     displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
 end
@@ -32,23 +34,11 @@ switch quantity
                 base = "Stress";
         end
     case "residual"
-        switch measure
-            case "nominal"
-                base = "Nominal stress residual";
-            case "cauchy"
-                base = "Cauchy stress residual";
-            otherwise
-                base = "Stress residual";
-        end
+        base = "Residual";
     case "compression-magnitude-residual"
-        switch measure
-            case "nominal"
-                base = "Nominal compressive-stress magnitude residual";
-            case "cauchy"
-                base = "Cauchy compressive-stress magnitude residual";
-            otherwise
-                base = "Compressive-stress magnitude residual";
-        end
+        base = "Magnitude residual";
+    case "objective"
+        base = "Objective";
     otherwise
         error("mechanics:plotting:UnknownMechanicalAxisQuantity", ...
             "Unsupported mechanical axis quantity: %s.", quantity);
