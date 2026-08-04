@@ -19,7 +19,7 @@ referencePrediction = mechanics.models.evaluateModel( ...
 
 figureHandle = figure("Color", "w");
 layout = tiledlayout(figureHandle, 2, 1, ...
-    "TileSpacing", "compact", "Padding", "compact");
+    "TileSpacing", "loose", "Padding", "compact");
 colors = lines(numel(specimens));
 fitAxes = nexttile(layout, 1);
 hold(fitAxes, "on")
