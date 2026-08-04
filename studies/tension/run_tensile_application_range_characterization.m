@@ -33,7 +33,7 @@ end
 
 %% 2. CHARACTERIZATION CONFIGURATION
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-config.fitRange = [0, 0.30];
+config.fitRange = [0, 0.50];
 config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
 config.fitting.numberOfStarts = 8;
 config.fitting.randomSeed = 1;
@@ -42,7 +42,7 @@ config.fitting.maxFunctionEvaluations = 10000;
 config.selection.requireConvergence = true;
 config.selection.practicalObjectiveTolerance = 0.02;
 config.selection.tieBreakOrder = config.candidateModelNames;
-config.rangeSensitivity.maximumDeformations = [0.20; 0.25; 0.30];
+config.rangeSensitivity.maximumDeformations = [0.30; 0.40; 0.50];
 config.compressionValidation.minimumSpecimens = 1;
 config.export.enabled = true;
 config.export.outputFolder = outputFolder;
