@@ -181,7 +181,7 @@ if isfield(result, "hasCompressionValidation") && result.hasCompressionValidatio
         char(string(result.compressionValidation.refitPerformed)));
     fprintf(fileId, "Mean RMSE: %.6g %s\n\n", ...
         result.compressionValidation.meanRMSE, char(compressionUnits.stress));
-    fprintf(fileId, "Mean normalized RMSE: %.6g [dimensionless]\n\n", ...
+    fprintf(fileId, "Mean normalized RMSE: %.6g [-]\n\n", ...
         result.compressionValidation.meanNormalizedRMSE);
     fprintf(fileId, ...
         "Compression residual figure convention: `|measured| - |prediction|`.\n\n");
@@ -193,7 +193,7 @@ fprintf(fileId, "## Interpretation boundaries\n\n");
 fprintf(fileId, "- The selected model is conditional on the configured candidates, bounds, normalization, and fitted tensile range.\n");
 fprintf(fileId, "- Range sensitivity varies only the upper fitted deformation boundary.\n");
 fprintf(fileId, "- Compression, when supplied, is external prediction validation with fixed tensile-calibrated parameters and does not affect selection.\n");
-fprintf(fileId, "- Normalized objective, normalized RMSE, and normalized loss are dimensionless.\n");
+fprintf(fileId, "- Normalized objective, normalized RMSE, and normalized loss use the display unit `[-]`.\n");
 end
 
 function localWriteFigure(fileId, titleText, filePath)
