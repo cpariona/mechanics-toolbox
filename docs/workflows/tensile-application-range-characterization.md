@@ -60,7 +60,7 @@ It is consumed by `mechanicalAxisLabel` and by application-range export. Joint-c
 - model parameters and `mu0` use the stress unit;
 - normalization scale, RMSE, and maximum absolute error use the stress unit;
 - deformation limits use `mm/mm` for dimensionless strain;
-- normalized objective, normalized RMSE, and normalized loss are dimensionless;
+- normalized objective, normalized RMSE, and normalized loss use the display unit `[-]`;
 - labels distinguish engineering/true strain and nominal/Cauchy stress.
 
 ## Maintained figures
@@ -79,7 +79,7 @@ The lower panel recomputes, for every specimen:
 residual = measured stress - shared prediction
 ```
 
-at that specimen's deformation observations.
+at that specimen's deformation observations. Its vertical label is intentionally concise (`Residual [stress unit]`); the complete convention remains in the panel title.
 
 ### Range sensitivity
 
@@ -87,7 +87,7 @@ at that specimen's deformation observations.
 mechanics.plotting.plotTensileApplicationRangeSensitivity(result)
 ```
 
-The figure shows `mu0` and normalized objective versus the upper fitted deformation limit. When one model is selected for every scenario, its name appears once in the title instead of being repeated at every point.
+The figure shows `mu0` and normalized objective versus the upper fitted deformation limit. When one model is selected for every scenario, its name appears once in the title instead of being repeated at every point. Vertical labels are shortened to `mu0 [stress unit]` and `Objective [-]`.
 
 ### Compression validation
 
@@ -103,7 +103,9 @@ Because compression stresses are negative under the maintained sign convention, 
 |measured stress| - |shared prediction|
 ```
 
-A positive value therefore indicates that the tensile-calibrated model underpredicts the measured compressive-stress magnitude.
+A positive value therefore indicates that the tensile-calibrated model underpredicts the measured compressive-stress magnitude. Its vertical label is shortened to `Magnitude residual [stress unit]`, while the full definition remains in the panel title.
+
+All maintained two-panel figures use a looser vertical tile spacing to prevent titles and vertical labels from overlapping.
 
 ## Export
 
@@ -140,9 +142,9 @@ Compression cannot influence tensile fitting, eligibility, or model selection. T
 
 ## Validation status
 
-The pre-figure D1-D5 implementation passed all focused tests and `run_all_tests()` according to the user.
+The user reported that the figure tests and complete repository suite passed before the final compact-label adjustment.
 
-The figure corrections still require local MATLAB validation. Required checks:
+The final label and spacing corrections require local MATLAB validation. Required checks:
 
 1. run `tests/test_tensile_application_range_figures.m`;
 2. run `tests/test_tensile_application_range_workflow.m`;
