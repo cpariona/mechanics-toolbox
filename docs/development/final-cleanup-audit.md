@@ -1,6 +1,6 @@
 # Final repository cleanup audit
 
-This audit records the repository state after completion of the tensile-study comparison migration.
+> Historical snapshot: this document records the repository state after the tensile-study comparison migration. Its former “Remaining work” section reflected the state at that time and is not the current roadmap. Current priorities are maintained only in `docs/development/context-handoff.md`.
 
 ## Maintained tensile workflows
 
@@ -56,7 +56,7 @@ The workflow does not re-import files or rerun specimen processing.
 
 ## Test audit
 
-Permanent tests now protect:
+Permanent tests protect:
 
 - study-result validation;
 - label count and uniqueness;
@@ -69,9 +69,9 @@ Permanent tests now protect:
 
 No transitional validation script is retained.
 
-## Remaining work
+## Historical deferred items
 
-The initial comparison contract covers population curves and scalar mechanical metrics. Possible later extensions are:
+At the time of this audit, the following were still deferred:
 
 - selected constitutive parameter comparison;
 - initial shear-modulus comparison;
@@ -79,9 +79,9 @@ The initial comparison contract covers population curves and scalar mechanical m
 - dedicated study-comparison export and reporting;
 - representative validation with two real material workbooks.
 
-These extensions should compose existing results and must not refit or reprocess data unless explicitly requested.
+Several of these capabilities were implemented later. This list is preserved only as historical context and must not be used to infer current repository gaps.
 
-## Validation before merge
+## Validation recorded at the time
 
 - `tests/test_tensile_study_comparison.m`;
 - `tests/test_tensile_study_input_contracts.m`;
