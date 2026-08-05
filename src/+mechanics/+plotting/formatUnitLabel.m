@@ -1,15 +1,11 @@
 function label = formatUnitLabel(name, unit)
-%FORMATUNITLABEL Append a bracketed unit to a plotting label.
+%FORMATUNITLABEL Append a bracketed display unit to a plotting label.
 arguments
     name (1,1) string
     unit (1,1) string
 end
 
-if contains(lower(name), "strain") && ...
-        (unit == "-" || unit == "1" || strlength(unit) == 0)
-    unit = "mm/mm";
-end
-
+unit = strtrim(unit);
 if strlength(unit) == 0
     label = name;
 else
