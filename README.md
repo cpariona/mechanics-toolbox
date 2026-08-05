@@ -17,6 +17,9 @@ MATLAB toolbox for reproducible processing, constitutive fitting, statistical an
 - replicate population statistics and bootstrap intervals;
 - group comparison and selected-parameter inference;
 - tensile and compression study workflows;
+- joint tension-compression material characterization;
+- tensile application-range characterization with parsimonious shared-model selection;
+- fit-range sensitivity and fixed-parameter external compression validation;
 - measurement-aware Monte Carlo refitting;
 - end-to-end execution, figures, and reporting.
 
@@ -98,6 +101,34 @@ comparison = mechanics.workflow.compareCompressionStudies( ...
     [studyA, studyB], ["Condition A", "Condition B"]);
 ```
 
+## Tensile application-range characterization
+
+Consume a completed tensile study and optionally validate the tensile-calibrated model against a completed compression study without refitting:
+
+```matlab
+config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    tensileStudy, config, compressionStudy);
+```
+
+The workflow performs shared candidate fitting, parsimonious selection, registry-derived reference-property evaluation, range-sensitivity auditing, unit-aware export, and optional external compression prediction.
+
+Maintained real-study driver:
+
+```text
+studies/tension/run_tensile_application_range_characterization.m
+```
+
+## Joint material characterization
+
+Joint characterization consumes completed tensile and compression studies through one explicit workflow and does not re-import raw workbooks or rerun the individual study pipelines.
+
+```matlab
+config = mechanics.config.jointMaterialCharacterizationConfig();
+result = mechanics.workflow.runJointMaterialCharacterization( ...
+    tensileStudy, compressionStudy, config);
+```
+
 ## Shared uniaxial architecture
 
 Tension and compression share import normalization, mechanical measures, tangent modulus, constitutive fitting, uncertainty, population analysis, group comparison, unit-aware labels, and maintained figure export when their contracts are identical.
@@ -111,7 +142,7 @@ Stored mechanics use physical signs. Compression reports may display positive ma
 
 ## Reporting and figure export
 
-Maintained reports are exposed through `mechanics.io`, including tensile, compression, and constitutive study reports.
+Maintained reports are exposed through `mechanics.io`, including tensile, compression, constitutive, joint-characterization, and tensile application-range reports.
 
 Every maintained workflow figure is persisted through `mechanics.plotting.exportFigureFiles` as:
 
