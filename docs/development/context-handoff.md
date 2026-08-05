@@ -8,198 +8,187 @@ Use this document as the persistent starting point for future repository work.
 cpariona/mechanics-toolbox
 ```
 
-Do not modify `main`, open a pull request, or merge changes unless explicitly requested.
-
 ## Current merged baseline
 
-PR #48 is merged on `main`:
+The repository is integrated on `main` after PR #50.
+
+Observed aligned state before this documentation update:
 
 ```text
-366aa54ef8b5ddbfbcb77360b84e06f4baf20276
+main == origin/main
+e506d61e53eb5f584f544e7916ed7b951c089459
 ```
 
-It includes D1-D4 for tensile application-range characterization: input/range contracts, shared fitting, parsimonious selection, range-sensitivity auditing, and optional fixed-parameter compression validation.
+Local and remote feature branches from the tensile application-range integration were removed. Only `main` remains as the maintained branch.
 
-## Active branch
+## Completed integration
 
-```text
-feature/tensile-application-range-workflow
-```
+The tensile application-range characterization capability is complete and merged. It includes:
 
-Purpose:
+- normalization of completed tensile-study inputs;
+- shared fitting of Neo-Hookean, Mooney-Rivlin, and Yeoh candidates;
+- parsimonious model selection;
+- registry-derived reference properties;
+- sensitivity to the upper tensile fitting limit;
+- optional compression prediction with fixed tensile-calibrated parameters and no refitting;
+- maintained public orchestration;
+- CSV, MAT, Markdown, PNG, and FIG export;
+- unit-aware figures and reports;
+- focused plotting tests and repository-wide regression validation.
 
-```text
-D5 — public workflow, export, real-study driver, and validation closure
-```
-
-## D5 implementation status
-
-Implemented:
-
-```text
-src/+mechanics/+workflow/runTensileApplicationRangeCharacterization.m
-src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
-studies/tension/run_tensile_application_range_characterization.m
-tests/test_tensile_application_range_workflow.m
-```
-
-Updated:
-
-```text
-src/+mechanics/+config/tensileApplicationRangeCharacterizationConfig.m
-tests/test_tensile_application_range_input_contract.m
-```
-
-## Public workflow
+Public entrypoint:
 
 ```matlab
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
 result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
-    tensileStudy, config);
-```
-
-Optional compression validation:
-
-```matlab
-result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
     tensileStudy, config, compressionStudy);
 ```
 
-The entrypoint composes D1-D4 directly and does not duplicate their logic.
-
-## Result contract
-
-```text
-normalized
-candidates
-candidateSummary
-selectedModelName
-selectedFit
-referenceProperties
-selection
-rangeSensitivity
-compressionValidation
-hasCompressionValidation
-config
-createdAt
-outputFiles
-```
-
-Compression remains prediction-only external validation and records:
+Compression remains external validation only:
 
 ```matlab
 result.compressionValidation.refitPerformed = false;
 ```
 
-## Export contract
+## Real-study evidence
 
-Configuration:
-
-```matlab
-config.export.enabled = false;
-config.export.outputFolder = ...
-    "results/tensile-application-range-characterization";
-```
-
-When enabled, export produces:
-
-```text
-candidate_model_summary.csv
-selected_parameters.csv
-reference_properties.csv
-tensile_specimen_fit_summary.csv
-range_sensitivity_summary.csv
-compression_validation_summary.csv   % optional
-tensile_application_range_characterization.mat
-tensile_application_range_characterization.md
-```
-
-Complete curves and diagnostic evidence remain in the MAT result. D5 does not create redundant curve CSV files or new figures.
-
-## Real-study driver
+The maintained real-study driver was executed and its generated artifacts were inspected:
 
 ```text
 studies/tension/run_tensile_application_range_characterization.m
 ```
 
-Primary input:
+Observed result:
+
+- selected model: `mooney-rivlin`;
+- selected parameters approximately `C10 = 0.0231222` and `C01 = 0.0054067` in the stored stress unit;
+- reference `mu0` approximately `0.0570579` in the stored stress unit;
+- stable model selection from upper deformation limits `0.30`, `0.40`, and `0.50`;
+- approximately 1.55% total variation in `mu0` across those limits;
+- good tensile fit for the first three retained specimens and a larger, still bounded mismatch for the fourth;
+- compression prediction without refitting systematically underpredicts measured compressive-stress magnitude.
+
+These observations support the tensile characterization but limit direct quantitative transfer from tension to compression.
+
+## Maintained units contract
+
+Stored physical values are not rescaled for presentation.
+
+Human-facing outputs use:
 
 ```text
-results/real-tensile-study/tensile_study.mat
+dimensionless strain -> mm/mm
+stress and stress-like parameters -> stored stress unit, typically MPa
+normalized objective, normalized RMSE, and normalized loss -> [-]
 ```
 
-Optional input:
+Shared presentation helpers:
 
 ```text
-results/real-compression-study/compression_study.mat
+mechanics.plotting.mechanicalDisplayUnit
+mechanics.plotting.mechanicalAxisLabel
 ```
-
-The driver loads completed study results only. It does not re-import workbooks or repeat preprocessing.
 
 ## Validation evidence
 
-The user reported successful execution of:
+The user reported successful local execution after the final figure corrections:
 
 ```text
-tests/test_tensile_application_range_input_contract.m
-tests/test_tensile_application_range_fitting.m
-tests/test_tensile_application_range_selection.m
-tests/test_tensile_application_range_audit.m
+tests/test_tensile_application_range_figures.m
 tests/test_tensile_application_range_workflow.m
 run_all_tests()
 ```
 
-An obsolete D1 assertion that required the absence of `config.export` was corrected after D5 introduced a maintained consumer. The current test verifies that export exists, is disabled by default, and points to the maintained output folder.
+The real driver was rerun and the final tensile, sensitivity, and compression figures were visually accepted.
 
-Do not claim real-study or artifact validation beyond this synthetic and repository-wide MATLAB evidence.
+## Next maintenance phase
 
-## Remaining work after D5 merge
+The next phase is a focused source-organization and contract-consolidation audit. It is not a new scientific workflow and must not alter validated numerical behavior without explicit evidence.
 
-The required algorithmic capability is complete. Remaining work is experimental closure:
+Primary goals:
 
-1. execute the real-study driver locally;
-2. inspect selected model, parameters, `mu0`, candidate evidence, and specimen errors;
-3. inspect stability across the configured upper fitting limits;
-4. inspect optional compression predictions and confirm no refitting;
-5. inspect exported CSV, MAT, and Markdown files;
-6. add figures only when real outputs demonstrate a specific nonredundant scientific need;
-7. document scientific interpretation, sensitivity, external validity, and limitations.
+1. consolidate human-facing unit presentation;
+2. remove or reduce overlapping plotting-unit helpers;
+3. migrate older maintained figures to the shared unit-aware label contract where their inputs contain sufficient metadata;
+4. extract genuinely shared Markdown table serialization used by multiple maintained exporters;
+5. document naming boundaries between `tension`, `tensile`, specimen-level mechanics, and study-level workflows;
+6. verify package ownership and identify misplaced functions without reorganizing packages for cosmetic symmetry;
+7. update tests only to protect maintained behavior, not obsolete aliases or temporary migration states.
 
-No new mandatory algorithmic phase is defined. Any later code should respond to concrete evidence from real validation.
+Initial files to inspect:
 
-## Repository verification
-
-Before opening or merging the D5 PR:
-
-```bash
-git fetch origin --prune
-git switch feature/tensile-application-range-workflow
-git pull --ff-only origin feature/tensile-application-range-workflow
-git diff --check
-git status -sb
-git ls-files --others --exclude-standard
+```text
+src/+mechanics/+plotting/formatUnitLabel.m
+src/+mechanics/+plotting/mechanicalDisplayUnit.m
+src/+mechanics/+plotting/mechanicalAxisLabel.m
+src/+mechanics/+plotting/resolveStudyUnits.m
+src/+mechanics/+plotting/plotStressStrain.m
+src/+mechanics/+plotting/plotModelFit.m
+src/+mechanics/+io/exportJointMaterialCharacterization.m
+src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
 ```
 
-After D5 is merged:
+## Required architecture contracts
+
+- Favor simplicity, structure, order, and explicit ownership.
+- Keep reusable implementation under `src/+mechanics`.
+- Keep real experiment drivers under `studies`.
+- Keep runnable demonstrations under `examples` and regression coverage under `tests`.
+- Do not add implementation at repository root; maintained root MATLAB entrypoints are `startup.m` and `run_all_tests.m`.
+- Extract shared code only when at least two maintained callers use the same physical and data contract.
+- Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
+- Do not reorganize packages merely because a folder has many files.
+- Preserve public APIs unless a demonstrated structural defect justifies migration.
+- Use the model registry rather than scattering model-name conditionals when the contracts are identical.
+- Keep model evaluation in `mechanics.models`, optimization in `mechanics.fitting`, population inference in `mechanics.statistics`, deterministic mechanical calculations in `mechanics.analysis`, and orchestration in `mechanics.workflow`.
+- Keep individual tensile, compression, joint-characterization, and tensile application-range workflows distinct.
+- Preserve completed-study add-ons as consumers of canonical completed study results; do not re-import or reprocess raw data.
+- Preserve stored physical values and signs. Presentation conventions must not silently change numerical state.
+- Generated data and outputs remain under ignored `results/` paths.
+- Do not merge a pull request unless explicitly requested.
+
+## Efficiency requirements
+
+- Inspect callers before extracting, moving, or deleting a function.
+- Prefer one small shared contract over parallel near-duplicates.
+- Avoid broad rewrites when a localized consolidation is sufficient.
+- Keep tests focused by subsystem and avoid repeating expensive end-to-end workflows unnecessarily.
+- Do not retain obsolete migration tests after canonical behavioral coverage exists.
+- Update canonical documentation in the same phase as structural changes.
+
+## Session bootstrap
+
+Before proposing or modifying code in a new session:
+
+1. read this file completely;
+2. read `docs/development/repository-structure.md`;
+3. read the relevant workflow and testing documents;
+4. verify Git state:
 
 ```bash
-git switch main
 git fetch origin --prune
+git switch main
 git pull --ff-only origin main
 git status -sb
 git rev-parse HEAD
 git rev-parse origin/main
 ```
 
-## Maintenance rules
+5. create a dedicated branch for code changes unless the user explicitly requests direct work on `main`;
+6. inspect current callers and tests before proposing moves or shared helpers;
+7. define the smallest coherent phase and its validation gate before implementation.
 
-- Favor simplicity, structure, order, and explicit contracts.
-- Represent intervals as two-element vectors where appropriate.
-- Share code only for genuinely shared physical and data contracts.
-- Keep reusable implementation under `src/+mechanics` and real drivers under `studies`.
-- Do not preserve obsolete APIs through wrappers or aliases.
-- Do not add bridge files or one-caller helpers for superficial symmetry.
-- Use the model registry instead of model-name conditionals where contracts match.
-- Keep individual, joint, and tensile application-range workflows distinct.
-- Keep generated data and outputs under ignored `results/` paths.
-- Do not merge a pull request unless explicitly requested.
+## Validation gate for the next phase
+
+At minimum:
+
+```text
+focused plotting/export tests
+all directly affected workflow tests
+run_all_tests()
+git diff --check
+git status -sb
+no generated files tracked
+```
+
+Do not claim MATLAB validation unless the user reports the actual local result.
