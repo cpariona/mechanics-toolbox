@@ -14,13 +14,17 @@ outputFiles = struct();
 format = lower(string(config.figureFormat));
 records = study.analysis.records;
 units = mechanics.plotting.resolveStudyUnits(records);
+strainDisplayUnit = mechanics.plotting.mechanicalDisplayUnit( ...
+    "deformation", units.strain);
+stressDisplayUnit = mechanics.plotting.mechanicalDisplayUnit( ...
+    "stress", units.stress);
 studyTitle = localStudyTitle(study, config);
 strainLabel = mechanics.plotting.formatUnitLabel( ...
-    "Engineering strain, \epsilon", units.strain);
+    "Engineering strain, \epsilon", strainDisplayUnit);
 stressLabel = mechanics.plotting.formatUnitLabel( ...
-    localStressName(study), units.stress);
+    localStressName(study), stressDisplayUnit);
 modulusLabel = mechanics.plotting.formatUnitLabel( ...
-    "Tangent modulus", units.stress);
+    "Tangent modulus", stressDisplayUnit);
 
 if config.includeIndividualCurves
     figureHandle = figure("Visible", "off", "Color", "w", ...
@@ -106,7 +110,7 @@ if config.includePeakMetrics && ...
     axesHandle = nexttile;
     bar(axesHandle, labels, summary.PeakStress);
     ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
-        "Peak nominal stress", units.stress));
+        "Peak nominal stress", stressDisplayUnit));
     title(axesHandle, "Peak stress");
     axesHandle.XTickLabelRotation = 25;
     grid(axesHandle, "on");
