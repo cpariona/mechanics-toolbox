@@ -26,19 +26,45 @@ Test files are grouped by subsystem or workflow rather than by implementation ph
 - fitting, diagnostics, uncertainty, and model selection;
 - tensile and compression workflows;
 - population and group analysis;
-- exports and reports;
+- plotting and presentation contracts;
+- Markdown serialization, exports, and reports;
 - end-to-end regression behavior.
 
-`test_measurement_monte_carlo.m` covers measurement-uncertainty propagation through constitutive refitting. `test_compression_population.m` covers compression fitting, default calibrated length, population aggregation, and group comparison. Keeping these concerns separate makes failures easier to localize.
+`test_plotting_units.m` protects the stored-unit, display-unit, and mechanical-label boundary. It also verifies that label migration does not alter plotted data.
+
+`test_markdown_table_serialization.m` protects the shared scalar Markdown contract, including numeric precision, non-finite values, missing text, logicals, datetime values, scalar cells, escaped pipes, and the retained blank line after a table.
 
 Tests created only to verify a temporary migration or removed compatibility alias should be deleted once the canonical API is covered by functional tests. Test count alone is not a cleanup target; redundant behavior coverage, duplicated fixtures, and unnecessarily repeated expensive workflows are.
 
-Run one test file directly:
+## Running focused tests
+
+Calling a function-based test file by name constructs and displays its suite but does not execute the tests:
+
+```matlab
+test_joint_mode_plotting
+```
+
+A returned `Test` array is therefore not a pass or failure result.
+
+Execute one test file with `runtests`:
 
 ```matlab
 results = runtests( ...
-    "tests/test_curve_segmentation.m", ...
+    "tests/test_joint_mode_plotting.m", ...
     "IncludeSubfolders", true);
+
+disp(table(results))
+assert(all([results.Passed]), "Focused tests failed.")
+```
+
+Execute several affected files together:
+
+```matlab
+results = runtests([ ...
+    "tests/test_plotting_units.m"
+    "tests/test_markdown_table_serialization.m"
+    "tests/test_joint_mode_plotting.m"
+    ], "IncludeSubfolders", true);
 
 disp(table(results))
 assert(all([results.Passed]), "Focused tests failed.")
@@ -53,7 +79,7 @@ disp(string({suite.Name})')
 
 ## Release validation
 
-Before merging maintenance or release changes, run:
+Before merging maintenance or release changes, run from the branch intended for merge:
 
 ```matlab
 restoredefaultpath
@@ -69,12 +95,32 @@ results = run_all_tests();
 assert(all([results.Passed]), "Repository tests failed.")
 ```
 
-Also verify the Git worktree:
+Also verify the Git state against the intended base branch:
 
 ```bash
-git diff --check
+git fetch origin --prune
+git diff --check origin/main...HEAD
+git diff --stat origin/main...HEAD
 git status -sb
 git ls-files --others --exclude-standard
+git ls-files results
 ```
 
-The release gate is satisfied only when every discovered test passes from the branch intended for merge and no unintended generated files are tracked.
+Review the complete branch diff:
+
+```bash
+git diff origin/main...HEAD
+git log --oneline origin/main..HEAD
+```
+
+The release gate is satisfied only when:
+
+- every discovered MATLAB test passes from the branch intended for merge;
+- no test remains incomplete;
+- `git diff --check` is clean;
+- no unintended generated or untracked files are present;
+- no generated files under `results/` are tracked;
+- documentation reflects the implemented contracts;
+- merge authorization has been given explicitly.
+
+Do not claim MATLAB validation unless the person who ran MATLAB reports the actual result.
