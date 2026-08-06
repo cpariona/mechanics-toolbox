@@ -19,7 +19,7 @@ units = mechanics.plotting.resolveStudyUnits(record);
 
 verifyEqual(testCase, units.force, "kN");
 verifyEqual(testCase, units.displacement, "cm");
-verifyEqual(testCase, units.strain, "-");
+verifyEqual(testCase, units.strain, "mm/mm");
 verifyEqual(testCase, units.stress, "kPa");
 verifyEqual(testCase, units.energy, "J");
 end
@@ -32,7 +32,7 @@ units = mechanics.plotting.resolveStudyUnits(record);
 
 verifyEqual(testCase, units.force, "N");
 verifyEqual(testCase, units.displacement, "mm");
-verifyEqual(testCase, units.strain, "-");
+verifyEqual(testCase, units.strain, "mm/mm");
 verifyEqual(testCase, units.stress, "MPa");
 verifyEqual(testCase, units.energy, "mJ");
 end
@@ -87,4 +87,19 @@ verifyEqual(testCase, string(axesHandle.XLabel.String), "Strain [mm/mm]");
 verifyEqual(testCase, string(axesHandle.YLabel.String), "Stress [kPa]");
 verifyEqual(testCase, lineHandle.XData(:), curve.strain);
 verifyEqual(testCase, lineHandle.YData(:), curve.stress);
+end
+
+function testFittingAuditUsesStoredStressUnitForPresentation(testCase)
+audit.windowSummary = table( ...
+    "specimen-1", "neo-hookean", 1, true, 0.05, ...
+    'VariableNames', {'SpecimenId','Model','WindowFraction', ...
+    'Succeeded','InitialShearModulus'});
+
+figureHandle = mechanics.plotting.plotFittingAudit( ...
+    audit, "Audit", "kPa");
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+axesHandle = findobj(figureHandle, "Type", "axes");
+
+verifyEqual(testCase, string(axesHandle.YLabel.String), ...
+    "Equivalent initial shear modulus [kPa]");
 end
