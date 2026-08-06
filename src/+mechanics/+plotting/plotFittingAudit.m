@@ -68,8 +68,10 @@ for specimenIndex = 1:numel(specimenIds)
 end
 
 xlabel(axesHandle, "Fitting window fraction");
+displayStressUnit = mechanics.plotting.mechanicalDisplayUnit( ...
+    "stress", stressUnit);
 ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
-    "Equivalent initial shear modulus", stressUnit));
+    "Equivalent initial shear modulus", displayStressUnit));
 title(axesHandle, titleText + " — fitting-window audit", ...
     "Interpreter", "none");
 windowMinimum = min(summary.WindowFraction);

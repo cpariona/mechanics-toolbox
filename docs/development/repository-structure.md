@@ -56,6 +56,9 @@ Use terminology consistently:
 
 - `tension` and `compression` describe constitutive modes or specimen-level mechanics;
 - `tensile study` and `compression study` describe experimental workflow families;
+- `specimen-level mechanics` processes or evaluates one specimen;
+- `study-level workflow` orchestrates a complete campaign;
+- `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
 
@@ -63,17 +66,63 @@ Preserve existing public names unless a demonstrated ambiguity or ownership defe
 
 ## Unit-presentation boundary
 
-Stored physical values and units belong to processed results. Human-facing presentation belongs to plotting and export contracts.
+Stored physical values and stored units belong to processed results. Human-facing transformations belong to plotting and export contracts.
+
+The maintained responsibilities are:
+
+```text
+mechanics.plotting.resolveStudyUnits
+    retrieves stored units from completed study records
+
+mechanics.plotting.mechanicalDisplayUnit
+    converts stored units to the display convention for a known physical quantity
+
+mechanics.plotting.mechanicalAxisLabel
+    builds standard labels for known mechanical quantities
+
+mechanics.plotting.formatUnitLabel
+    appends an already resolved display unit to specialized or generic label text
+```
 
 Current display conventions include:
 
 ```text
-dimensionless strain -> mm/mm
+dimensionless deformation -> mm/mm
 normalized quantities -> [-]
 stress-like quantities -> stored stress unit
 ```
 
-A shared presentation helper should own each convention. Avoid parallel near-duplicate unit transformations in individual plotters or exporters.
+`formatUnitLabel` must not infer physical semantics from free-text label content. A caller that uses specialized wording must resolve the display unit explicitly before formatting the label.
+
+A plotter must not invent physical units when its input contract does not retain unit metadata. Extend the producer and result contract first, then migrate the plotter with tests.
+
+## Serialization boundary
+
+`mechanics.io` owns maintained report serialization.
+
+Use:
+
+```text
+mechanics.io.writeMarkdownTable
+```
+
+only for the established scalar Markdown table contract:
+
+```text
+numeric scalars -> %.6g
+NaN and infinities -> explicit text
+missing text -> missing
+logical scalars -> true/false
+datetime -> MATLAB string representation
+scalar cells -> unwrapped
+empty or non-scalar numeric values -> empty cell text
+pipe characters -> escaped
+blank line after the table
+```
+
+Do not force report writers with different behavior for empty tables, missing values, arrays, NaN, or whitespace through this helper. A broader migration requires an intentional canonical contract and direct regression tests.
+
+The shared helper writes only one table to an already open file identifier. It does not open or close files, create report sections, write figures, or act as a report builder.
 
 ## Executable study drivers
 

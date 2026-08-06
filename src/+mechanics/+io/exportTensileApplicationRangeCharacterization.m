@@ -161,17 +161,17 @@ fprintf(fileId, "Fitted range requested: [%g, %g] %s\n\n", ...
 fprintf(fileId, "Selected model: `%s`\n\n", ...
     char(string(result.selectedModelName)));
 fprintf(fileId, "## Selected parameters\n\n");
-localWriteTable(fileId, selectedParameters);
+mechanics.io.writeMarkdownTable(fileId, selectedParameters);
 fprintf(fileId, "## Reference properties\n\n");
-localWriteTable(fileId, properties);
+mechanics.io.writeMarkdownTable(fileId, properties);
 fprintf(fileId, "## Candidate models\n\n");
-localWriteTable(fileId, result.candidateSummary);
+mechanics.io.writeMarkdownTable(fileId, result.candidateSummary);
 fprintf(fileId, "## Tensile specimen fit summary\n\n");
-localWriteTable(fileId, specimenSummary);
+mechanics.io.writeMarkdownTable(fileId, specimenSummary);
 localWriteFigure(fileId, "Tensile fits and residuals", ...
     outputFiles.tensileFitFigure);
 fprintf(fileId, "## Range sensitivity\n\n");
-localWriteTable(fileId, sensitivitySummary);
+mechanics.io.writeMarkdownTable(fileId, sensitivitySummary);
 localWriteFigure(fileId, "Range sensitivity", ...
     outputFiles.rangeSensitivityFigure);
 if isfield(result, "hasCompressionValidation") && result.hasCompressionValidation
@@ -185,7 +185,7 @@ if isfield(result, "hasCompressionValidation") && result.hasCompressionValidatio
         result.compressionValidation.meanNormalizedRMSE);
     fprintf(fileId, ...
         "Compression residual figure convention: `|measured| - |prediction|`.\n\n");
-    localWriteTable(fileId, compressionSummary);
+    mechanics.io.writeMarkdownTable(fileId, compressionSummary);
     localWriteFigure(fileId, "Compression validation", ...
         outputFiles.compressionValidationFigure);
 end
@@ -200,38 +200,4 @@ function localWriteFigure(fileId, titleText, filePath)
 [~, name, extension] = fileparts(filePath);
 fprintf(fileId, "### %s\n\n![%s](%s%s)\n\n", ...
     char(titleText), char(titleText), char(string(name)), char(string(extension)));
-end
-
-function localWriteTable(fileId, input)
-variables = string(input.Properties.VariableNames);
-fprintf(fileId, "| %s |\n", char(strjoin(variables, " | ")));
-fprintf(fileId, "|%s|\n", ...
-    char(strjoin(repmat("---", 1, numel(variables)), "|")));
-for row = 1:height(input)
-    values = strings(1, numel(variables));
-    for column = 1:numel(variables)
-        value = input{row, column};
-        if iscell(value), value = value{1}; end
-        values(column) = localText(value);
-    end
-    fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
-end
-fprintf(fileId, "\n");
-end
-
-function output = localText(value)
-if ismissing(value)
-    output = "missing";
-elseif islogical(value)
-    output = string(value);
-elseif isnumeric(value)
-    if isempty(value) || ~isscalar(value), output = "";
-    elseif isnan(value), output = "NaN";
-    elseif isinf(value), output = string(value);
-    else, output = string(sprintf("%.6g", value)); end
-elseif isdatetime(value)
-    output = string(value);
-else
-    output = replace(string(value), "|", "\\|");
-end
 end

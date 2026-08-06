@@ -74,13 +74,13 @@ fprintf(fileId, "Modes: %s\n\n", ...
     char(strjoin(string(result.modeNames(:))', ", ")));
 
 fprintf(fileId, "## Selected parameters\n\n");
-localWriteTable(fileId, selectedParameters);
+mechanics.io.writeMarkdownTable(fileId, selectedParameters);
 fprintf(fileId, "## Candidate models\n\n");
-localWriteTable(fileId, result.candidateSummary);
+mechanics.io.writeMarkdownTable(fileId, result.candidateSummary);
 fprintf(fileId, "## Mode fit summary\n\n");
-localWriteTable(fileId, result.modeSummary);
+mechanics.io.writeMarkdownTable(fileId, result.modeSummary);
 fprintf(fileId, "## Specimen fit summary\n\n");
-localWriteTable(fileId, result.specimenSummary);
+mechanics.io.writeMarkdownTable(fileId, result.specimenSummary);
 
 fprintf(fileId, "## Interpretation boundaries\n\n");
 fprintf(fileId, "- Tension and compression specimens are independent and unpaired.\n");
@@ -96,45 +96,5 @@ for modeIndex = 1:numel(result.modeNames)
         fprintf(fileId, "### %s\n\n![%s joint fit](%s%s)\n\n", ...
             char(modeName), char(modeName), char(string(name)), char(string(extension)));
     end
-end
-end
-
-function localWriteTable(fileId, input)
-variables = string(input.Properties.VariableNames);
-fprintf(fileId, "| %s |\n", char(strjoin(variables, " | ")));
-fprintf(fileId, "|%s|\n", char(strjoin(repmat("---",1,numel(variables)), "|")));
-for row = 1:height(input)
-    values = strings(1,numel(variables));
-    for column = 1:numel(variables)
-        value = input{row,column};
-        if iscell(value)
-            value = value{1};
-        end
-        values(column) = localText(value);
-    end
-    fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
-end
-fprintf(fileId, "\n");
-end
-
-function output = localText(value)
-if ismissing(value)
-    output = "missing";
-elseif islogical(value)
-    output = string(value);
-elseif isnumeric(value)
-    if isempty(value) || ~isscalar(value)
-        output = "";
-    elseif isnan(value)
-        output = "NaN";
-    elseif isinf(value)
-        output = string(value);
-    else
-        output = string(sprintf("%.6g", value));
-    end
-elseif isdatetime(value)
-    output = string(value);
-else
-    output = replace(string(value), "|", "\\|");
 end
 end

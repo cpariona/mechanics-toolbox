@@ -1,5 +1,5 @@
 function units = resolveStudyUnits(records)
-%RESOLVESTUDYUNITS Resolve plotting units from processed study records.
+%RESOLVESTUDYUNITS Resolve stored units from processed study records.
 arguments
     records struct
 end

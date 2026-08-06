@@ -104,15 +104,15 @@ fprintf(fileId, "- Measures match: `%s`\n", ...
     char(string(comparison.compatibility.measuresMatch)));
 fprintf(fileId, "- Units match: `%s`\n\n", ...
     char(string(comparison.compatibility.unitsMatch)));
-localWriteTable(fileId, compatibilityTable);
+mechanics.io.writeMarkdownTable(fileId, compatibilityTable);
 
 fprintf(fileId, "## Study summary\n\n");
-localWriteTable(fileId, comparison.studySummaries);
+mechanics.io.writeMarkdownTable(fileId, comparison.studySummaries);
 
 metricComparison = comparison.groupComparison.metricComparison;
 if ~isempty(metricComparison)
     fprintf(fileId, "## Scalar metric comparison\n\n");
-    localWriteTable(fileId, metricComparison);
+    mechanics.io.writeMarkdownTable(fileId, metricComparison);
 end
 
 if isfield(comparison.groupComparison, "curveComparison") && ...
@@ -137,43 +137,5 @@ fields = fieldnames(outputFiles);
 for index = 1:numel(fields)
     [~, name, extension] = fileparts(outputFiles.(fields{index}));
     fprintf(fileId, "- `%s%s`\n", char(string(name)), char(string(extension)));
-end
-end
-
-function localWriteTable(fileId, input)
-variables = string(input.Properties.VariableNames);
-fprintf(fileId, "| %s |\n", char(strjoin(variables, " | ")));
-fprintf(fileId, "|%s|\n", char(strjoin(repmat("---",1,numel(variables)), "|")));
-for row = 1:height(input)
-    values = strings(1,numel(variables));
-    for column = 1:numel(variables)
-        value = input{row,column};
-        if iscell(value)
-            value = value{1};
-        end
-        values(column) = localText(value);
-    end
-    fprintf(fileId, "| %s |\n", char(strjoin(values, " | ")));
-end
-fprintf(fileId, "\n");
-end
-
-function output = localText(value)
-if ismissing(value)
-    output = "missing";
-elseif islogical(value)
-    output = string(value);
-elseif isnumeric(value)
-    if isempty(value) || ~isscalar(value)
-        output = "";
-    elseif isnan(value)
-        output = "NaN";
-    else
-        output = string(sprintf("%.6g", value));
-    end
-elseif isdatetime(value)
-    output = string(value);
-else
-    output = replace(string(value), "|", "\\|");
 end
 end

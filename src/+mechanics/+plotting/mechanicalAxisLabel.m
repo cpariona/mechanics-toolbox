@@ -7,15 +7,11 @@ arguments
 end
 quantity = lower(strtrim(quantity));
 measure = lower(strtrim(measure));
-if quantity == "deformation"
-    displayUnit = mechanics.plotting.mechanicalDisplayUnit("deformation", unit);
-elseif quantity == "objective"
-    displayUnit = mechanics.plotting.mechanicalDisplayUnit("objective", unit);
-else
-    displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
-end
+
 switch quantity
     case "deformation"
+        displayUnit = mechanics.plotting.mechanicalDisplayUnit( ...
+            "deformation", unit);
         switch measure
             case "engineering-strain"
                 base = "Engineering strain";
@@ -25,6 +21,7 @@ switch quantity
                 base = "Deformation";
         end
     case "stress"
+        displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
         switch measure
             case "nominal"
                 base = "Nominal stress";
@@ -34,18 +31,18 @@ switch quantity
                 base = "Stress";
         end
     case "residual"
+        displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
         base = "Residual";
     case "compression-magnitude-residual"
+        displayUnit = mechanics.plotting.mechanicalDisplayUnit("stress", unit);
         base = "Magnitude residual";
     case "objective"
+        displayUnit = mechanics.plotting.mechanicalDisplayUnit("objective", unit);
         base = "Objective";
     otherwise
         error("mechanics:plotting:UnknownMechanicalAxisQuantity", ...
             "Unsupported mechanical axis quantity: %s.", quantity);
 end
-if strlength(displayUnit) > 0
-    label = base + " [" + displayUnit + "]";
-else
-    label = base;
-end
+
+label = mechanics.plotting.formatUnitLabel(base, displayUnit);
 end
