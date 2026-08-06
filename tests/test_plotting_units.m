@@ -19,7 +19,7 @@ units = mechanics.plotting.resolveStudyUnits(record);
 
 verifyEqual(testCase, units.force, "kN");
 verifyEqual(testCase, units.displacement, "cm");
-verifyEqual(testCase, units.strain, "mm/mm");
+verifyEqual(testCase, units.strain, "-");
 verifyEqual(testCase, units.stress, "kPa");
 verifyEqual(testCase, units.energy, "J");
 end
@@ -32,7 +32,7 @@ units = mechanics.plotting.resolveStudyUnits(record);
 
 verifyEqual(testCase, units.force, "N");
 verifyEqual(testCase, units.displacement, "mm");
-verifyEqual(testCase, units.strain, "mm/mm");
+verifyEqual(testCase, units.strain, "-");
 verifyEqual(testCase, units.stress, "MPa");
 verifyEqual(testCase, units.energy, "mJ");
 end
