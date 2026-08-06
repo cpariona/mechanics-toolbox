@@ -21,6 +21,7 @@ expected = strjoin([ ...
     "| alpha\|beta | 1.23457 | true | Inf |"
     "| missing | NaN | false | -Inf |"
     ""
+    ""
     ], newline);
 
 verifyEqual(testCase, string(content), expected);
@@ -36,6 +37,7 @@ expected = strjoin([ ...
     "| CreatedAt | Description |"
     "|---|---|"
     "| " + string(timestamp) + " | cell\|value |"
+    ""
     ""
     ], newline);
 
