@@ -8,125 +8,190 @@ Use this document as the persistent starting point for future repository work.
 cpariona/mechanics-toolbox
 ```
 
-## Current merged baseline
+## Current branch state
 
-The repository is integrated on `main` after PR #50.
-
-Observed aligned state before this documentation update:
+The merged baseline remains:
 
 ```text
 main == origin/main
-e506d61e53eb5f584f544e7916ed7b951c089459
+2e5e3597e8cdb9f86b13e132d12093668e877bdc
 ```
 
-Local and remote feature branches from the tensile application-range integration were removed. Only `main` remains as the maintained branch.
-
-## Completed integration
-
-The tensile application-range characterization capability is complete and merged. It includes:
-
-- normalization of completed tensile-study inputs;
-- shared fitting of Neo-Hookean, Mooney-Rivlin, and Yeoh candidates;
-- parsimonious model selection;
-- registry-derived reference properties;
-- sensitivity to the upper tensile fitting limit;
-- optional compression prediction with fixed tensile-calibrated parameters and no refitting;
-- maintained public orchestration;
-- CSV, MAT, Markdown, PNG, and FIG export;
-- unit-aware figures and reports;
-- focused plotting tests and repository-wide regression validation.
-
-Public entrypoint:
-
-```matlab
-config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
-    tensileStudy, config, compressionStudy);
-```
-
-Compression remains external validation only:
-
-```matlab
-result.compressionValidation.refitPerformed = false;
-```
-
-## Real-study evidence
-
-The maintained real-study driver was executed and its generated artifacts were inspected:
+The active maintenance work is implemented on:
 
 ```text
-studies/tension/run_tensile_application_range_characterization.m
+maintenance/consolidate-presentation-contracts
 ```
 
-Observed result:
+The branch has not been merged. Do not merge it without explicit user authorization.
 
-- selected model: `mooney-rivlin`;
-- selected parameters approximately `C10 = 0.0231222` and `C01 = 0.0054067` in the stored stress unit;
-- reference `mu0` approximately `0.0570579` in the stored stress unit;
-- stable model selection from upper deformation limits `0.30`, `0.40`, and `0.50`;
-- approximately 1.55% total variation in `mu0` across those limits;
-- good tensile fit for the first three retained specimens and a larger, still bounded mismatch for the fourth;
-- compression prediction without refitting systematically underpredicts measured compressive-stress magnitude.
+## Completed maintenance implementation
 
-These observations support the tensile characterization but limit direct quantitative transfer from tension to compression.
+The presentation-contract and Markdown-serialization consolidation is implemented on the active branch.
 
-## Maintained units contract
+### Unit presentation
 
 Stored physical values are not rescaled for presentation.
 
-Human-facing outputs use:
+Responsibilities are now separated as follows:
 
 ```text
-dimensionless strain -> mm/mm
-stress and stress-like parameters -> stored stress unit, typically MPa
-normalized objective, normalized RMSE, and normalized loss -> [-]
-```
+mechanics.plotting.resolveStudyUnits
+    retrieves stored study units and canonicalizes dimensionless strain metadata to "-"
 
-Shared presentation helpers:
-
-```text
 mechanics.plotting.mechanicalDisplayUnit
+    converts stored units to human-facing display units
+
 mechanics.plotting.mechanicalAxisLabel
+    constructs standard labels for known mechanical quantities
+
+mechanics.plotting.formatUnitLabel
+    appends an already resolved display unit to a specialized or generic label
 ```
+
+Human-facing conventions remain:
+
+```text
+dimensionless deformation -> mm/mm
+stress and stress-like quantities -> stored stress unit
+normalized quantities -> [-]
+```
+
+`formatUnitLabel` no longer infers strain semantics from free-text labels.
+
+Migrated maintained consumers include:
+
+```text
+src/+mechanics/+plotting/plotStressStrain.m
+src/+mechanics/+plotting/exportTensileStudyFigures.m
+src/+mechanics/+plotting/exportCompressionStudyFigures.m
+src/+mechanics/+plotting/plotFittingAudit.m
+```
+
+The migration preserves numerical arrays, compression sign conventions, styles, output filenames, and specialized labels.
+
+`plotModelFit` remains intentionally unchanged because its current `fitResult` contract does not retain sufficient unit and measure metadata. Do not add inferred defaults such as `MPa` or `mm/mm` without first extending and validating the result contract.
+
+### Markdown table serialization
+
+A shared serializer now owns the identical Markdown table contract used by three maintained exporters:
+
+```text
+mechanics.io.writeMarkdownTable
+```
+
+Migrated consumers:
+
+```text
+src/+mechanics/+io/exportJointMaterialCharacterization.m
+src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
+src/+mechanics/+io/exportTensileStudyComparison.m
+```
+
+The retained contract includes:
+
+```text
+numeric scalars -> %.6g
+NaN -> NaN
+Inf/-Inf -> Inf/-Inf
+missing text -> missing
+logical scalars -> true/false
+datetime -> MATLAB string representation
+scalar cell values -> unwrapped
+non-scalar or empty numeric values -> empty cell text
+pipe characters -> escaped as \|
+blank line after each table
+```
+
+Other report writers were not migrated because their contracts differ for empty tables, missing values, arrays, NaN, or trailing whitespace:
+
+```text
+exportCompressionStudyReport
+exportConstitutiveStudyReport
+exportTensileStudyReport
+writeFittingAuditSection
+```
+
+Do not force them through the shared helper without first defining and testing an intentional canonical migration.
 
 ## Validation evidence
 
-The user reported successful local execution after the final figure corrections:
+The user reported successful local MATLAB execution on the active branch after the final corrections:
 
 ```text
-tests/test_tensile_application_range_figures.m
-tests/test_tensile_application_range_workflow.m
+tests/test_plotting_units.m
+tests/test_markdown_table_serialization.m
 run_all_tests()
 ```
 
-The real driver was rerun and the final tensile, sensitivity, and compression figures were visually accepted.
+The complete repository suite passed locally. This evidence was reported by the user; MATLAB was not executed by the assistant.
 
-## Next maintenance phase
-
-The next phase is a focused source-organization and contract-consolidation audit. It is not a new scientific workflow and must not alter validated numerical behavior without explicit evidence.
-
-Primary goals:
-
-1. consolidate human-facing unit presentation;
-2. remove or reduce overlapping plotting-unit helpers;
-3. migrate older maintained figures to the shared unit-aware label contract where their inputs contain sufficient metadata;
-4. extract genuinely shared Markdown table serialization used by multiple maintained exporters;
-5. document naming boundaries between `tension`, `tensile`, specimen-level mechanics, and study-level workflows;
-6. verify package ownership and identify misplaced functions without reorganizing packages for cosmetic symmetry;
-7. update tests only to protect maintained behavior, not obsolete aliases or temporary migration states.
-
-Initial files to inspect:
+## Tests added or extended
 
 ```text
-src/+mechanics/+plotting/formatUnitLabel.m
-src/+mechanics/+plotting/mechanicalDisplayUnit.m
-src/+mechanics/+plotting/mechanicalAxisLabel.m
-src/+mechanics/+plotting/resolveStudyUnits.m
-src/+mechanics/+plotting/plotStressStrain.m
-src/+mechanics/+plotting/plotModelFit.m
-src/+mechanics/+io/exportJointMaterialCharacterization.m
-src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
+tests/test_plotting_units.m
+tests/test_markdown_table_serialization.m
 ```
+
+The plotting tests protect stored-versus-display unit ownership, semantic labels, fitting-audit units, and preservation of plotted data.
+
+The Markdown tests protect scalar formatting, missing and non-finite values, logicals, datetime values, scalar cells, pipe escaping, and the retained blank line after a table.
+
+## Package ownership findings
+
+No package moves were justified in this phase.
+
+The inspected functions remain correctly owned:
+
+```text
+mechanics.plotting
+    figure construction and human-facing unit presentation
+
+mechanics.io
+    report serialization and Markdown table output
+```
+
+The phase prioritized contract consolidation rather than cosmetic folder reorganization.
+
+## Terminology boundaries
+
+Use these terms consistently:
+
+- `tension` and `compression` describe constitutive modes or specimen-level mechanics;
+- `tensile study` and `compression study` describe complete experimental workflow families;
+- `specimen-level mechanics` processes or evaluates one specimen;
+- `study-level workflow` orchestrates a complete campaign;
+- `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
+- `joint characterization` combines completed experimental modes under one shared constitutive contract;
+- `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
+
+Preserve existing public names unless a demonstrated ambiguity or ownership defect justifies migration.
+
+## Next step
+
+The current branch should now undergo final Git review and pull-request preparation, without merge.
+
+Required checks:
+
+```bash
+git fetch origin --prune
+git switch maintenance/consolidate-presentation-contracts
+git pull --ff-only origin maintenance/consolidate-presentation-contracts
+git diff --check origin/main...HEAD
+git diff --stat origin/main...HEAD
+git status -sb
+git ls-files --others --exclude-standard
+git ls-files results
+```
+
+Review the complete diff before creating or updating a pull request:
+
+```bash
+git diff origin/main...HEAD
+git log --oneline origin/main..HEAD
+```
+
+Do not merge unless explicitly authorized.
 
 ## Required architecture contracts
 
@@ -163,32 +228,7 @@ Before proposing or modifying code in a new session:
 1. read this file completely;
 2. read `docs/development/repository-structure.md`;
 3. read the relevant workflow and testing documents;
-4. verify Git state:
-
-```bash
-git fetch origin --prune
-git switch main
-git pull --ff-only origin main
-git status -sb
-git rev-parse HEAD
-git rev-parse origin/main
-```
-
-5. create a dedicated branch for code changes unless the user explicitly requests direct work on `main`;
+4. verify Git state;
+5. determine whether work continues on the active maintenance branch or starts from updated `main`;
 6. inspect current callers and tests before proposing moves or shared helpers;
 7. define the smallest coherent phase and its validation gate before implementation.
-
-## Validation gate for the next phase
-
-At minimum:
-
-```text
-focused plotting/export tests
-all directly affected workflow tests
-run_all_tests()
-git diff --check
-git status -sb
-no generated files tracked
-```
-
-Do not claim MATLAB validation unless the user reports the actual local result.
