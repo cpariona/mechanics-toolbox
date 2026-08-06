@@ -24,9 +24,7 @@ fprintf(fileId, "\n");
 end
 
 function output = localText(value)
-if ismissing(value)
-    output = "missing";
-elseif islogical(value)
+if islogical(value)
     output = string(value);
 elseif isnumeric(value)
     if isempty(value) || ~isscalar(value)
@@ -41,6 +39,11 @@ elseif isnumeric(value)
 elseif isdatetime(value)
     output = string(value);
 else
-    output = replace(string(value), "|", "\\|");
+    output = string(value);
+    if ismissing(output)
+        output = "missing";
+    else
+        output = replace(output, "|", "\|");
+    end
 end
 end
