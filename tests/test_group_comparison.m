@@ -50,6 +50,23 @@ verifyEqual(testCase, result.modelInitialShearSummary.Models, ...
     ["neo-hookean";"neo-hookean"]);
 end
 
+function testCurveBootstrapIncludesBothGroupIntervals(testCase)
+result = localComparison(true);
+comparison = result.curveComparison;
+verifyTrue(testCase, all(isfinite(comparison.confidenceLowerA)));
+verifyTrue(testCase, all(isfinite(comparison.confidenceUpperA)));
+verifyTrue(testCase, all(isfinite(comparison.confidenceLowerB)));
+verifyTrue(testCase, all(isfinite(comparison.confidenceUpperB)));
+verifyTrue(testCase, all(isfinite(comparison.confidenceLower)));
+verifyTrue(testCase, all(isfinite(comparison.confidenceUpper)));
+
+figureHandle = mechanics.plotting.plotGroupComparison(result);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyTrue(testCase, figureHandle.UserData.groupCurveConfidenceBands);
+patches = findall(figureHandle, "Type", "patch");
+verifyGreaterThanOrEqual(testCase, numel(patches), 3);
+end
+
 function testTangentModulusComparisonIncludesModelReference(testCase)
 result = localComparison();
 figureHandle = mechanics.plotting.plotGroupTangentModulusComparison(result);
@@ -58,6 +75,15 @@ verifyTrue(testCase, isgraphics(figureHandle));
 verifyEqual(testCase, ...
     figureHandle.UserData.initialShearSummary.InitialShearModulus, ...
     [2;4], "AbsTol", 1e-12);
+verifyEqual(testCase, figureHandle.UserData.initialShearAnnotationCount, 2);
+textHandles = findall(figureHandle, "Type", "text");
+latexStrings = strings(0,1);
+for index = 1:numel(textHandles)
+    if string(textHandles(index).Interpreter) == "latex"
+        latexStrings(end+1,1) = string(textHandles(index).String); %#ok<AGROW>
+    end
+end
+verifyEqual(testCase, nnz(contains(latexStrings, "\\mu_0")), 2);
 end
 
 function testMetricComparisonPlotIsCreated(testCase)
@@ -83,7 +109,7 @@ verifyEqual(testCase, figureHandle.UserData.differenceConvention, ...
     "compression-magnitude-B-minus-A");
 end
 
-function testExportCreatesFiles(testCase)
+function testExportCreatesFilesAndReport(testCase)
 result = localComparison();
 folder = string(tempname);
 cleanup = onCleanup(@() localRemove(folder)); %#ok<NASGU>
@@ -99,6 +125,7 @@ verifyTrue(testCase, isfile(files.metricFigure));
 verifyTrue(testCase, isfile(files.metricFigureFig));
 verifyTrue(testCase, isfile(files.tangentModulusFigure));
 verifyTrue(testCase, isfile(files.tangentModulusFigureFig));
+verifyTrue(testCase, isfile(files.report));
 verifyEqual(testCase, string(files.figure), ...
     string(fullfile(folder, "group_comparison.png")));
 verifyEqual(testCase, string(files.figureFig), ...
@@ -107,6 +134,16 @@ verifyEqual(testCase, string(files.metricFigure), ...
     string(fullfile(folder, "group_metric_comparison.png")));
 verifyEqual(testCase, string(files.tangentModulusFigure), ...
     string(fullfile(folder, "group_tangent_modulus_comparison.png")));
+verifyEqual(testCase, string(files.report), ...
+    string(fullfile(folder, "group_comparison_report.md")));
+
+report = string(fileread(files.report));
+verifyTrue(testCase, contains(report, "# Tension study comparison report"));
+verifyTrue(testCase, contains(report, "## Scalar metric comparison"));
+verifyTrue(testCase, contains(report, "## Model-derived initial shear modulus"));
+verifyTrue(testCase, contains(report, "$\\mu_0$"));
+verifyTrue(testCase, contains(report, "group_comparison.png"));
+verifyTrue(testCase, contains(report, "group_tangent_modulus_comparison.png"));
 end
 
 function testInsufficientGroupRejected(testCase)
@@ -122,7 +159,10 @@ verifyError(testCase, @() mechanics.workflow.analyzeGroupComparison( ...
     "mechanics:workflow:InsufficientGroupSpecimens");
 end
 
-function result = localComparison()
+function result = localComparison(enableBootstrap)
+if nargin < 1
+    enableBootstrap = false;
+end
 analysis = localAnalysis();
 assignments = table( ...
     ["a1";"a2";"b1";"b2"], ...
@@ -131,7 +171,8 @@ assignments = table( ...
 analysis = mechanics.workflow.assignSpecimenGroups(analysis, assignments);
 config = mechanics.config.groupComparisonConfig();
 config.populationConfig.bootstrap.enabled = false;
-config.bootstrap.enabled = false;
+config.bootstrap.enabled = enableBootstrap;
+config.bootstrap.iterations = 100;
 config.populationConfig.strainGridPointCount = 21;
 result = mechanics.workflow.analyzeGroupComparison( ...
     analysis, ["control","treated"], config);
