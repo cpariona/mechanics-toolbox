@@ -88,7 +88,7 @@ The third-order constitutive expression is numerically unchanged from the pre-fe
 
 ### Registry metadata
 
-The model registry now separates four concepts:
+The model registry separates four concepts:
 
 ```text
 model.name        canonical registered variant identity
@@ -108,11 +108,11 @@ model.familyName  = yeoh
 model.order       = 2 / 3
 ```
 
-Fitting, selection, plotting, reporting, and statistics continue to consume registry metadata rather than duplicate Yeoh-specific logic.
+Fitting, selection, plotting, reporting, and statistics consume registry metadata rather than duplicate Yeoh-specific logic.
 
 ### Fitting and selection integration
 
-Existing fitting and selection implementations required no model-specific production branches. They already consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
+Existing fitting and selection implementations required no model-specific production branches. They consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
 
 Validated architecture paths include:
 
@@ -179,24 +179,16 @@ This is an experiment-specific comparison decision and does not alter library de
 
 ## Persistence and historical generated results
 
-New MAT/CSV outputs must persist canonical registered identities:
+New MAT/CSV outputs persist canonical registered identities:
 
 ```text
 yeoh-second-order
 yeoh-third-order
 ```
 
-Generated results produced before the explicit third-order identity migration may contain:
-
-```text
-yeoh
-```
-
-for the third-order variant. These files are pre-migration snapshots under ignored `results/` paths and are not a maintained compatibility contract.
+Generated results produced before the explicit third-order identity migration may contain the historical third-order identifier `yeoh`. Those files are pre-migration snapshots under ignored `results/` paths and are not a maintained compatibility contract.
 
 When current workflows need those results, regenerate them with current drivers. Do not add `yeoh` back to the registry as an alias and do not add a compatibility wrapper or migration bridge.
-
-Completed-study consumers may continue to use regenerated canonical tensile/compression MAT results without re-importing raw data.
 
 ## MATLAB validation status
 
@@ -216,49 +208,59 @@ The bare identifier `yeoh` is intentionally rejected by the registry and is not 
 
 MATLAB was run by the user, not by the assistant.
 
-## Real-data evidence before final identity migration
+## Final real-data validation
 
-The user regenerated the maintained real study drivers with both Yeoh orders included before the final third-order identifier migration.
+After the final identity migration, the user regenerated all maintained real drivers and supplied the complete generated bundle for review.
 
-Observed evidence included:
-
-- individual tensile and compression specimen selection continued to favor the third-order Yeoh variant;
-- tensile application-range characterization continued to select Mooney-Rivlin;
-- in joint characterization, second-order Yeoh achieved a joint objective of approximately `0.001247`, while third-order Yeoh retained approximately `0.000936`, so the third-order variant remained clearly preferred for that dataset;
-- human-facing outputs correctly distinguished `Yeoh second order` and `Yeoh third order` after the presentation fixes;
-- fitting-audit `mu0` for second-order Yeoh became finite after registry-driven derived-quantity migration.
-
-Those scientific results remain relevant because the final identity migration changes the stored third-order name only, not the constitutive equation or objective.
-
-## Remaining gate before merge
-
-Regenerate the four maintained real drivers once under the final explicit-order registry:
+The final bundle contains:
 
 ```text
-1. real tensile study
-2. real compression study
-3. tensile application-range characterization
-4. joint material characterization and robustness audit
+real tensile study
+real compression study
+tensile application-range characterization
+joint material characterization
 ```
 
-Review the regenerated MAT/CSV/Markdown/figures against the pre-migration four-candidate results.
+The inspected CSV and Markdown outputs persist canonical registered identities `yeoh-second-order` and `yeoh-third-order`; human-facing output uses `Yeoh second order` and `Yeoh third order`.
 
-Expected invariant:
+Individual tensile and compression model selection continued to select `yeoh-third-order` for every retained specimen, and both consensus-model population exports selected `yeoh-third-order` with selection fraction `1.0`.
+
+The final joint characterization retained the previous four-candidate scientific result:
 
 ```text
-all scientific metrics and fitted parameters remain unchanged within numerical tolerance
+Neo-Hookean objective       ~= 0.016832
+Mooney-Rivlin objective     ~= 0.016832
+Yeoh second order objective ~= 0.00124659
+Yeoh third order objective  ~= 0.000936332
 ```
 
-Expected intentional identity change:
+Third-order Yeoh remained selected with approximately:
 
 ```text
-historical third-order model id: yeoh
-final third-order model id:      yeoh-third-order
+C10 = 0.052481 MPa
+C20 = 1.99e-4 MPa
+C30 = 4e-6 MPa
 ```
 
-Also confirm that human-facing outputs continue to show `Yeoh second order` and `Yeoh third order`, and that no newly generated MAT/CSV output persists the bare identifier `yeoh` as a model identity.
+Mean normalized RMSE remained approximately `3.94 %` in tension and `1.66 %` in compression.
 
-Do not merge this branch until this final real-data regeneration is reviewed and the user explicitly authorizes the merge.
+The final tensile application-range characterization retained Mooney-Rivlin as the selected model. Approximate selected properties were:
+
+```text
+C10 = 0.023122 MPa
+C01 = 0.005407 MPa
+mu0 = 0.057058 MPa
+```
+
+Range-sensitivity scenarios at `0.30`, `0.40`, and `0.50 mm/mm` all retained Mooney-Rivlin.
+
+These results match the inspected pre-rename four-candidate results to the reported precision. The explicit-order migration therefore changed model identity and presentation contracts without changing the scientific conclusions or constitutive fits.
+
+## Feature closure state
+
+Implementation, regression validation, real-driver regeneration, and documentation are complete on `feature/yeoh-second-order`.
+
+The branch is ready for pull-request review. Do not merge the pull request without explicit user authorization.
 
 ## Completed presentation and serialization contracts
 
