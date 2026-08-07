@@ -11,11 +11,23 @@ strain=linspace(lo,hi,n)';
 A=localInterp(groupA.curves,strain); B=localInterp(groupB.curves,strain);
 meanA=mean(A,2); meanB=mean(B,2); difference=meanA-meanB;
 lower=nan(n,1); upper=nan(n,1);
+lowerA=nan(n,1); upperA=nan(n,1);
+lowerB=nan(n,1); upperB=nan(n,1);
 if config.bootstrap.enabled
     for k=1:n
-        c=config.bootstrap; c.randomSeed=config.bootstrap.randomSeed+k-1;
+        c=config.bootstrap;
+
+        c.randomSeed=config.bootstrap.randomSeed+k-1;
         ci=mechanics.statistics.bootstrapDifferenceOfMeans(A(k,:),B(k,:),c);
         lower(k)=ci.lower; upper(k)=ci.upper;
+
+        c.randomSeed=config.bootstrap.randomSeed+1000+k-1;
+        ciA=mechanics.statistics.bootstrapMeanConfidenceInterval(A(k,:),c);
+        lowerA(k)=ciA.lower; upperA(k)=ciA.upper;
+
+        c.randomSeed=config.bootstrap.randomSeed+2000+k-1;
+        ciB=mechanics.statistics.bootstrapMeanConfidenceInterval(B(k,:),c);
+        lowerB(k)=ciB.lower; upperB(k)=ciB.upper;
     end
 end
 comparison.strain=strain;
@@ -24,6 +36,10 @@ comparison.meanStressB=meanB;
 comparison.meanDifference=difference;
 comparison.confidenceLower=lower;
 comparison.confidenceUpper=upper;
+comparison.confidenceLowerA=lowerA;
+comparison.confidenceUpperA=upperA;
+comparison.confidenceLowerB=lowerB;
+comparison.confidenceUpperB=upperB;
 comparison.groupNameA=groupA.name;
 comparison.groupNameB=groupB.name;
 comparison.sampleCountA=size(A,2);
