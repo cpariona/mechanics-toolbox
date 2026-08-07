@@ -82,7 +82,7 @@ for row = 1:height(summary)
         char(summary.SpecimenId(row)), char(summary.Status(row)), ...
         summary.MaximumStrain(row), summary.MaximumStress(row), ...
         summary.PeakForce(row), summary.MedianTangentModulus(row), ...
-        char(summary.BestModel(row)));
+        char(localModelDisplayName(summary.BestModel(row))));
 end
 fprintf(fileId, "\n");
 
@@ -109,7 +109,8 @@ if string(study.populationStatus) == "completed" && ...
             isfield(study.population.modelParameters, "summary") && ...
             ~isempty(study.population.modelParameters.summary)
         fprintf(fileId, "### Individually selected-model parameter summary\n\n");
-        parameterSummary = study.population.modelParameters.summary;
+        parameterSummary = localDisplayModelTable( ...
+            study.population.modelParameters.summary);
         parameterSummary.Unit = repmat(stressUnit, height(parameterSummary), 1);
         localWriteTable(fileId, parameterSummary);
     end
@@ -167,7 +168,7 @@ if isfield(analysisConfig, "summaryStrainRange")
 end
 if isfield(fittingConfig, "modelNames")
     fprintf(fileId, "- Candidate models: `%s`\n", ...
-        char(strjoin(string(fittingConfig.modelNames(:))', ", ")));
+        char(strjoin(localModelDisplayNames(fittingConfig.modelNames(:))', ", ")));
 end
 if isfield(fittingConfig, "selectionConfig") && ...
         isfield(fittingConfig.selectionConfig, "rankingMetric")
@@ -186,6 +187,33 @@ end
 
 outputFiles = figureFiles;
 outputFiles.report = string(reportFile);
+end
+
+function output = localDisplayModelTable(input)
+output = input;
+variables = string(output.Properties.VariableNames);
+for candidate = ["ModelName", "Model"]
+    if ismember(candidate, variables)
+        output.(candidate) = localModelDisplayNames(output.(candidate));
+    end
+end
+end
+
+function names = localModelDisplayNames(modelNames)
+modelNames = string(modelNames(:));
+names = strings(size(modelNames));
+for index = 1:numel(modelNames)
+    names(index) = localModelDisplayName(modelNames(index));
+end
+end
+
+function name = localModelDisplayName(modelName)
+modelName = string(modelName);
+if strlength(strtrim(modelName)) == 0
+    name = "";
+    return;
+end
+name = mechanics.models.modelRegistry(modelName).displayName;
 end
 
 function localWriteTable(fileId, inputTable)
