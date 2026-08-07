@@ -66,6 +66,7 @@ fitting.enabled = true;
 fitting.modelNames = [
     "neo-hookean"
     "mooney-rivlin"
+    "yeoh-second-order"
     "yeoh"
 ];
 fitting.context.deformationMeasure = "engineering-strain";
