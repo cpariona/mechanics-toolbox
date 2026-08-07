@@ -39,14 +39,15 @@ verifyEqual(testCase, fit.parameters, parameters, "RelTol", 2e-2, ...
 verifyLessThan(testCase, fit.objective, 1e-8);
 end
 
-function testYeohSharedParametersAreRecovered(testCase)
+function testThirdOrderYeohSharedParametersAreRecovered(testCase)
 parameters = [0.052, 2e-4, 4e-6];
-normalized = localNormalized("yeoh", parameters, [51; 67]);
-config = localConfig("yeoh");
+normalized = localNormalized("yeoh-third-order", parameters, [51; 67]);
+config = localConfig("yeoh-third-order");
 config.fitting.numberOfStarts = 12;
 fit = mechanics.fitting.fitTensileApplicationRangeModel( ...
-    normalized, "yeoh", config);
+    normalized, "yeoh-third-order", config);
 
+verifyEqual(testCase, fit.modelName, "yeoh-third-order");
 verifyEqual(testCase, fit.parameters, parameters, "RelTol", 2e-2, ...
     "AbsTol", 2e-6);
 verifyLessThan(testCase, fit.objective, 1e-8);
@@ -77,7 +78,8 @@ function testCandidateWorkflowRetainsOneResultPerModel(testCase)
 normalized = localNormalized("neo-hookean", 0.16, [31; 43]);
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
 config.candidateModelNames = [ ...
-    "neo-hookean"; "mooney-rivlin"; "yeoh-second-order"; "yeoh"];
+    "neo-hookean"; "mooney-rivlin"; ...
+    "yeoh-second-order"; "yeoh-third-order"];
 config.fitting.numberOfStarts = 4;
 candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
     normalized, config);
