@@ -8,7 +8,8 @@ end
 
 function testRegisteredModels(testCase)
 verifyEqual(testCase, mechanics.models.listModels(), ...
-    ["neo-hookean", "mooney-rivlin", "yeoh-second-order", "yeoh"]);
+    ["neo-hookean", "mooney-rivlin", ...
+    "yeoh-second-order", "yeoh-third-order"]);
 end
 
 function testRegisteredModelDisplayNames(testCase)
@@ -18,14 +19,31 @@ verifyEqual(testCase, mechanics.models.modelRegistry("mooney-rivlin").displayNam
     "Mooney-Rivlin");
 verifyEqual(testCase, mechanics.models.modelRegistry("yeoh-second-order").displayName, ...
     "Yeoh second order");
-verifyEqual(testCase, mechanics.models.modelRegistry("yeoh").displayName, ...
+verifyEqual(testCase, mechanics.models.modelRegistry("yeoh-third-order").displayName, ...
     "Yeoh third order");
+end
+
+function testRegisteredModelFamilyMetadata(testCase)
+neoHookean = mechanics.models.modelRegistry("neo-hookean");
+mooneyRivlin = mechanics.models.modelRegistry("mooney-rivlin");
+yeohSecond = mechanics.models.modelRegistry("yeoh-second-order");
+yeohThird = mechanics.models.modelRegistry("yeoh-third-order");
+verifyEqual(testCase, neoHookean.familyName, "neo-hookean");
+verifyTrue(testCase, isnan(neoHookean.order));
+verifyEqual(testCase, mooneyRivlin.familyName, "mooney-rivlin");
+verifyTrue(testCase, isnan(mooneyRivlin.order));
+verifyEqual(testCase, yeohSecond.familyName, "yeoh");
+verifyEqual(testCase, yeohSecond.order, 2);
+verifyEqual(testCase, yeohThird.familyName, "yeoh");
+verifyEqual(testCase, yeohThird.order, 3);
 end
 
 function testSecondOrderYeohRegistryMetadata(testCase)
 model = mechanics.models.modelRegistry("yeoh-second-order");
 verifyEqual(testCase, model.name, "yeoh-second-order");
 verifyEqual(testCase, model.displayName, "Yeoh second order");
+verifyEqual(testCase, model.familyName, "yeoh");
+verifyEqual(testCase, model.order, 2);
 verifyEqual(testCase, model.functionHandle, @mechanics.models.yeoh);
 verifyEqual(testCase, model.parameterNames, ["C10", "C20"]);
 verifyEqual(testCase, model.defaultInitialGuess, [1, 0]);
@@ -36,14 +54,29 @@ verifyEqual(testCase, model.evaluateDerivedQuantities([2, 0.1]), 4, ...
     "AbsTol", 1e-12);
 end
 
-function testExistingYeohRegistryRemainsThirdOrder(testCase)
-model = mechanics.models.modelRegistry("yeoh");
-verifyEqual(testCase, model.name, "yeoh");
+function testThirdOrderYeohRegistryMetadata(testCase)
+model = mechanics.models.modelRegistry("yeoh-third-order");
+verifyEqual(testCase, model.name, "yeoh-third-order");
 verifyEqual(testCase, model.displayName, "Yeoh third order");
+verifyEqual(testCase, model.familyName, "yeoh");
+verifyEqual(testCase, model.order, 3);
+verifyEqual(testCase, model.functionHandle, @mechanics.models.yeoh);
 verifyEqual(testCase, model.parameterNames, ["C10", "C20", "C30"]);
 verifyEqual(testCase, model.defaultInitialGuess, [1, 0, 0]);
 verifyEqual(testCase, model.lowerBounds, [0, -Inf, -Inf]);
 verifyEqual(testCase, model.upperBounds, [Inf, Inf, Inf]);
+verifyEqual(testCase, model.derivedQuantityNames, "mu0");
+verifyEqual(testCase, model.evaluateDerivedQuantities([2, 0.1, 0.01]), 4, ...
+    "AbsTol", 1e-12);
+end
+
+function testBareYeohIdentifierIsRejected(testCase)
+verifyError(testCase, ...
+    @() mechanics.models.modelRegistry("yeoh"), ...
+    "mechanics:models:UnknownModel");
+verifyError(testCase, ...
+    @() mechanics.models.evaluateModel("yeoh", 0.1, [1, 0.1, 0.01]), ...
+    "mechanics:models:UnknownModel");
 end
 
 function testZeroStressAtReferenceConfiguration(testCase)
@@ -52,7 +85,7 @@ context.stressMeasure = "nominal";
 verifyEqual(testCase, mechanics.models.evaluateModel("neo-hookean", 1, 2, context), 0, "AbsTol", 1e-12);
 verifyEqual(testCase, mechanics.models.evaluateModel("mooney-rivlin", 1, [2, 1], context), 0, "AbsTol", 1e-12);
 verifyEqual(testCase, mechanics.models.evaluateModel("yeoh-second-order", 1, [2, 1], context), 0, "AbsTol", 1e-12);
-verifyEqual(testCase, mechanics.models.evaluateModel("yeoh", 1, [2, 1, 0.5], context), 0, "AbsTol", 1e-12);
+verifyEqual(testCase, mechanics.models.evaluateModel("yeoh-third-order", 1, [2, 1, 0.5], context), 0, "AbsTol", 1e-12);
 end
 
 function testSecondOrderYeohReducesToNeoHookeanWhenC20IsZero(testCase)
@@ -77,7 +110,8 @@ dWdI1 = parameters(1) + ...
     2 .* parameters(2) .* I1minus3 + ...
     3 .* parameters(3) .* I1minus3.^2;
 expected = 2 .* dWdI1 .* (lambda - lambda.^(-2));
-actual = mechanics.models.evaluateModel("yeoh", lambda, parameters, context);
+actual = mechanics.models.evaluateModel( ...
+    "yeoh-third-order", lambda, parameters, context);
 verifyEqual(testCase, actual, expected, "AbsTol", 1e-12);
 end
 
@@ -89,7 +123,7 @@ verifyError(testCase, ...
     @() mechanics.models.evaluateModel("yeoh-second-order", 0.1, [1, 0.1, 0.01]), ...
     "mechanics:models:InvalidParameterCount");
 verifyError(testCase, ...
-    @() mechanics.models.evaluateModel("yeoh", 0.1, [1, 0.1]), ...
+    @() mechanics.models.evaluateModel("yeoh-third-order", 0.1, [1, 0.1]), ...
     "mechanics:models:InvalidParameterCount");
 end
 
@@ -140,7 +174,8 @@ end
 
 function testOutputShapeIsPreserved(testCase)
 strain = linspace(0, 0.5, 15);
-stress = mechanics.models.evaluateModel("yeoh", strain, [1, 0.1, 0.01]);
+stress = mechanics.models.evaluateModel( ...
+    "yeoh-third-order", strain, [1, 0.1, 0.01]);
 verifySize(testCase, stress, size(strain));
 secondOrderStress = mechanics.models.evaluateModel( ...
     "yeoh-second-order", strain, [1, 0.1]);
