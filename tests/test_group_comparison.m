@@ -36,6 +36,51 @@ verifyEqual(testCase, result.groups(1).specimenCount, 2);
 verifyEqual(testCase, result.curveComparison.meanDifference(end), ...
     -2, "AbsTol", 1e-12);
 verifyEqual(testCase, height(result.metricComparison), 3);
+verifyEqual(testCase, result.mechanics.strainMeasure, "engineering");
+verifyEqual(testCase, result.mechanics.stressMeasure, "engineering");
+verifyEqual(testCase, result.mechanics.strainUnit, "-");
+verifyEqual(testCase, result.mechanics.stressUnit, "MPa");
+verifyEqual(testCase, result.testType, "tension");
+verifyEqual(testCase, result.modelInitialShearSummary.Group, ...
+    ["control";"treated"]);
+verifyEqual(testCase, ...
+    result.modelInitialShearSummary.InitialShearModulus, ...
+    [2;4], "AbsTol", 1e-12);
+verifyEqual(testCase, result.modelInitialShearSummary.Models, ...
+    ["neo-hookean";"neo-hookean"]);
+end
+
+function testTangentModulusComparisonIncludesModelReference(testCase)
+result = localComparison();
+figureHandle = mechanics.plotting.plotGroupTangentModulusComparison(result);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(figureHandle));
+verifyEqual(testCase, ...
+    figureHandle.UserData.initialShearSummary.InitialShearModulus, ...
+    [2;4], "AbsTol", 1e-12);
+end
+
+function testMetricComparisonPlotIsCreated(testCase)
+result = localComparison();
+figureHandle = mechanics.plotting.plotGroupMetricComparison(result);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(figureHandle));
+axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
+verifyEqual(testCase, numel(axesHandles), 3);
+end
+
+function testCompressionPlotUsesMagnitudeDifferenceConvention(testCase)
+result = localComparison();
+result.testType = "compression";
+comparison = result.curveComparison;
+comparison.meanStressA = -abs(comparison.meanStressA);
+comparison.meanStressB = -abs(comparison.meanStressB);
+comparison.meanDifference = comparison.meanStressA - comparison.meanStressB;
+result.curveComparison = comparison;
+figureHandle = mechanics.plotting.plotGroupComparison(result);
+cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyEqual(testCase, figureHandle.UserData.differenceConvention, ...
+    "compression-magnitude-B-minus-A");
 end
 
 function testExportCreatesFiles(testCase)
@@ -46,13 +91,22 @@ files = mechanics.io.exportGroupComparison(result, folder);
 verifyTrue(testCase, isfile(files.groupSummary));
 verifyTrue(testCase, isfile(files.curveComparison));
 verifyTrue(testCase, isfile(files.metricComparison));
+verifyTrue(testCase, isfile(files.modelInitialShearSummary));
 verifyTrue(testCase, isfile(files.comparison));
 verifyTrue(testCase, isfile(files.figure));
 verifyTrue(testCase, isfile(files.figureFig));
+verifyTrue(testCase, isfile(files.metricFigure));
+verifyTrue(testCase, isfile(files.metricFigureFig));
+verifyTrue(testCase, isfile(files.tangentModulusFigure));
+verifyTrue(testCase, isfile(files.tangentModulusFigureFig));
 verifyEqual(testCase, string(files.figure), ...
     string(fullfile(folder, "group_comparison.png")));
 verifyEqual(testCase, string(files.figureFig), ...
     string(fullfile(folder, "group_comparison.fig")));
+verifyEqual(testCase, string(files.metricFigure), ...
+    string(fullfile(folder, "group_metric_comparison.png")));
+verifyEqual(testCase, string(files.tangentModulusFigure), ...
+    string(fullfile(folder, "group_tangent_modulus_comparison.png")));
 end
 
 function testInsufficientGroupRejected(testCase)
@@ -100,8 +154,27 @@ end
 function record = localRecord(id, slope)
 strain = linspace(0,1,21)';
 specimen.id = string(id);
+specimen.testType = "tension";
 specimen.processed.strain = strain;
 specimen.processed.stress = slope .* strain;
+specimen.processed.mechanicsConfig.strainMeasure = "engineering";
+specimen.processed.mechanicsConfig.stressMeasure = "engineering";
+specimen.processed.units.strain = "-";
+specimen.processed.units.stress = "MPa";
+specimen.analysis.tangentModulus.strain = strain;
+specimen.analysis.tangentModulus.tangentModulusForPlot = ...
+    repmat(slope, size(strain));
+
+fitResult.parameterNames = "mu";
+fitResult.parameters = slope;
+modelRecord.modelName = "neo-hookean";
+modelRecord.succeeded = true;
+modelRecord.windowFraction = 1;
+modelRecord.fitResult = fitResult;
+specimen.modelSelection.selection.hasEligibleModel = true;
+specimen.modelSelection.selection.bestModel = "neo-hookean";
+specimen.modelSelection.records = modelRecord;
+
 record.index = 1;
 record.specimenId = string(id);
 record.sheetName = string(id);
