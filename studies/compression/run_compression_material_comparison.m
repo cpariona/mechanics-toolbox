@@ -85,14 +85,28 @@ disp(comparison.compatibility)
 if isfield(comparison.groupComparison, "metricComparison")
     disp(comparison.groupComparison.metricComparison)
 end
-
+if isfield(comparison.groupComparison, "modelInitialShearSummary")
+    disp(comparison.groupComparison.modelInitialShearSummary)
+end
 if isfield(comparison.groupComparison, "outputFiles")
     disp(comparison.groupComparison.outputFiles)
 end
 
 %% 4. INTERACTIVE REVIEW
-% Persistent comparison figures are owned by exportGroupComparison.
-if isfield(comparison.groupComparison, "curveComparison") && ...
-        ~isempty(fieldnames(comparison.groupComparison.curveComparison))
-    mechanics.plotting.plotGroupComparison(comparison.groupComparison);
+% Persistent comparison figures are owned by exportGroupComparison. These
+% calls reproduce the same maintained views for interactive inspection.
+groupComparison = comparison.groupComparison;
+if isfield(groupComparison, "curveComparison") && ...
+        ~isempty(fieldnames(groupComparison.curveComparison))
+    mechanics.plotting.plotGroupComparison(groupComparison);
+    mechanics.plotting.plotGroupMetricComparison(groupComparison);
+end
+
+hasTangentModulus = numel(groupComparison.groups) == 2 && ...
+    all(arrayfun(@(group) ...
+    isfield(group.population, "tangentModulusStatus") && ...
+    group.population.tangentModulusStatus == "completed", ...
+    groupComparison.groups));
+if hasTangentModulus
+    mechanics.plotting.plotGroupTangentModulusComparison(groupComparison);
 end
