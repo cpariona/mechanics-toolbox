@@ -6,6 +6,8 @@ The capability is implemented, merged on `main`, validated locally in MATLAB, an
 
 The maintained workflow includes normalization, shared candidate fitting, parsimonious model selection, registry-derived reference properties, fit-range sensitivity, optional fixed-parameter compression validation, unit-aware figures, and export.
 
+A feature branch currently adds the registered `yeoh-second-order` model. Automated synthetic regression coverage has passed. Real-study results must be regenerated before interpreting whether the new two-parameter Yeoh form changes selection or fitted properties.
+
 ## Public workflow
 
 ```matlab
@@ -15,6 +17,29 @@ result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
 ```
 
 The workflow composes maintained normalization, fitting, selection, sensitivity, optional compression validation, and export contracts without re-importing raw data.
+
+## Candidate-model contract
+
+The library default candidate set remains unchanged:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh
+```
+
+The maintained real-study driver explicitly expands the experiment-specific comparison to:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh
+```
+
+`yeoh-second-order` has parameters `C10, C20`. The historical registered name `yeoh` remains the third-order form with `C10, C20, C30`. Both expose `mu0 = 2*C10` through registry metadata.
+
+Adding the model to the real-study driver does not change library defaults. A future default change requires separate real-data evidence and an explicit reproducibility decision.
 
 ## Library defaults and real driver
 
@@ -32,7 +57,7 @@ config.fitRange = [0, 0.50];
 config.rangeSensitivity.maximumDeformations = [0.30; 0.40; 0.50];
 ```
 
-This keeps the general API stable while recording the experiment-specific range decision in the driver.
+This keeps the general API stable while recording experiment-specific range and candidate-model decisions in the driver.
 
 ## Units contract
 
@@ -143,9 +168,9 @@ validation.refitPerformed = false;
 
 Compression cannot influence tensile fitting, eligibility, or model selection. The figure residual convention does not alter stored validation metrics, RMSE, predictions, fitting, or selection.
 
-## Real-study result
+## Historical real-study baseline
 
-The maintained driver selected `mooney-rivlin` for the inspected real tensile study.
+Before `yeoh-second-order` was added to the real-study candidate set, the maintained driver selected `mooney-rivlin` for the inspected real tensile study.
 
 Observed values were approximately:
 
@@ -157,19 +182,13 @@ mu0 = 0.0570579
 
 in the stored stress unit.
 
-The selected model remained stable across upper deformation limits `0.30`, `0.40`, and `0.50`. The corresponding `mu0` variation was small, while compression prediction systematically underpredicted compressive-stress magnitude. This supports the tensile characterization and limits direct quantitative tension-to-compression transfer.
+That result is historical evidence for the previous three-model candidate set, not evidence against or in favor of `yeoh-second-order`. The driver must be rerun with the four-model set before the scientific interpretation is updated.
 
 ## Validation status
 
-The user reported successful local execution after the final figure and label corrections:
+The user reported successful local execution of all focused second-order Yeoh tests and the complete `run_all_tests()` suite after the mathematical, registry, fitting/selection, and downstream-output phases.
 
-```text
-tests/test_tensile_application_range_figures.m
-tests/test_tensile_application_range_workflow.m
-run_all_tests()
-```
-
-The real-study driver was rerun and the final tensile, sensitivity, and compression figures were visually inspected and accepted.
+Real-study validation with the new candidate set remains pending. It should include regenerated tensile application-range outputs and review of candidate summary, selected parameters, `mu0`, range sensitivity, compression validation, and maintained figures.
 
 ## Maintenance boundary
 
