@@ -159,37 +159,36 @@ text = strjoin(parts, ", ");
 end
 
 function value = localInitialShearModulus(modelName, names, parameters)
-modelName = lower(string(modelName));
-names = lower(string(names(:)));
-parameters = parameters(:);
 value = NaN;
-switch modelName
-    case "neo-hookean"
-        value = localParameter(names, parameters, ["mu", "c10"]);
-    case "mooney-rivlin"
-        c10 = localParameter(names, parameters, "c10");
-        c01 = localParameter(names, parameters, "c01");
-        if isfinite(c10) && isfinite(c01)
-            value = 2 .* (c10 + c01);
-        end
-    case "yeoh"
-        c10 = localParameter(names, parameters, "c10");
-        if isfinite(c10)
-            value = 2 .* c10;
-        end
-end
+model = mechanics.models.modelRegistry(string(modelName));
+derivedNames = string(model.derivedQuantityNames(:));
+mu0Index = find(derivedNames == "mu0", 1, "first");
+if isempty(mu0Index) || isempty(model.evaluateDerivedQuantities)
+    return;
 end
 
-function value = localParameter(names, parameters, candidates)
-value = NaN;
-candidates = string(candidates);
-for candidate = candidates(:)'
-    index = find(names == candidate, 1);
-    if ~isempty(index)
-        value = parameters(index);
+expectedNames = string(model.parameterNames(:));
+fitNames = string(names(:));
+fitParameters = parameters(:);
+if numel(expectedNames) ~= numel(fitParameters)
+    return;
+end
+
+orderedParameters = zeros(numel(expectedNames), 1);
+for index = 1:numel(expectedNames)
+    match = strcmpi(fitNames, expectedNames(index));
+    if nnz(match) ~= 1
         return;
     end
+    orderedParameters(index) = fitParameters(match);
 end
+
+derivedValues = reshape(double( ...
+    model.evaluateDerivedQuantities(orderedParameters)), [], 1);
+if numel(derivedValues) ~= numel(derivedNames)
+    return;
+end
+value = derivedValues(mu0Index);
 end
 
 function value = localMetric(metrics, fieldName)
