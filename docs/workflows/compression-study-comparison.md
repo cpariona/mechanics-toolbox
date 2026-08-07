@@ -181,12 +181,54 @@ Preserve these ownership rules:
 
 Do not duplicate the comparison workflow in the driver and do not add model-specific $\mu_0$ formulas to plotting code.
 
-## Validation status
+## Merge and validation status
 
-The comparison-visualization and reporting enhancement is implemented on:
+The comparison-visualization and reporting enhancement was merged through PR #53.
+
+Merge commit:
+
+```text
+8f70dedad8d1420595f9d1c1a6be9f0992d8dd60
+```
+
+The former implementation branch was:
 
 ```text
 feature/compression-study-comparison-visuals
 ```
 
-MATLAB validation is pending after the latest presentation/report refinements. Run the focused group-comparison tests and the complete repository suite before merging or documenting the regenerated Ecoflex outputs as validated results.
+The user regenerated and supplied the final Ecoflex 00-20 versus 00-50 comparison bundle after the final presentation/report refinements. The reviewed output contains:
+
+- both stress-strain group means with pointwise bootstrap bands;
+- the compression magnitude-difference panel;
+- specimen-level scalar metric panels;
+- tangent-modulus population comparison;
+- annotated model-derived $\mu_0$ references;
+- the maintained Markdown report with generic interpretation boundaries.
+
+The reviewed final numerical summaries include approximately:
+
+```text
+Maximum strain mean
+Ecoflex 00-20 = 0.38248
+Ecoflex 00-50 = 0.37653
+A - B = +0.00594
+95% bootstrap interval = [-0.01324, +0.02243]
+
+Maximum stress mean
+Ecoflex 00-20 = 0.09964 MPa
+Ecoflex 00-50 = 0.21519 MPa
+
+Median tangent modulus mean
+Ecoflex 00-20 = 0.19775 MPa
+Ecoflex 00-50 = 0.47282 MPa
+
+Model-derived initial shear modulus
+Ecoflex 00-20 = 0.04268 MPa
+Ecoflex 00-50 = 0.11266 MPa
+00-50 / 00-20 ~= 2.64
+```
+
+The maximum-strain interval includes zero; the maintained report therefore does not claim a clear directional separation for that metric. The stress, tangent-modulus, and model-derived initial-shear results consistently indicate a stiffer response for Ecoflex 00-50 under the configured comparison.
+
+The conversation does not contain an explicit final statement that `run_all_tests()` passed after the last presentation/report refinements. Do not retroactively claim a documented full-suite pass for PR #53 without a later user report. The final real-data bundle regeneration and review are documented.
