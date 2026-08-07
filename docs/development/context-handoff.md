@@ -123,6 +123,7 @@ mechanics.fitting.fitTensileApplicationRangeModel
 mechanics.fitting.fitJointModel
 mechanics.workflow.selectTensileApplicationRangeModel
 mechanics.workflow.selectJointModel
+mechanics.workflow.selectStudyConsensusModel
 ```
 
 ### Population and fitting-audit integration
@@ -197,33 +198,27 @@ When current workflows need those results, regenerate them with current drivers.
 
 Completed-study consumers may continue to use regenerated canonical tensile/compression MAT results without re-importing raw data.
 
-## Validation evidence before final identity migration
+## MATLAB validation status
 
-The user reported successful local MATLAB execution after the second-order mathematical, registry, fitting/selection, downstream-output, and presentation phases.
+The final explicit-order migration is locally validated.
 
-Focused coverage that passed included:
+The user reported successful execution of the focused migration tests and the complete:
 
-```text
-tests/test_constitutive_models.m
-tests/test_tensile_application_range_fitting.m
-tests/test_tensile_application_range_selection.m
-tests/test_tensile_application_range_workflow.m
-tests/test_joint_fixed_model_fitting.m
-tests/test_joint_model_selection.m
-tests/test_joint_material_characterization_workflow.m
-tests/test_joint_mode_plotting.m
-tests/test_selected_parameter_population.m
-tests/test_study_reporting.m
-tests/test_compression_reporting.m
+```matlab
+run_all_tests()
 ```
 
-The user also reported successful complete `run_all_tests()` execution before the final rename from the historical registered `yeoh` identity to `yeoh-third-order`.
+suite after all remaining historical fixtures, including study-consensus-model coverage, were migrated from the removed third-order identifier `yeoh` to `yeoh-third-order`.
+
+Validated coverage includes the constitutive registry/evaluator contract, default candidate sets, fitting, windowed selection, tensile application-range fitting and selection, joint characterization, study consensus, population summaries, fitting audit, plotting, reporting, export, and persistence-oriented fixtures.
+
+The bare identifier `yeoh` is intentionally rejected by the registry and is not preserved by any compatibility path.
 
 MATLAB was run by the user, not by the assistant.
 
 ## Real-data evidence before final identity migration
 
-The user regenerated the maintained real study drivers with both Yeoh orders included.
+The user regenerated the maintained real study drivers with both Yeoh orders included before the final third-order identifier migration.
 
 Observed evidence included:
 
@@ -235,36 +230,35 @@ Observed evidence included:
 
 Those scientific results remain relevant because the final identity migration changes the stored third-order name only, not the constitutive equation or objective.
 
-## Required validation after final identity migration
+## Remaining gate before merge
 
-The current branch now requires a fresh MATLAB validation gate because the canonical third-order registered identity changed.
-
-Run focused tests covering:
+Regenerate the four maintained real drivers once under the final explicit-order registry:
 
 ```text
-tests/test_constitutive_models.m
-tests/test_model_selection.m
-tests/test_tensile_application_range_fitting.m
-tests/test_tensile_application_range_selection.m
-tests/test_tensile_application_range_workflow.m
-tests/test_joint_fixed_model_fitting.m
-tests/test_joint_model_selection.m
-tests/test_joint_material_characterization_workflow.m
-tests/test_joint_mode_plotting.m
-tests/test_selected_parameter_population.m
-tests/test_study_reporting.m
-tests/test_compression_reporting.m
+1. real tensile study
+2. real compression study
+3. tensile application-range characterization
+4. joint material characterization and robustness audit
 ```
 
-Then run:
+Review the regenerated MAT/CSV/Markdown/figures against the pre-migration four-candidate results.
 
-```matlab
-results = run_all_tests();
+Expected invariant:
+
+```text
+all scientific metrics and fitted parameters remain unchanged within numerical tolerance
 ```
 
-After tests pass, regenerate the four maintained real drivers so new MAT/CSV outputs persist `yeoh-third-order`. Compare numerical metrics with the pre-migration outputs; only model identity strings and derived presentation should change.
+Expected intentional identity change:
 
-Do not claim the final identity migration is MATLAB-validated until the user reports these results.
+```text
+historical third-order model id: yeoh
+final third-order model id:      yeoh-third-order
+```
+
+Also confirm that human-facing outputs continue to show `Yeoh second order` and `Yeoh third order`, and that no newly generated MAT/CSV output persists the bare identifier `yeoh` as a model identity.
+
+Do not merge this branch until this final real-data regeneration is reviewed and the user explicitly authorizes the merge.
 
 ## Completed presentation and serialization contracts
 
