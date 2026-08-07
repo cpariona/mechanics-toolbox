@@ -185,17 +185,34 @@ validation.refitPerformed = false;
 
 Compression cannot influence tensile fitting, eligibility, or model selection. The figure residual convention does not alter stored validation metrics, RMSE, predictions, fitting, or selection.
 
-## Real-study evidence
+## Final real-study evidence
 
-The four-candidate real-study run performed before the final identifier migration retained `mooney-rivlin` as the selected tensile application-range model. Yeoh second order and Yeoh third order were both fitted and reported separately. The final identifier migration changes only the stored third-order model name; it does not change the constitutive equation, fitting objective, parameter count, or selection policy.
+The final four-candidate application-range run after the explicit-order identifier migration retained Mooney-Rivlin as the selected model. Candidate objectives were approximately:
 
-The generated study bundle should be rerun once after the identifier migration so MAT/CSV persistence records `yeoh-third-order` rather than the historical `yeoh` identifier.
+```text
+Neo-Hookean       0.000277
+Mooney-Rivlin     0.000225
+Yeoh second order 0.000234
+Yeoh third order  0.000226
+```
+
+Mooney-Rivlin and third-order Yeoh were practically equivalent under the configured tolerance, and the parsimonious selector retained Mooney-Rivlin. The selected parameters and registry-derived reference property were approximately:
+
+```text
+C10 = 0.023122 MPa
+C01 = 0.005407 MPa
+mu0 = 0.057058 MPa
+```
+
+Range-sensitivity runs at maximum engineering strains `0.30`, `0.40`, and `0.50 mm/mm` all selected Mooney-Rivlin, with `mu0` approximately `0.057946`, `0.057503`, and `0.057058 MPa`, respectively.
+
+These values match the pre-rename four-candidate run to the inspected precision. The identifier migration therefore changed only the persisted third-order Yeoh name from the historical `yeoh` string to `yeoh-third-order`.
 
 ## Validation status
 
-The user reported successful local execution of focused second-order Yeoh tests and the complete `run_all_tests()` suite before the final third-order identifier migration.
+The user reported successful local execution of all focused migration tests and the complete `run_all_tests()` suite after the explicit-order identity migration.
 
-The explicit-order migration therefore requires a new focused and complete MATLAB validation gate. Scientific metrics should remain unchanged apart from the third-order model identifier.
+The maintained real tensile, compression, tensile application-range, and joint-characterization drivers were then regenerated successfully. The inspected application-range bundle persists canonical registered identities and retains the same Mooney-Rivlin selection and fitted properties observed before the third-order identifier rename.
 
 ## Maintenance boundary
 
