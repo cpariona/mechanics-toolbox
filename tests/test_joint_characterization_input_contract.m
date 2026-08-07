@@ -30,6 +30,15 @@ verifyEqual(testCase, normalized.specimens(1).Context.deformationMeasure, ...
 verifyEqual(testCase, normalized.specimens(1).Context.stressMeasure, "nominal");
 end
 
+function testDefaultCandidatesUseExplicitThirdOrderYeoh(testCase)
+config = mechanics.config.jointMaterialCharacterizationConfig();
+verifyEqual(testCase, config.candidateModelNames, ...
+    ["neo-hookean"; "mooney-rivlin"; "yeoh-third-order"]);
+verifyFalse(testCase, any(config.candidateModelNames == "yeoh"));
+verifyEqual(testCase, config.selection.tieBreakOrder, ...
+    config.candidateModelNames);
+end
+
 function testConfiguredModeWeightsAreNormalized(testCase)
 config = mechanics.config.jointMaterialCharacterizationConfig();
 config.modeWeights = [3; 1];
