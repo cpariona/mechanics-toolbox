@@ -167,6 +167,20 @@ compression: 1.66 %
 
 These values match the pre-rename four-candidate run to the inspected precision. The final migration therefore changed persisted model identity from the historical `yeoh` string to `yeoh-third-order` without changing the scientific conclusion or constitutive result.
 
+## Default-policy interpretation
+
+The joint evidence argues against adding second-order Yeoh to the conservative library default merely because it is now registered. Second-order Yeoh is substantially better than Neo-Hookean and Mooney-Rivlin for this dataset, but third-order Yeoh still reduces the joint objective from approximately `0.00124659` to `0.000936332`, a relative reduction of about 25%. That is not a practically equivalent result under the maintained selection contract.
+
+The second-order variant remains valuable as an explicit nested-model comparison because it quantifies whether the third-order term is needed. For the validated real dataset, the comparison indicates that the third-order term retains material explanatory value. Therefore the maintained default remains:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-third-order
+```
+
+A future default-policy change should be based on additional datasets or an explicit methodological decision to routinely include nested model orders in every default comparison.
+
 ## Validation
 
 The user reported successful local execution of all focused migration tests and the complete `run_all_tests()` suite after the explicit-order identity migration.
