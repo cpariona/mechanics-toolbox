@@ -53,8 +53,8 @@ grid(axesHandle, "on")
 box(axesHandle, "on")
 legend(axesHandle, "Location", "best", "Interpreter", "none")
 
-figureHandle.UserData.initialShearSummary = ...
-    localInitialShearUserData(result);
+figureHandle.UserData = struct( ...
+    "initialShearSummary", localInitialShearUserData(result));
 end
 
 function localConfidenceBand(axesHandle, tangent)
