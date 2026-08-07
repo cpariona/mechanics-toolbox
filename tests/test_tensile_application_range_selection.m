@@ -35,6 +35,24 @@ verifyEqual(testCase, result.referenceProperties.values, 0.42, ...
     "AbsTol", 1e-12);
 end
 
+function testSecondOrderYeohIsTreatedAsTwoParameterModel(testCase)
+config = localConfig();
+config.selection.practicalObjectiveTolerance = 0.05;
+config.selection.tieBreakOrder = ["yeoh-second-order"; "yeoh"];
+candidates = [ ...
+    localCandidate("yeoh-second-order", 0.0102, true, [0.15, 0.02]); ...
+    localCandidate("yeoh", 0.0100, true, [0.15, 0.02, 0.001])];
+result = mechanics.workflow.selectTensileApplicationRangeModel( ...
+    candidates, config);
+
+verifyEqual(testCase, result.candidateSummary.ParameterCount, [2; 3]);
+verifyTrue(testCase, all(result.candidateSummary.PracticallyEquivalent));
+verifyEqual(testCase, result.selectedModelName, "yeoh-second-order");
+verifyEqual(testCase, result.referenceProperties.names, "mu0");
+verifyEqual(testCase, result.referenceProperties.values, 0.3, ...
+    "AbsTol", 1e-12);
+end
+
 function testRegistryAliasesCannotCreateDuplicateCandidates(testCase)
 config = localConfig();
 candidates = [ ...
@@ -91,9 +109,9 @@ verifyError(testCase, @() mechanics.workflow.selectTensileApplicationRangeModel(
 end
 
 function testAllRegisteredModelsExposeMu0(testCase)
-models = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
-parameters = {0.4, [0.1, 0.2], [0.15, 0.01, 0.001]};
-expected = [0.4; 0.6; 0.3];
+models = ["neo-hookean"; "mooney-rivlin"; "yeoh-second-order"; "yeoh"];
+parameters = {0.4, [0.1, 0.2], [0.15, 0.01], [0.15, 0.01, 0.001]};
+expected = [0.4; 0.6; 0.3; 0.3];
 for index = 1:numel(models)
     model = mechanics.models.modelRegistry(models(index));
     verifyEqual(testCase, model.derivedQuantityNames, "mu0");
