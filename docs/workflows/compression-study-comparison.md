@@ -1,0 +1,144 @@
+# Compression study comparison
+
+## Purpose
+
+Completed compression studies can be compared without re-importing or reprocessing raw workbooks.
+
+Public entrypoint:
+
+```matlab
+comparison = mechanics.workflow.compareCompressionStudies( ...
+    studies, groupLabels, config);
+```
+
+The workflow delegates shared uniaxial study combination to `mechanics.workflow.compareUniaxialStudies` and group-level population inference to `mechanics.workflow.analyzeGroupComparison`.
+
+The maintained Ecoflex material-comparison driver is:
+
+```text
+studies/compression/run_compression_material_comparison.m
+```
+
+It currently compares completed ASTM D575 studies for Ecoflex 00-20 and Ecoflex 00-50.
+
+## Input boundary
+
+The comparison consumes completed `compression_study.mat` results. It does not own workbook extraction, cycle selection, zero referencing, mechanical conversion, fitting, or specimen exclusion.
+
+The two studies must use compatible stored strain/stress measures and units when the corresponding compatibility checks remain enabled.
+
+## Pairwise stress-strain comparison
+
+For exactly two groups, the maintained population comparison retains:
+
+```text
+mean stress for group A
+mean stress for group B
+mean signed difference A - B
+bootstrap confidence interval for the difference
+```
+
+For compression studies the maintained stored stress convention is negative. The lower panel therefore presents the same stored difference as the physically intuitive magnitude convention:
+
+```text
+|stress_B| - |stress_A|
+```
+
+under the maintained negative-compression sign contract. Positive plotted values mean that group B has the larger compressive-stress magnitude.
+
+This is a presentation convention only. Stored stress values and the statistical comparison remain unchanged.
+
+Axes use the retained mechanics metadata so dimensionless engineering strain is displayed as `mm/mm` and stress-like quantities retain the stored stress unit.
+
+## Tangent-modulus comparison
+
+When both group populations contain completed tangent-modulus aggregation, the exporter creates:
+
+```text
+group_tangent_modulus_comparison.png
+group_tangent_modulus_comparison.fig
+```
+
+The figure overlays the population tangent-modulus curves and their available confidence bands.
+
+Each material also receives a horizontal model-derived initial shear reference `mu0` when selected-model parameters are available. The value is obtained through the maintained registry-derived contract in `mechanics.statistics.deriveInitialShearModulus`; the plotting layer does not implement model-specific formulas.
+
+The reference uses the same population central statistic (`mean` or `median`) configured for the group population.
+
+`mu0` and tangent modulus have the same stress units but are not the same mechanical quantity:
+
+- tangent modulus is a local incremental slope of the measured compression response;
+- `mu0` is a model-derived small-strain shear reference from the selected specimen fits.
+
+The horizontal line is therefore a global stiffness reference, not a prediction of the tangent-modulus curve.
+
+The associated summary is persisted as:
+
+```text
+group_model_initial_shear_modulus.csv
+```
+
+The summary records group name, contributing specimen count, central statistic, `mu0`, unit, and selected model names represented in the group.
+
+## Specimen-level metric comparison
+
+For exactly two groups the exporter also creates:
+
+```text
+group_metric_comparison.png
+group_metric_comparison.fig
+```
+
+The figure shows individual processed-specimen values together with the group mean for each maintained scalar comparison metric:
+
+```text
+MaximumStrain
+MaximumStress
+MedianTangentModulus
+```
+
+Each panel reports the mean A-minus-B difference and its bootstrap 95% confidence interval when available. Individual points remain visible because small experimental groups should not be represented only by aggregate bars or intervals.
+
+## Export bundle
+
+The group comparison exporter retains the previous files and adds the new stiffness/presentation outputs:
+
+```text
+group_summary.csv
+pairwise_curve_comparison.csv
+pairwise_metric_comparison.csv
+group_model_initial_shear_modulus.csv
+group_comparison.png
+group_comparison.fig
+group_metric_comparison.png
+group_metric_comparison.fig
+group_tangent_modulus_comparison.png      % when available
+group_tangent_modulus_comparison.fig      % when available
+group_comparison.mat
+```
+
+Each group also retains its own population-analysis export folder.
+
+## Architecture boundary
+
+Preserve these ownership rules:
+
+- completed compression studies remain the only inputs;
+- `compareCompressionStudies` remains the compression-specific public entrypoint;
+- shared group statistics remain under `mechanics.statistics` and `mechanics.workflow`;
+- figures remain under `mechanics.plotting`;
+- serialization and persistent figure export remain under `mechanics.io`;
+- experiment-specific paths and group labels remain in the study driver;
+- no Ecoflex-specific logic belongs in `src/+mechanics`.
+
+Do not duplicate the comparison workflow in the driver and do not add model-specific `mu0` formulas to plotting code.
+
+## Validation status
+
+The comparison-visualization enhancement is implemented on:
+
+```text
+feature/compression-study-comparison-visuals
+```
+
+MATLAB validation is pending. Run the focused group-comparison tests and the complete repository suite before merging or documenting the generated Ecoflex figures as validated outputs.
