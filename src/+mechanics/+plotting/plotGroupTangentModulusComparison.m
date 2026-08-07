@@ -16,6 +16,7 @@ end
 
 commonRange = localCommonStrainRange(result.groups);
 stressUnit = localStressUnit(result);
+displayStressUnit = mechanics.plotting.mechanicalDisplayUnit("stress", stressUnit);
 figureHandle = figure("Color", "w");
 axesHandle = axes(figureHandle);
 hold(axesHandle, "on")
@@ -35,6 +36,7 @@ for index = 1:2
     uistack(lineHandle, "top")
 end
 
+annotationCount = 0;
 if isfield(result, "modelInitialShearSummary") && ...
         ~isempty(result.modelInitialShearSummary)
     shearSummary = result.modelInitialShearSummary;
@@ -43,29 +45,58 @@ if isfield(result, "modelInitialShearSummary") && ...
         if ~isfinite(value)
             continue;
         end
-        label = sprintf("mu0 model reference — %s", shearSummary.Group(index));
-        lineArguments = {"--", "LineWidth", 1.2, "DisplayName", label};
+        color = [0.25 0.25 0.25];
         if index <= size(groupColors, 1) && all(isfinite(groupColors(index, :)))
-            lineArguments = [lineArguments, {"Color", groupColors(index, :)}]; %#ok<AGROW>
+            color = groupColors(index, :);
         end
-        yline(axesHandle, value, lineArguments{:});
+        yline(axesHandle, value, "--", ...
+            "LineWidth", 1.2, ...
+            "Color", color, ...
+            "DisplayName", char(shearSummary.Group(index) + ...
+            " model-derived initial shear"));
+        localShearAnnotation(axesHandle, commonRange, value, ...
+            displayStressUnit, color);
+        annotationCount = annotationCount + 1;
     end
 end
 
 xlim(axesHandle, commonRange)
 xlabel(axesHandle, localStrainLabel(result))
 ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
-    "Tangent modulus", mechanics.plotting.mechanicalDisplayUnit( ...
-    "stress", stressUnit)))
+    "Tangent modulus", displayStressUnit))
 title(axesHandle, ...
-    "Tangent-modulus populations with model-derived initial shear references")
+    "Tangent-modulus populations with model-derived \mu_0 references", ...
+    "Interpreter", "tex")
 grid(axesHandle, "on")
 box(axesHandle, "on")
 legend(axesHandle, "Location", "best", "Interpreter", "none")
 
 figureHandle.UserData = struct( ...
     "initialShearSummary", localInitialShearUserData(result), ...
+    "initialShearAnnotationCount", annotationCount, ...
     "commonStrainRange", commonRange);
+end
+
+function localShearAnnotation(axesHandle, strainRange, value, unit, color)
+x = strainRange(2) - 0.02 * diff(strainRange);
+unitLatex = localLatexUnit(unit);
+label = sprintf("$\\mu_0 = %.3g\\,\\mathrm{%s}$", value, unitLatex);
+text(axesHandle, x, value, label, ...
+    "Interpreter", "latex", ...
+    "HorizontalAlignment", "right", ...
+    "VerticalAlignment", "bottom", ...
+    "Color", color, ...
+    "FontWeight", "bold", ...
+    "BackgroundColor", "w", ...
+    "Margin", 2);
+end
+
+function output = localLatexUnit(unit)
+output = char(string(unit));
+output = strrep(output, "\\", "\\textbackslash{}");
+output = strrep(output, "_", "\\_");
+output = strrep(output, "%", "\\%");
+output = strrep(output, " ", "\\,");
 end
 
 function range = localCommonStrainRange(groups)
