@@ -58,19 +58,34 @@ The library default candidate set remains:
 ```text
 neo-hookean
 mooney-rivlin
-yeoh
+yeoh-third-order
 ```
 
-The maintained real joint-characterization driver on the second-order Yeoh feature branch explicitly compares:
+The maintained real joint-characterization driver explicitly compares:
 
 ```text
 neo-hookean
 mooney-rivlin
 yeoh-second-order
-yeoh
+yeoh-third-order
 ```
 
-`yeoh-second-order` has parameters `C10, C20`; `yeoh` retains the historical third-order contract `C10, C20, C30`. Both expose `mu0 = 2*C10` through registry metadata. Adding the model to the real driver does not alter the library default.
+Both Yeoh variants share:
+
+```text
+familyName = yeoh
+functionHandle = mechanics.models.yeoh
+mu0 = 2 * C10
+```
+
+Their registered contracts are:
+
+```text
+yeoh-second-order -> C10, C20       -> order 2
+yeoh-third-order  -> C10, C20, C30  -> order 3
+```
+
+The bare identifier `yeoh` is not a registered model identity and is not retained as a compatibility alias. Human-facing outputs use `Yeoh second order` and `Yeoh third order`; MAT/CSV results persist the canonical registered identifiers.
 
 ## Maintained driver and bundle
 
@@ -104,6 +119,8 @@ joint_fit_compression.fig
 
 The bundle does not duplicate the complete tension and compression exports.
 
+Generated results that still contain the historical third-order identifier `yeoh` are pre-migration snapshots. Regenerate them with the current drivers when they must be consumed by current code; do not add a legacy registry alias.
+
 ## Robustness audit
 
 ```matlab
@@ -114,9 +131,9 @@ robustnessAudit = mechanics.workflow.auditJointMaterialCharacterization( ...
 
 The maintained driver stores the audit result as `robustnessAudit`. The audit is one-factor-at-a-time and evaluates mode weights, sampling density, retained deformation range, and specimens retained per mode. It does not form a Cartesian product of perturbations or add alternative normalization methods without evidence.
 
-## Historical real-data baseline
+## Real-data evidence
 
-Before `yeoh-second-order` was added to the real-driver candidate set, the first maintained real run used four tensile and four compression specimens, with 22,006 observations in total. Third-order `yeoh` was selected with:
+The original maintained three-candidate run used four tensile and four compression specimens, with 22,006 observations in total. Third-order Yeoh was selected with:
 
 ```text
 C10 = 0.0524808 MPa
@@ -124,16 +141,23 @@ C20 = 1.98662e-4 MPa
 C30 = 4.04826e-6 MPa
 ```
 
-The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`, so third-order Yeoh was not selected by a marginal difference within that three-model candidate set.
+The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`.
 
-Mean normalized RMSE was approximately:
+A subsequent four-candidate run that included second-order Yeoh gave approximately:
+
+```text
+Yeoh second order objective = 0.001247
+Yeoh third order objective  = 0.000936
+```
+
+and third-order Yeoh remained clearly preferred. The final explicit-order identifier migration changes only the third-order registered name from the historical `yeoh` string to `yeoh-third-order`; it does not change the third-order constitutive equation or fitting objective.
+
+Mean normalized RMSE in the original maintained joint run was approximately:
 
 ```text
 tension:     3.94 %
 compression: 1.66 %
 ```
-
-This result remains useful historical evidence but does not determine whether the two-parameter Yeoh form is practically equivalent under the current parsimonious selection contract. The real driver must be rerun with all four candidates before updating the scientific interpretation.
 
 ## Historical robustness result
 
@@ -148,15 +172,13 @@ Under the previous three-model candidate set, third-order Yeoh remained selected
 | 75% deformation range | 0.0016051 | 0.011781 |
 | One specimen per mode | 0.00067871 | 0.0086765 |
 
-Those robustness values are tied to the previous candidate set. Once `yeoh-second-order` is included, model identity and parameter stability must be reassessed because the parsimonious selector may legitimately prefer the two-parameter model when objectives are practically equivalent.
+The robustness audit should be regenerated after the explicit identifier migration so persisted scenario model names use `yeoh-third-order`.
 
 ## Validation
 
-The user reported successful local execution of all focused second-order Yeoh tests and the complete `run_all_tests()` suite after the mathematical, registry, fitting/selection, and downstream-output phases.
+The user reported successful local execution of all focused second-order Yeoh tests and the complete `run_all_tests()` suite before the final third-order identifier migration.
 
-Synthetic joint coverage verifies second-order Yeoh parameter recovery, parameter count, selection, export, figures, Markdown output, and MAT persistence without changing default candidates.
-
-Real joint execution with the four-model candidate set remains pending. The required review should include candidate objective, parameter count, AIC/BIC diagnostics, selected model, mode/specimen RMSE, fitted parameters, `mu0`, and robustness scenarios.
+Synthetic joint coverage verifies second-order Yeoh parameter recovery, parameter count, selection, export, figures, Markdown output, and MAT persistence. The explicit-order identity migration requires a new focused and complete MATLAB validation gate; numerical joint results should remain unchanged apart from the third-order model identifier.
 
 ## Extension policy
 
