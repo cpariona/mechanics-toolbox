@@ -75,6 +75,7 @@ if isfield(result, "curveComparison") && ...
     end
 end
 
+localWriteInterpretationBoundaries(fileId, result);
 localWriteFigures(fileId, outputFiles);
 
 fprintf(fileId, "## Reproducibility\n\n");
@@ -82,6 +83,63 @@ fprintf(fileId, "- Comparison configuration is stored in `result.config`.\n");
 fprintf(fileId, "- Complete grouped populations and pairwise results are stored in `group_comparison.mat`.\n");
 fprintf(fileId, "- Group curve and metric tables are exported as CSV files.\n");
 fprintf(fileId, "- Bootstrap settings are recorded in the stored configuration.\n");
+end
+
+function localWriteInterpretationBoundaries(fileId, result)
+fprintf(fileId, "## Interpretation boundaries\n\n");
+fprintf(fileId, ...
+    "- Pairwise bootstrap intervals are descriptive uncertainty summaries for the configured specimen groups; this report does not convert interval exclusion of zero into a formal hypothesis-test claim.\n");
+
+if isfield(result, "metricComparison") && ~isempty(result.metricComparison)
+    comparison = result.metricComparison;
+    for rowIndex = 1:height(comparison)
+        metric = localMetricDisplayName(string(comparison.Metric(rowIndex)));
+        difference = comparison.MeanDifference(rowIndex);
+        lower = comparison.ConfidenceLower(rowIndex);
+        upper = comparison.ConfidenceUpper(rowIndex);
+        if ~all(isfinite([difference, lower, upper]))
+            continue;
+        end
+
+        groupA = string(comparison.GroupA(rowIndex));
+        groupB = string(comparison.GroupB(rowIndex));
+        if lower <= 0 && upper >= 0
+            fprintf(fileId, ...
+                "- %s: the 95%% bootstrap interval for the mean difference includes zero, so the current comparison does not show a clear directional separation between `%s` and `%s` for this metric.\n", ...
+                char(metric), char(groupA), char(groupB));
+        elseif difference > 0
+            fprintf(fileId, ...
+                "- %s: the observed mean is higher for `%s` than for `%s`, and the 95%% bootstrap interval for A-minus-B remains above zero.\n", ...
+                char(metric), char(groupA), char(groupB));
+        else
+            fprintf(fileId, ...
+                "- %s: the observed mean is higher for `%s` than for `%s`, and the 95%% bootstrap interval for A-minus-B remains below zero.\n", ...
+                char(metric), char(groupB), char(groupA));
+        end
+    end
+end
+
+if isfield(result, "modelInitialShearSummary") && ...
+        height(result.modelInitialShearSummary) == 2
+    shear = result.modelInitialShearSummary;
+    values = shear.InitialShearModulus;
+    if all(isfinite(values)) && all(values > 0)
+        if values(1) ~= values(2)
+            [largerValue, largerIndex] = max(values);
+            smallerIndex = 3 - largerIndex;
+            ratio = largerValue / values(smallerIndex);
+            fprintf(fileId, ...
+                "- Model-derived $\\mu_0$: `%s` is %.3g times the corresponding reference for `%s`. This ratio is a constitutive stiffness reference and must not be interpreted as a pointwise tangent-modulus ratio.\n", ...
+                char(shear.Group(largerIndex)), ratio, char(shear.Group(smallerIndex)));
+        end
+    end
+end
+
+if localTestType(result) == "compression"
+    fprintf(fileId, ...
+        "- Compression curves retain negative stored stress. Magnitude-based presentation in the pairwise figure changes only interpretation of the plotted difference, not the stored numerical state.\n");
+end
+fprintf(fileId, "\n");
 end
 
 function tableOut = localMetricTable(tableIn, mechanicsMetadata)
@@ -144,6 +202,19 @@ for row = 1:numel(modelLists)
     end
     displayNames = displayNames(strlength(displayNames) > 0);
     output(row) = strjoin(displayNames, ", ");
+end
+end
+
+function name = localMetricDisplayName(metric)
+switch metric
+    case "MaximumStrain"
+        name = "Maximum strain";
+    case "MaximumStress"
+        name = "Maximum stress";
+    case "MedianTangentModulus"
+        name = "Median tangent modulus";
+    otherwise
+        name = metric;
 end
 end
 
