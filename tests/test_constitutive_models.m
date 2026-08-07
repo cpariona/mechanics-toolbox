@@ -11,9 +11,21 @@ verifyEqual(testCase, mechanics.models.listModels(), ...
     ["neo-hookean", "mooney-rivlin", "yeoh-second-order", "yeoh"]);
 end
 
+function testRegisteredModelDisplayNames(testCase)
+verifyEqual(testCase, mechanics.models.modelRegistry("neo-hookean").displayName, ...
+    "Neo-Hookean");
+verifyEqual(testCase, mechanics.models.modelRegistry("mooney-rivlin").displayName, ...
+    "Mooney-Rivlin");
+verifyEqual(testCase, mechanics.models.modelRegistry("yeoh-second-order").displayName, ...
+    "Yeoh second order");
+verifyEqual(testCase, mechanics.models.modelRegistry("yeoh").displayName, ...
+    "Yeoh third order");
+end
+
 function testSecondOrderYeohRegistryMetadata(testCase)
 model = mechanics.models.modelRegistry("yeoh-second-order");
 verifyEqual(testCase, model.name, "yeoh-second-order");
+verifyEqual(testCase, model.displayName, "Yeoh second order");
 verifyEqual(testCase, model.functionHandle, @mechanics.models.yeoh);
 verifyEqual(testCase, model.parameterNames, ["C10", "C20"]);
 verifyEqual(testCase, model.defaultInitialGuess, [1, 0]);
@@ -27,6 +39,7 @@ end
 function testExistingYeohRegistryRemainsThirdOrder(testCase)
 model = mechanics.models.modelRegistry("yeoh");
 verifyEqual(testCase, model.name, "yeoh");
+verifyEqual(testCase, model.displayName, "Yeoh third order");
 verifyEqual(testCase, model.parameterNames, ["C10", "C20", "C30"]);
 verifyEqual(testCase, model.defaultInitialGuess, [1, 0, 0]);
 verifyEqual(testCase, model.lowerBounds, [0, -Inf, -Inf]);
