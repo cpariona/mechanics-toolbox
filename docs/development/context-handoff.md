@@ -20,28 +20,215 @@ c021ea4f3d3d00f1d345e779aa3ca2efef411bf4
 
 `main` subsequently advanced with documentation-only handoff maintenance. Future sessions must resolve the live `main` and `origin/main` SHAs with Git rather than treating the merge commit above as the permanent branch head.
 
-The maintenance branch `maintenance/consolidate-presentation-contracts` is no longer active. Future implementation should start from updated `main` unless the user explicitly requests otherwise.
+## Active branch
 
-## Completed maintenance implementation
+The current feature branch is:
 
-### Unit presentation
+```text
+feature/yeoh-second-order
+```
+
+It was created from the then-current `main` baseline:
+
+```text
+a5dbe4ce27c0472becdb8e90b09c3a6a5690aa5c
+```
+
+Do not merge this branch without explicit user authorization.
+
+## Second-order Yeoh feature status
+
+### Maintained naming
+
+The registry now exposes:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh
+```
+
+The unqualified registered name `yeoh` intentionally retains the historical third-order contract.
+
+```text
+yeoh-second-order -> C10, C20
+yeoh              -> C10, C20, C30
+```
+
+No wrapper, alias, bridge file, or duplicate Yeoh evaluator was introduced.
+
+### Constitutive evaluator
+
+`mechanics.models.yeoh` is the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
+
+```text
+[C10, C20]       -> second-order Yeoh
+[C10, C20, C30]  -> third-order Yeoh
+```
+
+The third-order expression is numerically unchanged from the previous maintained implementation.
+
+For both registered Yeoh orders:
+
+```text
+mu0 = 2 * C10
+```
+
+The derived quantity is owned by registry metadata.
+
+### Registry and fitting integration
+
+`mechanics.models.modelRegistry("yeoh-second-order")` defines:
+
+```text
+parameterNames      = C10, C20
+defaultInitialGuess = [1, 0]
+lowerBounds         = [0, -Inf]
+upperBounds         = [Inf, Inf]
+derivedQuantity     = mu0
+```
+
+Existing fitting and selection implementations required no model-specific production changes. They already consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
+
+Validated paths include:
+
+```text
+mechanics.fitting.fitModel
+mechanics.fitting.fitTensileApplicationRangeModel
+mechanics.fitting.fitJointModel
+mechanics.workflow.selectTensileApplicationRangeModel
+mechanics.workflow.selectJointModel
+```
+
+### Population and downstream integration
+
+One hard-coded downstream contract was found in:
+
+```text
+mechanics.statistics.deriveInitialShearModulus
+```
+
+It previously used a model-name switch for Neo-Hookean, Mooney-Rivlin, and third-order Yeoh. It now obtains `mu0` from registry metadata and reconstructs the registered parameter vector from the selected-parameter table.
+
+The existing statistical error contract for unsupported models remains preserved.
+
+Downstream synthetic coverage now includes:
+
+```text
+selected-parameter population
+consensus-model fitting
+parameter plotting
+CSV export
+MAT persistence
+tensile application-range report/figures/export
+joint characterization report/figures/export
+```
+
+### Library defaults
+
+Registering `yeoh-second-order` does not add it to every default candidate set.
+
+The library defaults for joint characterization and tensile application-range characterization remain:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh
+```
+
+Changing defaults is explicitly deferred until real-data evidence is reviewed.
+
+### Real-study drivers
+
+The maintained real drivers on the feature branch explicitly compare all four candidates:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh
+```
+
+Affected drivers:
+
+```text
+studies/tension/run_tensile_experiment.m
+studies/compression/run_compression_experiment.m
+studies/tension/run_tensile_application_range_characterization.m
+studies/joint-characterization/run_joint_material_characterization.m
+```
+
+This is an experiment-specific comparison decision and does not change library defaults.
+
+## Validation evidence
+
+The user reported successful local MATLAB execution after each completed implementation phase.
+
+Validated focused coverage includes:
+
+```text
+tests/test_constitutive_models.m
+tests/test_tensile_application_range_fitting.m
+tests/test_tensile_application_range_selection.m
+tests/test_tensile_application_range_workflow.m
+tests/test_joint_fixed_model_fitting.m
+tests/test_joint_model_selection.m
+tests/test_joint_material_characterization_workflow.m
+tests/test_selected_parameter_population.m
+```
+
+The user also reported that the complete:
+
+```matlab
+run_all_tests()
+```
+
+suite passed after the mathematical, registry, fitting/selection, and downstream-output phases.
+
+This MATLAB evidence was reported by the user; MATLAB was not executed by the assistant.
+
+## Pending real-data validation
+
+The current real-study result files under ignored `results/` were generated before `yeoh-second-order` was added to the maintained real-driver candidate sets unless the user explicitly regenerates them after this handoff.
+
+Historical results therefore remain evidence for the previous three-model candidate set only.
+
+The next validation step is to regenerate and review, in this order:
+
+```text
+1. real tensile study
+2. real compression study
+3. tensile application-range characterization
+4. joint material characterization and robustness audit
+```
+
+Review should compare at minimum:
+
+```text
+selected model
+candidate objective / RMSE / BIC evidence
+parameter count
+C10, C20, and C30 where applicable
+mu0
+fitting-window or application-range stability
+joint tension/compression fit quality
+robustness scenario model identity
+```
+
+Do not update scientific conclusions or library defaults before these real results are inspected.
+
+## Completed presentation and serialization contracts
 
 Stored physical values are not rescaled for presentation.
 
-Responsibilities are separated as follows:
+Maintained unit responsibilities remain:
 
 ```text
 mechanics.plotting.resolveStudyUnits
-    retrieves stored study units and canonicalizes dimensionless strain metadata to "-"
-
 mechanics.plotting.mechanicalDisplayUnit
-    converts stored units to human-facing display units
-
 mechanics.plotting.mechanicalAxisLabel
-    constructs standard labels for known mechanical quantities
-
 mechanics.plotting.formatUnitLabel
-    appends an already resolved display unit to a specialized or generic label
 ```
 
 Human-facing conventions remain:
@@ -52,105 +239,11 @@ stress and stress-like quantities -> stored stress unit
 normalized quantities -> [-]
 ```
 
-`formatUnitLabel` no longer infers strain semantics from free-text labels.
+`mechanics.io.writeMarkdownTable` remains the shared scalar Markdown serializer for the maintained equivalent table family. Report writers with distinct serialization contracts remain separate.
 
-Migrated maintained consumers include:
-
-```text
-src/+mechanics/+plotting/plotStressStrain.m
-src/+mechanics/+plotting/exportTensileStudyFigures.m
-src/+mechanics/+plotting/exportCompressionStudyFigures.m
-src/+mechanics/+plotting/plotFittingAudit.m
-```
-
-The migration preserves numerical arrays, compression sign conventions, styles, output filenames, and specialized labels.
-
-`plotModelFit` remains intentionally unchanged because its current `fitResult` contract does not retain sufficient unit and measure metadata. Do not add inferred defaults such as `MPa` or `mm/mm` without first extending and validating the result contract.
-
-### Markdown table serialization
-
-A shared serializer owns the identical Markdown table contract used by three maintained exporters:
-
-```text
-mechanics.io.writeMarkdownTable
-```
-
-Migrated consumers:
-
-```text
-src/+mechanics/+io/exportJointMaterialCharacterization.m
-src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
-src/+mechanics/+io/exportTensileStudyComparison.m
-```
-
-The retained contract includes:
-
-```text
-numeric scalars -> %.6g
-NaN -> NaN
-Inf/-Inf -> Inf/-Inf
-missing text -> missing
-logical scalars -> true/false
-datetime -> MATLAB string representation
-scalar cell values -> unwrapped
-non-scalar or empty numeric values -> empty cell text
-pipe characters -> escaped as \|
-blank line after each table
-```
-
-Other report writers were not migrated because their contracts differ for empty tables, missing values, arrays, NaN, or trailing whitespace:
-
-```text
-exportCompressionStudyReport
-exportConstitutiveStudyReport
-exportTensileStudyReport
-writeFittingAuditSection
-```
-
-Do not force them through the shared helper without first defining and testing an intentional canonical migration.
-
-## Validation evidence
-
-The user reported successful local MATLAB execution after PR #51 was merged:
-
-```text
-tests/test_plotting_units.m
-tests/test_markdown_table_serialization.m
-run_all_tests()
-```
-
-The complete repository suite passed locally on the merged state. This evidence was reported by the user; MATLAB was not executed by the assistant.
-
-## Tests added or extended
-
-```text
-tests/test_plotting_units.m
-tests/test_markdown_table_serialization.m
-```
-
-The plotting tests protect stored-versus-display unit ownership, semantic labels, fitting-audit units, and preservation of plotted data.
-
-The Markdown tests protect scalar formatting, missing and non-finite values, logicals, datetime values, scalar cells, pipe escaping, and the retained blank line after a table.
-
-## Package ownership findings
-
-No package moves were justified in the completed maintenance phase.
-
-The inspected functions remain correctly owned:
-
-```text
-mechanics.plotting
-    figure construction and human-facing unit presentation
-
-mechanics.io
-    report serialization and Markdown table output
-```
-
-The phase prioritized contract consolidation rather than cosmetic folder reorganization.
+`plotModelFit` remains intentionally unchanged because its current result contract does not retain sufficient unit and measure metadata. Do not infer physical units there without first extending and validating the producer/result contract.
 
 ## Terminology boundaries
-
-Use these terms consistently:
 
 - `tension` and `compression` describe constitutive modes or specimen-level mechanics;
 - `tensile study` and `compression study` describe complete experimental workflow families;
@@ -159,22 +252,6 @@ Use these terms consistently:
 - `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
-
-Preserve existing public names unless a demonstrated ambiguity or ownership defect justifies migration.
-
-## Next planned phase
-
-The next requested feature is support for a second-order Yeoh constitutive model as an additional fitting candidate.
-
-This feature has not yet been implemented. Before modifying code:
-
-1. inspect the current model registry and existing Yeoh implementation;
-2. define the exact constitutive equation and parameter naming for the second-order form;
-3. determine whether it should be a distinct registered model or an order-parameterized implementation without changing public behavior of the current Yeoh model;
-4. inspect fitting, model-selection, reporting, plotting, and application-range callers for hard-coded model-name or parameter-count assumptions;
-5. add the smallest registry-driven implementation and focused tests before enabling it in workflow defaults.
-
-The new model must not change the equations, parameter identities, ranking behavior, defaults, or stored results of existing Neo-Hookean, Mooney-Rivlin, or current Yeoh fits unless explicitly approved.
 
 ## Required architecture contracts
 
