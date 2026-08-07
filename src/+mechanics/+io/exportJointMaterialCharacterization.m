@@ -68,15 +68,16 @@ cleanup = onCleanup(@() fclose(fileId)); %#ok<NASGU>
 
 fprintf(fileId, "# Joint material characterization\n\n");
 fprintf(fileId, "Generated: %s\n\n", char(string(result.createdAt)));
-fprintf(fileId, "Selected model: `%s`\n\n", ...
-    char(string(result.selectedModelName)));
+selectedModel = mechanics.models.modelRegistry(string(result.selectedModelName));
+fprintf(fileId, "Selected model: `%s`\n\n", char(selectedModel.displayName));
 fprintf(fileId, "Modes: %s\n\n", ...
     char(strjoin(string(result.modeNames(:))', ", ")));
 
 fprintf(fileId, "## Selected parameters\n\n");
 mechanics.io.writeMarkdownTable(fileId, selectedParameters);
 fprintf(fileId, "## Candidate models\n\n");
-mechanics.io.writeMarkdownTable(fileId, result.candidateSummary);
+candidateSummary = localDisplayCandidateSummary(result.candidateSummary);
+mechanics.io.writeMarkdownTable(fileId, candidateSummary);
 fprintf(fileId, "## Mode fit summary\n\n");
 mechanics.io.writeMarkdownTable(fileId, result.modeSummary);
 fprintf(fileId, "## Specimen fit summary\n\n");
@@ -97,4 +98,16 @@ for modeIndex = 1:numel(result.modeNames)
             char(modeName), char(modeName), char(string(name)), char(string(extension)));
     end
 end
+end
+
+function output = localDisplayCandidateSummary(input)
+output = input;
+if ~ismember("ModelName", string(output.Properties.VariableNames))
+    return;
+end
+names = string(output.ModelName(:));
+for index = 1:numel(names)
+    names(index) = mechanics.models.modelRegistry(names(index)).displayName;
+end
+output.ModelName = names;
 end
