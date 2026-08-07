@@ -52,7 +52,8 @@ for index = 1:numel(keys)
     axesHandle.XLim = [0.5 max(height(rows)+0.5,1.5)];
     xlabel(axesHandle,'Specimen');
     ylabel(axesHandle,'Fitted parameter value');
-    title(axesHandle, modelName + " / " + parameterName, ...
+    model = mechanics.models.modelRegistry(modelName);
+    title(axesHandle, model.displayName + " / " + parameterName, ...
         'Interpreter','none');
     grid(axesHandle,'on');
     box(axesHandle,'on');
