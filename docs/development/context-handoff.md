@@ -36,64 +36,88 @@ a5dbe4ce27c0472becdb8e90b09c3a6a5690aa5c
 
 Do not merge this branch without explicit user authorization.
 
-## Second-order Yeoh feature status
+## Yeoh family feature status
 
-### Maintained naming
+### Final registered naming contract
 
-The registry now exposes:
+The registry exposes these constitutive model identities:
 
 ```text
 neo-hookean
 mooney-rivlin
 yeoh-second-order
-yeoh
+yeoh-third-order
 ```
 
-The unqualified registered name `yeoh` intentionally retains the historical third-order contract.
+The Yeoh variants are explicit and symmetric:
 
 ```text
-yeoh-second-order -> C10, C20
-yeoh              -> C10, C20, C30
+yeoh-second-order -> C10, C20       -> order 2
+yeoh-third-order  -> C10, C20, C30  -> order 3
 ```
 
-No wrapper, alias, bridge file, or duplicate Yeoh evaluator was introduced.
+Both variants share:
+
+```text
+familyName     = yeoh
+functionHandle = mechanics.models.yeoh
+mu0            = 2 * C10
+```
+
+Human-facing names are registry metadata:
+
+```text
+Yeoh second order
+Yeoh third order
+```
+
+The bare identifier `yeoh` is not a registered model identity and is not retained as a compatibility alias. It names only the constitutive family and the single maintained evaluator `mechanics.models.yeoh`.
+
+No wrapper, alias, bridge file, duplicate evaluator, or model-specific fitting path was introduced.
 
 ### Constitutive evaluator
 
-`mechanics.models.yeoh` is the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
+`mechanics.models.yeoh` remains the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
 
 ```text
 [C10, C20]       -> second-order Yeoh
 [C10, C20, C30]  -> third-order Yeoh
 ```
 
-The third-order expression is numerically unchanged from the previous maintained implementation.
+The third-order constitutive expression is numerically unchanged from the pre-feature implementation.
 
-For both registered Yeoh orders:
+### Registry metadata
+
+The model registry now separates four concepts:
 
 ```text
-mu0 = 2 * C10
+model.name        canonical registered variant identity
+model.displayName human-facing model name
+model.familyName  constitutive family identity
+model.order       polynomial order where meaningful
 ```
 
-The derived quantity is owned by registry metadata.
+For Neo-Hookean and Mooney-Rivlin, `familyName` equals the canonical model name and `order = NaN`.
 
-### Registry and fitting integration
-
-`mechanics.models.modelRegistry("yeoh-second-order")` defines:
+For Yeoh:
 
 ```text
-parameterNames      = C10, C20
-defaultInitialGuess = [1, 0]
-lowerBounds         = [0, -Inf]
-upperBounds         = [Inf, Inf]
-derivedQuantity     = mu0
+model.name        = yeoh-second-order / yeoh-third-order
+model.displayName = Yeoh second order / Yeoh third order
+model.familyName  = yeoh
+model.order       = 2 / 3
 ```
 
-Existing fitting and selection implementations required no model-specific production changes. They already consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
+Fitting, selection, plotting, reporting, and statistics continue to consume registry metadata rather than duplicate Yeoh-specific logic.
 
-Validated paths include:
+### Fitting and selection integration
+
+Existing fitting and selection implementations required no model-specific production branches. They already consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
+
+Validated architecture paths include:
 
 ```text
+mechanics.models.evaluateModel
 mechanics.fitting.fitModel
 mechanics.fitting.fitTensileApplicationRangeModel
 mechanics.fitting.fitJointModel
@@ -101,53 +125,44 @@ mechanics.workflow.selectTensileApplicationRangeModel
 mechanics.workflow.selectJointModel
 ```
 
-### Population and downstream integration
+### Population and fitting-audit integration
 
-One hard-coded downstream contract was found in:
+Two previous hard-coded derived-quantity paths were migrated to the registry:
 
 ```text
 mechanics.statistics.deriveInitialShearModulus
+mechanics.workflow.summarizeFittingAudit
 ```
 
-It previously used a model-name switch for Neo-Hookean, Mooney-Rivlin, and third-order Yeoh. It now obtains `mu0` from registry metadata and reconstructs the registered parameter vector from the selected-parameter table.
+Both now obtain `mu0` from registered derived-quantity metadata. Yeoh second order therefore participates in population summaries and fitting-audit figures with finite `mu0` values.
 
-The existing statistical error contract for unsupported models remains preserved.
-
-Downstream synthetic coverage now includes:
-
-```text
-selected-parameter population
-consensus-model fitting
-parameter plotting
-CSV export
-MAT persistence
-tensile application-range report/figures/export
-joint characterization report/figures/export
-```
+Presentation consumers use `displayName`; persisted model identities remain canonical registry names.
 
 ### Library defaults
 
-Registering `yeoh-second-order` does not add it to every default candidate set.
+Adding Yeoh second order does not add it to every default candidate set.
 
-The library defaults for joint characterization and tensile application-range characterization remain:
+The maintained library defaults remain three candidates:
 
 ```text
 neo-hookean
 mooney-rivlin
-yeoh
+yeoh-third-order
 ```
 
-Changing defaults is explicitly deferred until real-data evidence is reviewed.
+This preserves the previous default scientific policy while making the historical third-order identity explicit.
+
+Changing defaults to include Yeoh second order remains a separate evidence-driven reproducibility decision.
 
 ### Real-study drivers
 
-The maintained real drivers on the feature branch explicitly compare all four candidates:
+The maintained real drivers explicitly compare all four candidates:
 
 ```text
 neo-hookean
 mooney-rivlin
 yeoh-second-order
-yeoh
+yeoh-third-order
 ```
 
 Affected drivers:
@@ -159,13 +174,34 @@ studies/tension/run_tensile_application_range_characterization.m
 studies/joint-characterization/run_joint_material_characterization.m
 ```
 
-This is an experiment-specific comparison decision and does not change library defaults.
+This is an experiment-specific comparison decision and does not alter library defaults.
 
-## Validation evidence
+## Persistence and historical generated results
 
-The user reported successful local MATLAB execution after each completed implementation phase.
+New MAT/CSV outputs must persist canonical registered identities:
 
-Validated focused coverage includes:
+```text
+yeoh-second-order
+yeoh-third-order
+```
+
+Generated results produced before the explicit third-order identity migration may contain:
+
+```text
+yeoh
+```
+
+for the third-order variant. These files are pre-migration snapshots under ignored `results/` paths and are not a maintained compatibility contract.
+
+When current workflows need those results, regenerate them with current drivers. Do not add `yeoh` back to the registry as an alias and do not add a compatibility wrapper or migration bridge.
+
+Completed-study consumers may continue to use regenerated canonical tensile/compression MAT results without re-importing raw data.
+
+## Validation evidence before final identity migration
+
+The user reported successful local MATLAB execution after the second-order mathematical, registry, fitting/selection, downstream-output, and presentation phases.
+
+Focused coverage that passed included:
 
 ```text
 tests/test_constitutive_models.m
@@ -175,48 +211,60 @@ tests/test_tensile_application_range_workflow.m
 tests/test_joint_fixed_model_fitting.m
 tests/test_joint_model_selection.m
 tests/test_joint_material_characterization_workflow.m
+tests/test_joint_mode_plotting.m
 tests/test_selected_parameter_population.m
+tests/test_study_reporting.m
+tests/test_compression_reporting.m
 ```
 
-The user also reported that the complete:
+The user also reported successful complete `run_all_tests()` execution before the final rename from the historical registered `yeoh` identity to `yeoh-third-order`.
+
+MATLAB was run by the user, not by the assistant.
+
+## Real-data evidence before final identity migration
+
+The user regenerated the maintained real study drivers with both Yeoh orders included.
+
+Observed evidence included:
+
+- individual tensile and compression specimen selection continued to favor the third-order Yeoh variant;
+- tensile application-range characterization continued to select Mooney-Rivlin;
+- in joint characterization, second-order Yeoh achieved a joint objective of approximately `0.001247`, while third-order Yeoh retained approximately `0.000936`, so the third-order variant remained clearly preferred for that dataset;
+- human-facing outputs correctly distinguished `Yeoh second order` and `Yeoh third order` after the presentation fixes;
+- fitting-audit `mu0` for second-order Yeoh became finite after registry-driven derived-quantity migration.
+
+Those scientific results remain relevant because the final identity migration changes the stored third-order name only, not the constitutive equation or objective.
+
+## Required validation after final identity migration
+
+The current branch now requires a fresh MATLAB validation gate because the canonical third-order registered identity changed.
+
+Run focused tests covering:
+
+```text
+tests/test_constitutive_models.m
+tests/test_model_selection.m
+tests/test_tensile_application_range_fitting.m
+tests/test_tensile_application_range_selection.m
+tests/test_tensile_application_range_workflow.m
+tests/test_joint_fixed_model_fitting.m
+tests/test_joint_model_selection.m
+tests/test_joint_material_characterization_workflow.m
+tests/test_joint_mode_plotting.m
+tests/test_selected_parameter_population.m
+tests/test_study_reporting.m
+tests/test_compression_reporting.m
+```
+
+Then run:
 
 ```matlab
-run_all_tests()
+results = run_all_tests();
 ```
 
-suite passed after the mathematical, registry, fitting/selection, and downstream-output phases.
+After tests pass, regenerate the four maintained real drivers so new MAT/CSV outputs persist `yeoh-third-order`. Compare numerical metrics with the pre-migration outputs; only model identity strings and derived presentation should change.
 
-This MATLAB evidence was reported by the user; MATLAB was not executed by the assistant.
-
-## Pending real-data validation
-
-The current real-study result files under ignored `results/` were generated before `yeoh-second-order` was added to the maintained real-driver candidate sets unless the user explicitly regenerates them after this handoff.
-
-Historical results therefore remain evidence for the previous three-model candidate set only.
-
-The next validation step is to regenerate and review, in this order:
-
-```text
-1. real tensile study
-2. real compression study
-3. tensile application-range characterization
-4. joint material characterization and robustness audit
-```
-
-Review should compare at minimum:
-
-```text
-selected model
-candidate objective / RMSE / BIC evidence
-parameter count
-C10, C20, and C30 where applicable
-mu0
-fitting-window or application-range stability
-joint tension/compression fit quality
-robustness scenario model identity
-```
-
-Do not update scientific conclusions or library defaults before these real results are inspected.
+Do not claim the final identity migration is MATLAB-validated until the user reports these results.
 
 ## Completed presentation and serialization contracts
 
@@ -240,8 +288,6 @@ normalized quantities -> [-]
 ```
 
 `mechanics.io.writeMarkdownTable` remains the shared scalar Markdown serializer for the maintained equivalent table family. Report writers with distinct serialization contracts remain separate.
-
-`plotModelFit` remains intentionally unchanged because its current result contract does not retain sufficient unit and measure metadata. Do not infer physical units there without first extending and validating the producer/result contract.
 
 ## Terminology boundaries
 
