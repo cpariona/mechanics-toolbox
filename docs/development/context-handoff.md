@@ -164,7 +164,25 @@ yeoh-third-order
 
 This preserves the previous default scientific policy while allowing explicit evidence-driven comparison of both Yeoh orders in maintained experiments.
 
-Changing library defaults to include Yeoh second order remains a separate reproducibility and model-selection policy decision.
+## Pending Yeoh default-policy decision
+
+The question of whether `yeoh-second-order` should be added to the library default candidate sets is intentionally left open.
+
+Current policy is:
+
+```text
+library defaults:
+    neo-hookean
+    mooney-rivlin
+    yeoh-third-order
+
+explicit scientific comparisons may additionally include:
+    yeoh-second-order
+```
+
+The current real-data evidence does not require a default change: third-order Yeoh remains materially better than second-order Yeoh in the joint characterization, while tensile application-range characterization selects Mooney-Rivlin. However, this does not permanently settle the policy question.
+
+Revisit the default candidate set when additional independent datasets, repeated material campaigns, or a clearly stated methodological policy provide evidence that routinely comparing nested Yeoh orders improves model selection. A future change should be treated as a reproducibility and model-selection policy decision rather than as mere model registration.
 
 ## Persistence and historical generated results
 
@@ -235,20 +253,6 @@ mu0 = 0.057058 MPa
 Range-sensitivity scenarios at `0.30`, `0.40`, and `0.50 mm/mm` all retained Mooney-Rivlin.
 
 These results matched the inspected pre-rename four-candidate results to the reported precision. The explicit-order migration therefore changed model identity and presentation contracts without changing the scientific conclusions or constitutive fits.
-
-## Current policy conclusion
-
-The Yeoh second-order variant is a maintained registered model and should remain available for explicit comparisons.
-
-The current real-data evidence does not require changing the conservative library defaults. Third-order Yeoh remains materially better than second-order Yeoh in the joint characterization, while tensile application-range characterization selects Mooney-Rivlin. Therefore the default candidate sets remain:
-
-```text
-neo-hookean
-mooney-rivlin
-yeoh-third-order
-```
-
-A future default-policy change should require evidence from additional datasets, repeated experiments, or a clearly stated methodological preference for routinely testing nested Yeoh orders.
 
 ## Completed presentation and serialization contracts
 
