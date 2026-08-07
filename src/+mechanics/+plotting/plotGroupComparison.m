@@ -59,7 +59,8 @@ grid on
 box on
 legend("Location", "best", "Interpreter", "none")
 
-figureHandle.UserData.differenceConvention = differenceConvention;
+figureHandle.UserData = struct( ...
+    "differenceConvention", differenceConvention);
 end
 
 function [strainLabel, stressLabel, differenceLabel] = localAxisLabels(result)
