@@ -131,54 +131,47 @@ robustnessAudit = mechanics.workflow.auditJointMaterialCharacterization( ...
 
 The maintained driver stores the audit result as `robustnessAudit`. The audit is one-factor-at-a-time and evaluates mode weights, sampling density, retained deformation range, and specimens retained per mode. It does not form a Cartesian product of perturbations or add alternative normalization methods without evidence.
 
-## Real-data evidence
+## Final real-data evidence
 
-The original maintained three-candidate run used four tensile and four compression specimens, with 22,006 observations in total. Third-order Yeoh was selected with:
-
-```text
-C10 = 0.0524808 MPa
-C20 = 1.98662e-4 MPa
-C30 = 4.04826e-6 MPa
-```
-
-The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`.
-
-A subsequent four-candidate run that included second-order Yeoh gave approximately:
+The final four-candidate run after the explicit-order identifier migration used four tensile and four compression specimens and 22,006 observations. The candidate objectives were approximately:
 
 ```text
-Yeoh second order objective = 0.001247
-Yeoh third order objective  = 0.000936
+Neo-Hookean       0.016832
+Mooney-Rivlin     0.016832
+Yeoh second order 0.00124659
+Yeoh third order  0.000936332
 ```
 
-and third-order Yeoh remained clearly preferred. The final explicit-order identifier migration changes only the third-order registered name from the historical `yeoh` string to `yeoh-third-order`; it does not change the third-order constitutive equation or fitting objective.
+Third-order Yeoh remained selected. The fitted shared parameters were approximately:
 
-Mean normalized RMSE in the original maintained joint run was approximately:
+```text
+C10 = 0.052481 MPa
+C20 = 1.99e-4 MPa
+C30 = 4e-6 MPa
+```
+
+The corresponding pooled diagnostics for third-order Yeoh were approximately:
+
+```text
+Physical SSE = 81.8727
+AIC          = -123093
+BIC          = -123069
+```
+
+Mean normalized RMSE remained approximately:
 
 ```text
 tension:     3.94 %
 compression: 1.66 %
 ```
 
-## Historical robustness result
-
-Under the previous three-model candidate set, third-order Yeoh remained selected in every configured scenario:
-
-| Scenario | Objective | Relative parameter change |
-|---|---:|---:|
-| Baseline | 0.00093633 | 0 |
-| Tension-weighted | 0.0012154 | 0.022449 |
-| Compression-weighted | 0.00061859 | 0.0079484 |
-| 50% sampling density | 0.00093796 | 0.00011288 |
-| 75% deformation range | 0.0016051 | 0.011781 |
-| One specimen per mode | 0.00067871 | 0.0086765 |
-
-The robustness audit should be regenerated after the explicit identifier migration so persisted scenario model names use `yeoh-third-order`.
+These values match the pre-rename four-candidate run to the inspected precision. The final migration therefore changed persisted model identity from the historical `yeoh` string to `yeoh-third-order` without changing the scientific conclusion or constitutive result.
 
 ## Validation
 
-The user reported successful local execution of all focused second-order Yeoh tests and the complete `run_all_tests()` suite before the final third-order identifier migration.
+The user reported successful local execution of all focused migration tests and the complete `run_all_tests()` suite after the explicit-order identity migration.
 
-Synthetic joint coverage verifies second-order Yeoh parameter recovery, parameter count, selection, export, figures, Markdown output, and MAT persistence. The explicit-order identity migration requires a new focused and complete MATLAB validation gate; numerical joint results should remain unchanged apart from the third-order model identifier.
+The maintained joint driver was then regenerated successfully. The final bundle contains canonical `yeoh-second-order` and `yeoh-third-order` identities, human-facing `Yeoh second order` / `Yeoh third order` labels, finite registry-derived `mu0` values, and the same selected third-order Yeoh conclusion observed before the identifier rename.
 
 ## Extension policy
 
