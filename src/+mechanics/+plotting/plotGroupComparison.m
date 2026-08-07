@@ -14,23 +14,31 @@ isCompression = isfield(result, "testType") && ...
 figureHandle = figure("Color", "w");
 tiledlayout(figureHandle, 2, 1);
 
-nexttile
-hold on
-plot(comparison.strain, comparison.meanStressA, ...
+upperAxes = nexttile;
+hold(upperAxes, "on")
+lineA = plot(upperAxes, comparison.strain, comparison.meanStressA, ...
     "LineWidth", 2, "DisplayName", char(comparison.groupNameA));
-plot(comparison.strain, comparison.meanStressB, ...
+localConfidenceBand(upperAxes, comparison.strain, ...
+    comparison.confidenceLowerA, comparison.confidenceUpperA, lineA.Color);
+uistack(lineA, "top")
+lineB = plot(upperAxes, comparison.strain, comparison.meanStressB, ...
     "LineWidth", 2, "DisplayName", char(comparison.groupNameB));
-xlabel(strainLabel)
-ylabel(stressLabel)
-grid on
-box on
-legend("Location", "best", "Interpreter", "none")
+localConfidenceBand(upperAxes, comparison.strain, ...
+    comparison.confidenceLowerB, comparison.confidenceUpperB, lineB.Color);
+uistack(lineB, "top")
+xlabel(upperAxes, strainLabel)
+ylabel(upperAxes, stressLabel)
+title(upperAxes, "Mean stress with 95% bootstrap confidence bands")
+grid(upperAxes, "on")
+box(upperAxes, "on")
+legend(upperAxes, "Location", "best", "Interpreter", "none")
 
-nexttile
-hold on
+lowerAxes = nexttile;
+hold(lowerAxes, "on")
 if all(isfinite(comparison.confidenceLower)) && ...
         all(isfinite(comparison.confidenceUpper))
-    fill([comparison.strain; flipud(comparison.strain)], ...
+    fill(lowerAxes, ...
+        [comparison.strain; flipud(comparison.strain)], ...
         [comparison.confidenceLower; flipud(comparison.confidenceUpper)], ...
         0.8 * [1 1 1], ...
         "EdgeColor", "none", ...
@@ -41,26 +49,54 @@ end
 if isCompression
     differenceLabel = sprintf("|%s| - |%s|", ...
         comparison.groupNameB, comparison.groupNameA);
-    plot(comparison.strain, comparison.meanDifference, ...
+    plot(lowerAxes, comparison.strain, comparison.meanDifference, ...
         "LineWidth", 2, "DisplayName", differenceLabel);
-    title(sprintf("Positive values indicate larger compressive-stress magnitude for %s", ...
+    title(lowerAxes, sprintf( ...
+        "Positive values indicate larger compressive-stress magnitude for %s", ...
         comparison.groupNameB), "Interpreter", "none")
     differenceConvention = "compression-magnitude-B-minus-A";
 else
-    plot(comparison.strain, comparison.meanDifference, ...
+    plot(lowerAxes, comparison.strain, comparison.meanDifference, ...
         "LineWidth", 2, "DisplayName", "Mean difference A - B");
     differenceConvention = "signed-A-minus-B";
 end
 
-yline(0, "--", "HandleVisibility", "off")
-xlabel(strainLabel)
-ylabel(stressDifferenceLabel)
-grid on
-box on
-legend("Location", "best", "Interpreter", "none")
+yline(lowerAxes, 0, "--", "HandleVisibility", "off")
+xlabel(lowerAxes, strainLabel)
+ylabel(lowerAxes, stressDifferenceLabel)
+grid(lowerAxes, "on")
+box(lowerAxes, "on")
+legend(lowerAxes, "Location", "best", "Interpreter", "none")
 
 figureHandle.UserData = struct( ...
-    "differenceConvention", differenceConvention);
+    "differenceConvention", differenceConvention, ...
+    "groupCurveConfidenceBands", localGroupBandsAvailable(comparison));
+end
+
+function localConfidenceBand(axesHandle, strain, lower, upper, faceColor)
+if isempty(lower) || isempty(upper) || ...
+        ~all(isfinite(lower)) || ~all(isfinite(upper))
+    return;
+end
+fill(axesHandle, ...
+    [strain; flipud(strain)], ...
+    [lower; flipud(upper)], ...
+    faceColor, ...
+    "EdgeColor", "none", ...
+    "FaceAlpha", 0.15, ...
+    "HandleVisibility", "off");
+end
+
+function available = localGroupBandsAvailable(comparison)
+fields = ["confidenceLowerA","confidenceUpperA", ...
+    "confidenceLowerB","confidenceUpperB"];
+available = all(isfield(comparison, cellstr(fields)));
+if ~available
+    return;
+end
+for index = 1:numel(fields)
+    available = available && all(isfinite(comparison.(fields(index))));
+end
 end
 
 function [strainLabel, stressLabel, differenceLabel] = localAxisLabels(result)
