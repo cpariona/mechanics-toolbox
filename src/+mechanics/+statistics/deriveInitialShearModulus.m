@@ -29,7 +29,7 @@ for index = 1:numel(specimenIds)
             error("mechanics:statistics:MultipleSelectedModels", ...
                 "Each specimen must contain parameters from one selected model.");
         end
-        model = mechanics.models.modelRegistry(string(models));
+        model = localModel(string(models));
         value = localDerivedInitialShearModulus(rows, model);
         if config.requireFiniteParameters && ~isfinite(value)
             error("mechanics:statistics:NonfiniteInitialShearModulus", ...
@@ -59,6 +59,19 @@ result.values = values;
 result.summary = localSummary(values, config);
 result.errors = errors;
 result.specimenCount = height(values);
+end
+
+function model = localModel(modelName)
+try
+    model = mechanics.models.modelRegistry(modelName);
+catch ME
+    if string(ME.identifier) == "mechanics:models:UnknownModel"
+        error("mechanics:statistics:UnsupportedInitialShearModel", ...
+            "Initial shear modulus is not defined for selected model: %s", ...
+            modelName);
+    end
+    rethrow(ME);
+end
 end
 
 function value = localDerivedInitialShearModulus(rows, model)
