@@ -158,14 +158,15 @@ fprintf(fileId, "Deformation unit: `%s`\n\n", char(units.strain));
 fprintf(fileId, "Stress and parameter unit: `%s`\n\n", char(units.stress));
 fprintf(fileId, "Fitted range requested: [%g, %g] %s\n\n", ...
     result.config.fitRange(1), result.config.fitRange(2), char(units.strain));
-fprintf(fileId, "Selected model: `%s`\n\n", ...
-    char(string(result.selectedModelName)));
+selectedModel = mechanics.models.modelRegistry(string(result.selectedModelName));
+fprintf(fileId, "Selected model: `%s`\n\n", char(selectedModel.displayName));
 fprintf(fileId, "## Selected parameters\n\n");
 mechanics.io.writeMarkdownTable(fileId, selectedParameters);
 fprintf(fileId, "## Reference properties\n\n");
 mechanics.io.writeMarkdownTable(fileId, properties);
 fprintf(fileId, "## Candidate models\n\n");
-mechanics.io.writeMarkdownTable(fileId, result.candidateSummary);
+candidateSummary = localDisplayCandidateSummary(result.candidateSummary);
+mechanics.io.writeMarkdownTable(fileId, candidateSummary);
 fprintf(fileId, "## Tensile specimen fit summary\n\n");
 mechanics.io.writeMarkdownTable(fileId, specimenSummary);
 localWriteFigure(fileId, "Tensile fits and residuals", ...
@@ -194,6 +195,18 @@ fprintf(fileId, "- The selected model is conditional on the configured candidate
 fprintf(fileId, "- Range sensitivity varies only the upper fitted deformation boundary.\n");
 fprintf(fileId, "- Compression, when supplied, is external prediction validation with fixed tensile-calibrated parameters and does not affect selection.\n");
 fprintf(fileId, "- Normalized objective, normalized RMSE, and normalized loss use the display unit `[-]`.\n");
+end
+
+function output = localDisplayCandidateSummary(input)
+output = input;
+if ~ismember("ModelName", string(output.Properties.VariableNames))
+    return;
+end
+names = string(output.ModelName(:));
+for index = 1:numel(names)
+    names(index) = mechanics.models.modelRegistry(names(index)).displayName;
+end
+output.ModelName = names;
 end
 
 function localWriteFigure(fileId, titleText, filePath)
