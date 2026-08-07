@@ -75,7 +75,12 @@ result = localResult("yeoh", parameterNames, parameters, 40);
 figureHandle = mechanics.plotting.plotJointModeFit(result, "compression");
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 
+lineObjects = findobj(figureHandle, "Type", "line");
+displayNames = string(get(lineObjects, "DisplayName"));
+verifyTrue(testCase, any(contains(displayNames, "Yeoh third order")));
+
 [textContent, textInterpreters] = localTextContent(figureHandle);
+verifyTrue(testCase, any(contains(textContent, "Yeoh third order")));
 for index = 1:numel(parameterNames)
     verifyTrue(testCase, any(contains(textContent, parameterNames(index) + " =")));
 end
