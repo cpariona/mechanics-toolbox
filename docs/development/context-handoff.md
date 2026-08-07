@@ -8,32 +8,26 @@ Use this document as the persistent starting point for future repository work.
 cpariona/mechanics-toolbox
 ```
 
-## Current branch state
+## Current merged baseline
 
-The merged baseline remains:
+The presentation-contract and Markdown-serialization maintenance phase was merged through PR #51.
+
+Observed merged state:
 
 ```text
 main == origin/main
-2e5e3597e8cdb9f86b13e132d12093668e877bdc
+c021ea4f3d3d00f1d345e779aa3ca2efef411bf4
 ```
 
-The active maintenance work is implemented on:
-
-```text
-maintenance/consolidate-presentation-contracts
-```
-
-The branch has not been merged. Do not merge it without explicit user authorization.
+The maintenance branch `maintenance/consolidate-presentation-contracts` is no longer active. Future implementation should start from updated `main` unless the user explicitly requests otherwise.
 
 ## Completed maintenance implementation
-
-The presentation-contract and Markdown-serialization consolidation is implemented on the active branch.
 
 ### Unit presentation
 
 Stored physical values are not rescaled for presentation.
 
-Responsibilities are now separated as follows:
+Responsibilities are separated as follows:
 
 ```text
 mechanics.plotting.resolveStudyUnits
@@ -74,7 +68,7 @@ The migration preserves numerical arrays, compression sign conventions, styles, 
 
 ### Markdown table serialization
 
-A shared serializer now owns the identical Markdown table contract used by three maintained exporters:
+A shared serializer owns the identical Markdown table contract used by three maintained exporters:
 
 ```text
 mechanics.io.writeMarkdownTable
@@ -116,7 +110,7 @@ Do not force them through the shared helper without first defining and testing a
 
 ## Validation evidence
 
-The user reported successful local MATLAB execution on the active branch after the final corrections:
+The user reported successful local MATLAB execution after PR #51 was merged:
 
 ```text
 tests/test_plotting_units.m
@@ -124,7 +118,7 @@ tests/test_markdown_table_serialization.m
 run_all_tests()
 ```
 
-The complete repository suite passed locally. This evidence was reported by the user; MATLAB was not executed by the assistant.
+The complete repository suite passed locally on the merged state. This evidence was reported by the user; MATLAB was not executed by the assistant.
 
 ## Tests added or extended
 
@@ -139,7 +133,7 @@ The Markdown tests protect scalar formatting, missing and non-finite values, log
 
 ## Package ownership findings
 
-No package moves were justified in this phase.
+No package moves were justified in the completed maintenance phase.
 
 The inspected functions remain correctly owned:
 
@@ -167,31 +161,19 @@ Use these terms consistently:
 
 Preserve existing public names unless a demonstrated ambiguity or ownership defect justifies migration.
 
-## Next step
+## Next planned phase
 
-The current branch should now undergo final Git review and pull-request preparation, without merge.
+The next requested feature is support for a second-order Yeoh constitutive model as an additional fitting candidate.
 
-Required checks:
+This feature has not yet been implemented. Before modifying code:
 
-```bash
-git fetch origin --prune
-git switch maintenance/consolidate-presentation-contracts
-git pull --ff-only origin maintenance/consolidate-presentation-contracts
-git diff --check origin/main...HEAD
-git diff --stat origin/main...HEAD
-git status -sb
-git ls-files --others --exclude-standard
-git ls-files results
-```
+1. inspect the current model registry and existing Yeoh implementation;
+2. define the exact constitutive equation and parameter naming for the second-order form;
+3. determine whether it should be a distinct registered model or an order-parameterized implementation without changing public behavior of the current Yeoh model;
+4. inspect fitting, model-selection, reporting, plotting, and application-range callers for hard-coded model-name or parameter-count assumptions;
+5. add the smallest registry-driven implementation and focused tests before enabling it in workflow defaults.
 
-Review the complete diff before creating or updating a pull request:
-
-```bash
-git diff origin/main...HEAD
-git log --oneline origin/main..HEAD
-```
-
-Do not merge unless explicitly authorized.
+The new model must not change the equations, parameter identities, ranking behavior, defaults, or stored results of existing Neo-Hookean, Mooney-Rivlin, or current Yeoh fits unless explicitly approved.
 
 ## Required architecture contracts
 
@@ -228,7 +210,17 @@ Before proposing or modifying code in a new session:
 1. read this file completely;
 2. read `docs/development/repository-structure.md`;
 3. read the relevant workflow and testing documents;
-4. verify Git state;
-5. determine whether work continues on the active maintenance branch or starts from updated `main`;
+4. verify Git state:
+
+```bash
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+git status -sb
+git rev-parse HEAD
+git rev-parse origin/main
+```
+
+5. create a dedicated branch for code changes unless the user explicitly requests direct work on `main`;
 6. inspect current callers and tests before proposing moves or shared helpers;
 7. define the smallest coherent phase and its validation gate before implementation.
