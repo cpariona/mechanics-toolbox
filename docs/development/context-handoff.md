@@ -38,6 +38,14 @@ feature/yeoh-second-order
 
 It may be deleted locally and remotely after the user's working copy is synchronized with `main`.
 
+The current experiment-specific follow-up is compression material comparison between Ecoflex 00-20 and Ecoflex 00-50 using completed ASTM D575 study results. The maintained comparison workflow already exists; a real-study driver has been added under:
+
+```text
+studies/compression/run_compression_material_comparison.m
+```
+
+It consumes completed study bundles and does not re-import raw workbooks.
+
 ## Yeoh family contract
 
 ### Registered naming
@@ -164,25 +172,56 @@ yeoh-third-order
 
 This preserves the previous default scientific policy while allowing explicit evidence-driven comparison of both Yeoh orders in maintained experiments.
 
-## Pending Yeoh default-policy decision
+### Pending default-policy decision
 
-The question of whether `yeoh-second-order` should be added to the library default candidate sets is intentionally left open.
+Whether `yeoh-second-order` should become part of the library default candidate sets remains intentionally unresolved.
 
-Current policy is:
+Current real-data evidence supports keeping the conservative defaults for now: third-order Yeoh remains materially better than second-order Yeoh in the joint characterization, while tensile application-range characterization selects Mooney-Rivlin. This is not a permanent rejection of second-order Yeoh as a default candidate.
 
-```text
-library defaults:
-    neo-hookean
-    mooney-rivlin
-    yeoh-third-order
+Revisit this policy when additional datasets, repeated experiments, or a clearly stated methodological preference for routinely testing nested Yeoh orders provide enough evidence to justify changing the default model-selection experiment.
 
-explicit scientific comparisons may additionally include:
-    yeoh-second-order
+Do not silently change the default candidate sets as part of unrelated maintenance.
+
+## Compression completed-study comparison
+
+The maintained public entrypoint is:
+
+```matlab
+mechanics.workflow.compareCompressionStudies
 ```
 
-The current real-data evidence does not require a default change: third-order Yeoh remains materially better than second-order Yeoh in the joint characterization, while tensile application-range characterization selects Mooney-Rivlin. However, this does not permanently settle the policy question.
+It delegates to the shared uniaxial completed-study comparison contract, validates compatible mechanics measures and units, reconstructs one population per study, compares pairwise population stress-strain curves over their common strain domain, compares scalar study metrics, and can export the group-comparison bundle.
 
-Revisit the default candidate set when additional independent datasets, repeated material campaigns, or a clearly stated methodological policy provide evidence that routinely comparing nested Yeoh orders improves model selection. A future change should be treated as a reproducibility and model-selection policy decision rather than as mere model registration.
+The maintained real driver for Ecoflex comparison is:
+
+```text
+studies/compression/run_compression_material_comparison.m
+```
+
+It expects completed studies at:
+
+```text
+results/real-compression-study-ecoflex0020/compression_study.mat
+results/real-compression-study/compression_study.mat
+```
+
+corresponding to Ecoflex 00-20 and Ecoflex 00-50, respectively.
+
+The comparison output is written under:
+
+```text
+results/compression-ecoflex0020-vs-0050/
+```
+
+The Ecoflex 00-20 raw workbook is local experimental data:
+
+```text
+data/raw/Compression_ASTM_D575_ECOFLEX0020_test.xlsx
+```
+
+It must first be processed with the maintained compression-study workflow and exported to the dedicated Ecoflex 00-20 result folder above. Do not overwrite the existing Ecoflex 00-50 `results/real-compression-study` bundle.
+
+The comparison driver itself must continue to consume completed study MAT files rather than duplicate ASTM D575 extraction, cycle selection, preprocessing, constitutive fitting, or population analysis.
 
 ## Persistence and historical generated results
 
@@ -214,6 +253,8 @@ Validated coverage includes the constitutive registry/evaluator contract, defaul
 The bare identifier `yeoh` is intentionally rejected by the registry and is not preserved by any compatibility path.
 
 MATLAB was run by the user, not by the assistant.
+
+The new Ecoflex compression material-comparison driver has not yet been locally executed by the user. Its library workflow is pre-existing maintained functionality; real-data validation should occur after the Ecoflex 00-20 completed study has been generated.
 
 ## Final real-data validation
 
@@ -284,6 +325,7 @@ normalized quantities -> [-]
 - `specimen-level mechanics` processes or evaluates one specimen;
 - `study-level workflow` orchestrates a complete campaign;
 - `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
+- `completed-study comparison` compares canonical completed studies without re-importing raw data;
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
 
@@ -300,8 +342,8 @@ normalized quantities -> [-]
 - Preserve public APIs unless a demonstrated ambiguity or ownership defect justifies migration.
 - Use the model registry rather than scattering model-name conditionals when the contracts are identical.
 - Keep model evaluation in `mechanics.models`, optimization in `mechanics.fitting`, population inference in `mechanics.statistics`, deterministic mechanical calculations in `mechanics.analysis`, and orchestration in `mechanics.workflow`.
-- Keep individual tensile, compression, joint-characterization, and tensile application-range workflows distinct.
-- Preserve completed-study add-ons as consumers of canonical completed study results; do not re-import or reprocess raw data.
+- Keep individual tensile, compression, joint-characterization, tensile application-range, and completed-study comparison workflows distinct.
+- Preserve completed-study add-ons and comparisons as consumers of canonical completed study results; do not re-import or reprocess raw data.
 - Preserve stored physical values and signs. Presentation conventions must not silently change numerical state.
 - Generated data and outputs remain under ignored `results/` paths.
 - Do not merge a pull request unless explicitly requested.
