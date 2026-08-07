@@ -71,7 +71,7 @@ end
 function testYeohAnnotationUsesRegistryDerivedQuantity(testCase)
 parameterNames = ["C10", "C20", "C30"];
 parameters = [0.052, 2e-4, 4e-6];
-result = localResult("yeoh", parameterNames, parameters, 40);
+result = localResult("yeoh-third-order", parameterNames, parameters, 40);
 figureHandle = mechanics.plotting.plotJointModeFit(result, "compression");
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 
@@ -110,7 +110,7 @@ function result = localResult(modelName, parameterNames, parameters, pointCount)
 context.deformationMeasure = "engineering-strain";
 context.stressMeasure = "nominal";
 modeName = "tension";
-if modelName == "yeoh"
+if modelName == "yeoh-third-order"
     modeName = "compression";
 end
 specimens = repmat(localSpecimen(modeName, "s1", modelName, ...
