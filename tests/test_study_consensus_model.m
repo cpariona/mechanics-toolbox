@@ -12,7 +12,7 @@ config = mechanics.config.studyConsensusModelConfig();
 config.bootstrap.iterations = 50;
 result = mechanics.workflow.selectStudyConsensusModel(batch, config);
 verifyTrue(testCase, result.hasConsensusModel);
-verifyEqual(testCase, result.modelName, "yeoh");
+verifyEqual(testCase, result.modelName, "yeoh-third-order");
 verifyEqual(testCase, result.metricSummary.MedianBIC, [100;90;80]);
 verifyEqual(testCase, result.metricSummary.DeltaBIC, [20;10;0]);
 verifyEqual(testCase, result.reason, "Selected by lowest median BIC.");
@@ -70,19 +70,19 @@ verifyTrue(testCase, isfile(files.data));
 end
 
 function batch = localBatch(bicMatrix, eligibleMatrix)
-models = ["neo-hookean";"mooney-rivlin";"yeoh"];
+models = ["neo-hookean";"mooney-rivlin";"yeoh-third-order"];
 parameterCounts = [1;2;3];
 specimenCount = size(bicMatrix,1);
 batch.modelNames = models;
 batch.specimenCount = specimenCount;
 batch.specimenSummary = table("S" + (1:specimenCount)', ...
     repmat("all",specimenCount,1), true(specimenCount,1), ...
-    true(specimenCount,1), repmat("yeoh",specimenCount,1), ...
+    true(specimenCount,1), repmat("yeoh-third-order",specimenCount,1), ...
     zeros(specimenCount,1), strings(specimenCount,1), strings(specimenCount,1), ...
     'VariableNames', {'SpecimenId','Group','Success','HasSelectedModel', ...
     'SelectedModelName','SelectedCriterionValue','ErrorIdentifier','ErrorMessage'});
 batch.comparisons = cell(specimenCount,1);
-for specimenIndex = 1:specimenCount
+for specimenIndex = 1:numel(batch.comparisons)
     success = true(3,1);
     eligible = eligibleMatrix(specimenIndex,:)';
     normalizedRMSE = [0.03;0.02;0.01] + specimenIndex .* 1e-4;
@@ -99,7 +99,7 @@ for specimenIndex = 1:specimenCount
     analyses{1}.fitResult.parameters = 10 + specimenIndex;
     analyses{2}.fitResult.modelName = "mooney-rivlin";
     analyses{2}.fitResult.parameters = [3;2] + specimenIndex;
-    analyses{3}.fitResult.modelName = "yeoh";
+    analyses{3}.fitResult.modelName = "yeoh-third-order";
     analyses{3}.fitResult.parameters = [4;0.5;0.1] + specimenIndex;
     comparison.summary = summary;
     comparison.analyses = analyses;

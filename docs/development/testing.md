@@ -34,6 +34,43 @@ Test files are grouped by subsystem or workflow rather than by implementation ph
 
 `test_markdown_table_serialization.m` protects the shared scalar Markdown contract, including numeric precision, non-finite values, missing text, logicals, datetime values, scalar cells, escaped pipes, and the retained blank line after a table.
 
+Yeoh-family coverage is distributed by maintained behavior rather than by migration phase:
+
+```text
+test_constitutive_models.m
+    second- and third-order Yeoh equations, explicit registered identities,
+    family/order/display metadata, parameter counts, output shape,
+    reference configuration, Neo-Hookean reduction, and rejection of bare yeoh
+
+test_tensile_application_range_fitting.m
+    shared second-order and third-order Yeoh fitting and explicit four-model fitting
+
+test_tensile_application_range_selection.m
+    registry-derived parameter count, mu0, and parsimony across Yeoh orders
+
+test_joint_fixed_model_fitting.m
+    second-order Yeoh recovery across independent tension and compression modes
+
+test_joint_model_selection.m
+    explicit second-order and third-order Yeoh joint selection
+
+test_selected_parameter_population.m
+    registry-derived mu0, consensus population, plotting, CSV, and MAT persistence
+
+test_study_consensus_model.m
+    canonical third-order identity through study-level consensus selection and export
+
+test_tensile_application_range_workflow.m
+    second-order Yeoh end-to-end workflow, report, figures, and MAT export
+
+test_joint_material_characterization_workflow.m
+    second-order Yeoh end-to-end joint workflow, report, figures, and MAT export
+```
+
+The user reported successful local MATLAB execution of all focused migration tests and the complete `run_all_tests()` suite after the final explicit-order identity migration. MATLAB was run locally by the user, not by the assistant.
+
+Final real-study regeneration was also completed after the test gate. The maintained tensile, compression, tensile application-range, and joint-characterization drivers all ran successfully with explicit registered identities `yeoh-second-order` and `yeoh-third-order`. Review of the generated bundle confirmed canonical model identities in CSV outputs and unchanged scientific conclusions relative to the pre-rename four-candidate run.
+
 Tests created only to verify a temporary migration or removed compatibility alias should be deleted once the canonical API is covered by functional tests. Test count alone is not a cleanup target; redundant behavior coverage, duplicated fixtures, and unnecessarily repeated expensive workflows are.
 
 ## Running focused tests

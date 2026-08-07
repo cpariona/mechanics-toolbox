@@ -20,28 +20,259 @@ c021ea4f3d3d00f1d345e779aa3ca2efef411bf4
 
 `main` subsequently advanced with documentation-only handoff maintenance. Future sessions must resolve the live `main` and `origin/main` SHAs with Git rather than treating the merge commit above as the permanent branch head.
 
-The maintenance branch `maintenance/consolidate-presentation-contracts` is no longer active. Future implementation should start from updated `main` unless the user explicitly requests otherwise.
+## Active branch
 
-## Completed maintenance implementation
+The current feature branch is:
 
-### Unit presentation
+```text
+feature/yeoh-second-order
+```
+
+It was created from the then-current `main` baseline:
+
+```text
+a5dbe4ce27c0472becdb8e90b09c3a6a5690aa5c
+```
+
+Do not merge this branch without explicit user authorization.
+
+## Yeoh family feature status
+
+### Final registered naming contract
+
+The registry exposes these constitutive model identities:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh-third-order
+```
+
+The Yeoh variants are explicit and symmetric:
+
+```text
+yeoh-second-order -> C10, C20       -> order 2
+yeoh-third-order  -> C10, C20, C30  -> order 3
+```
+
+Both variants share:
+
+```text
+familyName     = yeoh
+functionHandle = mechanics.models.yeoh
+mu0            = 2 * C10
+```
+
+Human-facing names are registry metadata:
+
+```text
+Yeoh second order
+Yeoh third order
+```
+
+The bare identifier `yeoh` is not a registered model identity and is not retained as a compatibility alias. It names only the constitutive family and the single maintained evaluator `mechanics.models.yeoh`.
+
+No wrapper, alias, bridge file, duplicate evaluator, or model-specific fitting path was introduced.
+
+### Constitutive evaluator
+
+`mechanics.models.yeoh` remains the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
+
+```text
+[C10, C20]       -> second-order Yeoh
+[C10, C20, C30]  -> third-order Yeoh
+```
+
+The third-order constitutive expression is numerically unchanged from the pre-feature implementation.
+
+### Registry metadata
+
+The model registry separates four concepts:
+
+```text
+model.name        canonical registered variant identity
+model.displayName human-facing model name
+model.familyName  constitutive family identity
+model.order       polynomial order where meaningful
+```
+
+For Neo-Hookean and Mooney-Rivlin, `familyName` equals the canonical model name and `order = NaN`.
+
+For Yeoh:
+
+```text
+model.name        = yeoh-second-order / yeoh-third-order
+model.displayName = Yeoh second order / Yeoh third order
+model.familyName  = yeoh
+model.order       = 2 / 3
+```
+
+Fitting, selection, plotting, reporting, and statistics consume registry metadata rather than duplicate Yeoh-specific logic.
+
+### Fitting and selection integration
+
+Existing fitting and selection implementations required no model-specific production branches. They consume registry metadata for parameter count, bounds, initial guesses, evaluation, and parsimony.
+
+Validated architecture paths include:
+
+```text
+mechanics.models.evaluateModel
+mechanics.fitting.fitModel
+mechanics.fitting.fitTensileApplicationRangeModel
+mechanics.fitting.fitJointModel
+mechanics.workflow.selectTensileApplicationRangeModel
+mechanics.workflow.selectJointModel
+mechanics.workflow.selectStudyConsensusModel
+```
+
+### Population and fitting-audit integration
+
+Two previous hard-coded derived-quantity paths were migrated to the registry:
+
+```text
+mechanics.statistics.deriveInitialShearModulus
+mechanics.workflow.summarizeFittingAudit
+```
+
+Both now obtain `mu0` from registered derived-quantity metadata. Yeoh second order therefore participates in population summaries and fitting-audit figures with finite `mu0` values.
+
+Presentation consumers use `displayName`; persisted model identities remain canonical registry names.
+
+### Library defaults
+
+Adding Yeoh second order does not add it to every default candidate set.
+
+The maintained library defaults remain three candidates:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-third-order
+```
+
+This preserves the previous default scientific policy while making the historical third-order identity explicit.
+
+Changing defaults to include Yeoh second order remains a separate evidence-driven reproducibility decision.
+
+### Real-study drivers
+
+The maintained real drivers explicitly compare all four candidates:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh-third-order
+```
+
+Affected drivers:
+
+```text
+studies/tension/run_tensile_experiment.m
+studies/compression/run_compression_experiment.m
+studies/tension/run_tensile_application_range_characterization.m
+studies/joint-characterization/run_joint_material_characterization.m
+```
+
+This is an experiment-specific comparison decision and does not alter library defaults.
+
+## Persistence and historical generated results
+
+New MAT/CSV outputs persist canonical registered identities:
+
+```text
+yeoh-second-order
+yeoh-third-order
+```
+
+Generated results produced before the explicit third-order identity migration may contain the historical third-order identifier `yeoh`. Those files are pre-migration snapshots under ignored `results/` paths and are not a maintained compatibility contract.
+
+When current workflows need those results, regenerate them with current drivers. Do not add `yeoh` back to the registry as an alias and do not add a compatibility wrapper or migration bridge.
+
+## MATLAB validation status
+
+The final explicit-order migration is locally validated.
+
+The user reported successful execution of the focused migration tests and the complete:
+
+```matlab
+run_all_tests()
+```
+
+suite after all remaining historical fixtures, including study-consensus-model coverage, were migrated from the removed third-order identifier `yeoh` to `yeoh-third-order`.
+
+Validated coverage includes the constitutive registry/evaluator contract, default candidate sets, fitting, windowed selection, tensile application-range fitting and selection, joint characterization, study consensus, population summaries, fitting audit, plotting, reporting, export, and persistence-oriented fixtures.
+
+The bare identifier `yeoh` is intentionally rejected by the registry and is not preserved by any compatibility path.
+
+MATLAB was run by the user, not by the assistant.
+
+## Final real-data validation
+
+After the final identity migration, the user regenerated all maintained real drivers and supplied the complete generated bundle for review.
+
+The final bundle contains:
+
+```text
+real tensile study
+real compression study
+tensile application-range characterization
+joint material characterization
+```
+
+The inspected CSV and Markdown outputs persist canonical registered identities `yeoh-second-order` and `yeoh-third-order`; human-facing output uses `Yeoh second order` and `Yeoh third order`.
+
+Individual tensile and compression model selection continued to select `yeoh-third-order` for every retained specimen, and both consensus-model population exports selected `yeoh-third-order` with selection fraction `1.0`.
+
+The final joint characterization retained the previous four-candidate scientific result:
+
+```text
+Neo-Hookean objective       ~= 0.016832
+Mooney-Rivlin objective     ~= 0.016832
+Yeoh second order objective ~= 0.00124659
+Yeoh third order objective  ~= 0.000936332
+```
+
+Third-order Yeoh remained selected with approximately:
+
+```text
+C10 = 0.052481 MPa
+C20 = 1.99e-4 MPa
+C30 = 4e-6 MPa
+```
+
+Mean normalized RMSE remained approximately `3.94 %` in tension and `1.66 %` in compression.
+
+The final tensile application-range characterization retained Mooney-Rivlin as the selected model. Approximate selected properties were:
+
+```text
+C10 = 0.023122 MPa
+C01 = 0.005407 MPa
+mu0 = 0.057058 MPa
+```
+
+Range-sensitivity scenarios at `0.30`, `0.40`, and `0.50 mm/mm` all retained Mooney-Rivlin.
+
+These results match the inspected pre-rename four-candidate results to the reported precision. The explicit-order migration therefore changed model identity and presentation contracts without changing the scientific conclusions or constitutive fits.
+
+## Feature closure state
+
+Implementation, regression validation, real-driver regeneration, and documentation are complete on `feature/yeoh-second-order`.
+
+The branch is ready for pull-request review. Do not merge the pull request without explicit user authorization.
+
+## Completed presentation and serialization contracts
 
 Stored physical values are not rescaled for presentation.
 
-Responsibilities are separated as follows:
+Maintained unit responsibilities remain:
 
 ```text
 mechanics.plotting.resolveStudyUnits
-    retrieves stored study units and canonicalizes dimensionless strain metadata to "-"
-
 mechanics.plotting.mechanicalDisplayUnit
-    converts stored units to human-facing display units
-
 mechanics.plotting.mechanicalAxisLabel
-    constructs standard labels for known mechanical quantities
-
 mechanics.plotting.formatUnitLabel
-    appends an already resolved display unit to a specialized or generic label
 ```
 
 Human-facing conventions remain:
@@ -52,105 +283,9 @@ stress and stress-like quantities -> stored stress unit
 normalized quantities -> [-]
 ```
 
-`formatUnitLabel` no longer infers strain semantics from free-text labels.
-
-Migrated maintained consumers include:
-
-```text
-src/+mechanics/+plotting/plotStressStrain.m
-src/+mechanics/+plotting/exportTensileStudyFigures.m
-src/+mechanics/+plotting/exportCompressionStudyFigures.m
-src/+mechanics/+plotting/plotFittingAudit.m
-```
-
-The migration preserves numerical arrays, compression sign conventions, styles, output filenames, and specialized labels.
-
-`plotModelFit` remains intentionally unchanged because its current `fitResult` contract does not retain sufficient unit and measure metadata. Do not add inferred defaults such as `MPa` or `mm/mm` without first extending and validating the result contract.
-
-### Markdown table serialization
-
-A shared serializer owns the identical Markdown table contract used by three maintained exporters:
-
-```text
-mechanics.io.writeMarkdownTable
-```
-
-Migrated consumers:
-
-```text
-src/+mechanics/+io/exportJointMaterialCharacterization.m
-src/+mechanics/+io/exportTensileApplicationRangeCharacterization.m
-src/+mechanics/+io/exportTensileStudyComparison.m
-```
-
-The retained contract includes:
-
-```text
-numeric scalars -> %.6g
-NaN -> NaN
-Inf/-Inf -> Inf/-Inf
-missing text -> missing
-logical scalars -> true/false
-datetime -> MATLAB string representation
-scalar cell values -> unwrapped
-non-scalar or empty numeric values -> empty cell text
-pipe characters -> escaped as \|
-blank line after each table
-```
-
-Other report writers were not migrated because their contracts differ for empty tables, missing values, arrays, NaN, or trailing whitespace:
-
-```text
-exportCompressionStudyReport
-exportConstitutiveStudyReport
-exportTensileStudyReport
-writeFittingAuditSection
-```
-
-Do not force them through the shared helper without first defining and testing an intentional canonical migration.
-
-## Validation evidence
-
-The user reported successful local MATLAB execution after PR #51 was merged:
-
-```text
-tests/test_plotting_units.m
-tests/test_markdown_table_serialization.m
-run_all_tests()
-```
-
-The complete repository suite passed locally on the merged state. This evidence was reported by the user; MATLAB was not executed by the assistant.
-
-## Tests added or extended
-
-```text
-tests/test_plotting_units.m
-tests/test_markdown_table_serialization.m
-```
-
-The plotting tests protect stored-versus-display unit ownership, semantic labels, fitting-audit units, and preservation of plotted data.
-
-The Markdown tests protect scalar formatting, missing and non-finite values, logicals, datetime values, scalar cells, pipe escaping, and the retained blank line after a table.
-
-## Package ownership findings
-
-No package moves were justified in the completed maintenance phase.
-
-The inspected functions remain correctly owned:
-
-```text
-mechanics.plotting
-    figure construction and human-facing unit presentation
-
-mechanics.io
-    report serialization and Markdown table output
-```
-
-The phase prioritized contract consolidation rather than cosmetic folder reorganization.
+`mechanics.io.writeMarkdownTable` remains the shared scalar Markdown serializer for the maintained equivalent table family. Report writers with distinct serialization contracts remain separate.
 
 ## Terminology boundaries
-
-Use these terms consistently:
 
 - `tension` and `compression` describe constitutive modes or specimen-level mechanics;
 - `tensile study` and `compression study` describe complete experimental workflow families;
@@ -159,22 +294,6 @@ Use these terms consistently:
 - `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
-
-Preserve existing public names unless a demonstrated ambiguity or ownership defect justifies migration.
-
-## Next planned phase
-
-The next requested feature is support for a second-order Yeoh constitutive model as an additional fitting candidate.
-
-This feature has not yet been implemented. Before modifying code:
-
-1. inspect the current model registry and existing Yeoh implementation;
-2. define the exact constitutive equation and parameter naming for the second-order form;
-3. determine whether it should be a distinct registered model or an order-parameterized implementation without changing public behavior of the current Yeoh model;
-4. inspect fitting, model-selection, reporting, plotting, and application-range callers for hard-coded model-name or parameter-count assumptions;
-5. add the smallest registry-driven implementation and focused tests before enabling it in workflow defaults.
-
-The new model must not change the equations, parameter identities, ranking behavior, defaults, or stored results of existing Neo-Hookean, Mooney-Rivlin, or current Yeoh fits unless explicitly approved.
 
 ## Required architecture contracts
 

@@ -9,7 +9,7 @@ MATLAB toolbox for reproducible processing, constitutive fitting, statistical an
 - preservation of raw experimental data;
 - preprocessing and stress-strain conversion;
 - tangent-modulus estimation;
-- Neo-Hookean, Mooney-Rivlin, and Yeoh models;
+- Neo-Hookean, Mooney-Rivlin, and Yeoh constitutive models;
 - bounded nonlinear parameter fitting and diagnostics;
 - reliability-aware model comparison and selection;
 - dataset quality assessment and tensile loading segmentation;
@@ -159,7 +159,10 @@ Registered models:
 
 - `neo-hookean`;
 - `mooney-rivlin`;
-- `yeoh`.
+- `yeoh-second-order`;
+- `yeoh-third-order`.
+
+The two Yeoh variants share the single evaluator `mechanics.models.yeoh` and registry family name `yeoh`. The bare identifier `yeoh` is not a registered model or compatibility alias.
 
 Model functions only evaluate constitutive equations. They do not read files, modify experimental data, plot, or invoke optimizers.
 

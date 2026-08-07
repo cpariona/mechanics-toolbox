@@ -50,6 +50,66 @@ mechanics.workflow       orchestration across maintained lower-level contracts
 
 Do not move a function solely to make folders visually balanced. Move it only when ownership is incorrect and callers, tests, and documentation support the change.
 
+## Constitutive-model registry boundary
+
+Registered constitutive-model identity, presentation name, family identity, polynomial order when meaningful, parameter names, bounds, default initial guesses, function handles, descriptions, and derived quantities belong to `mechanics.models.modelRegistry`.
+
+The maintained Yeoh family uses one constitutive evaluator:
+
+```text
+mechanics.models.yeoh
+```
+
+and two explicit registered variants:
+
+```text
+yeoh-second-order -> C10, C20
+yeoh-third-order  -> C10, C20, C30
+```
+
+For both variants:
+
+```text
+familyName = yeoh
+```
+
+and the registry records:
+
+```text
+order = 2   for yeoh-second-order
+order = 3   for yeoh-third-order
+```
+
+The bare identifier `yeoh` is not a registered model identity. It names the constitutive family and the shared evaluator only. Do not add `yeoh` as an alias for `yeoh-third-order`, and do not create wrappers, bridge files, or duplicate Yeoh evaluators solely to distinguish polynomial order.
+
+Human-facing model names are separate registry metadata:
+
+```text
+Yeoh second order
+Yeoh third order
+```
+
+Persisted model identities in MAT/CSV results use the canonical registered names, not display names:
+
+```text
+yeoh-second-order
+yeoh-third-order
+```
+
+Results generated before this explicit-order migration may contain the historical third-order identifier `yeoh`. Generated `results/` artifacts are reproducible local outputs and are not a compatibility contract for the maintained library. Regenerate them with current drivers when they must be consumed by current workflows; do not add a legacy model alias to accommodate historical generated files.
+
+`mechanics.models.evaluateModel` validates parameter count from registry metadata before calling the evaluator. Fitting, model selection, exporters, plotting, and population workflows should therefore consume registry metadata rather than add model-name conditionals.
+
+For both maintained Yeoh orders, the initial shear modulus is registry-derived as:
+
+```text
+mu0 = 2 * C10
+```
+
+Population/statistical code must consume the registered derived-quantity contract rather than reimplement this formula by model name.
+
+Library workflow defaults remain independent of the complete list returned by `mechanics.models.listModels`. Registering a model makes it available; it does not automatically add that model to every default candidate set. Experiment-specific drivers may explicitly request additional registered candidates when a scientific comparison is intended.
+
 ## Naming boundaries
 
 Use terminology consistently:
@@ -72,7 +132,7 @@ The maintained responsibilities are:
 
 ```text
 mechanics.plotting.resolveStudyUnits
-    retrieves stored units from completed study records
+    retrieves stored study units from completed study records
 
 mechanics.plotting.mechanicalDisplayUnit
     converts stored units to the display convention for a known physical quantity
@@ -81,7 +141,7 @@ mechanics.plotting.mechanicalAxisLabel
     builds standard labels for known mechanical quantities
 
 mechanics.plotting.formatUnitLabel
-    appends an already resolved display unit to specialized or generic label text
+    appends an already resolved display unit to a specialized or generic label text
 ```
 
 Current display conventions include:

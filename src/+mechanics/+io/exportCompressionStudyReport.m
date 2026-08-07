@@ -73,7 +73,8 @@ for row = 1:height(summary)
     fprintf(fileId, "| %s | %s | %.6g | %.6g | %.6g | %s |\n", ...
         char(summary.SpecimenId(row)), char(summary.Status(row)), ...
         summary.MaximumStrain(row), summary.MaximumStress(row), ...
-        summary.MedianTangentModulus(row), char(summary.SelectedModel(row)));
+        summary.MedianTangentModulus(row), ...
+        char(localModelDisplayName(summary.SelectedModel(row))));
 end
 fprintf(fileId, "\n");
 
@@ -90,7 +91,7 @@ if study.populationStatus == "completed"
     modelParameters = study.population.modelParameters;
     if isfield(modelParameters, "summary") && ~isempty(modelParameters.summary)
         fprintf(fileId, "### Individually selected-model parameter summary\n\n");
-        parameterSummary = modelParameters.summary;
+        parameterSummary = localDisplayModelTable(modelParameters.summary);
         parameterSummary.Unit = repmat(units.stress, height(parameterSummary), 1);
         localWriteTable(fileId, parameterSummary);
     end
@@ -156,6 +157,33 @@ fprintf(fileId, "## Interpretation limits\n\n");
 fprintf(fileId, "- Metrics refer to the configured selected cycle.\n");
 fprintf(fileId, "- Hysteresis is computed from force-displacement work over the selected full cycle.\n");
 fprintf(fileId, "- Instrument polarity is normalized to the maintained physical compression sign contract.\n");
+end
+
+function output = localDisplayModelTable(input)
+output = input;
+variables = string(output.Properties.VariableNames);
+for candidate = ["ModelName", "Model"]
+    if ismember(candidate, variables)
+        output.(candidate) = localModelDisplayNames(output.(candidate));
+    end
+end
+end
+
+function names = localModelDisplayNames(modelNames)
+modelNames = string(modelNames(:));
+names = strings(size(modelNames));
+for index = 1:numel(modelNames)
+    names(index) = localModelDisplayName(modelNames(index));
+end
+end
+
+function name = localModelDisplayName(modelName)
+modelName = string(modelName);
+if strlength(strtrim(modelName)) == 0
+    name = "";
+    return;
+end
+name = mechanics.models.modelRegistry(modelName).displayName;
 end
 
 function localWriteFigures(fileId, figureFiles)

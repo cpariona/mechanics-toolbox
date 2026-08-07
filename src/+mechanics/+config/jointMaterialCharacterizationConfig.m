@@ -1,6 +1,6 @@
 function config = jointMaterialCharacterizationConfig()
 %JOINTMATERIALCHARACTERIZATIONCONFIG Configure joint material characterization.
-config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh"];
+config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"; "yeoh-third-order"];
 config.modeNames = ["tension"; "compression"];
 config.modeWeights = [1; 1];
 config.specimenWeighting = "equal";

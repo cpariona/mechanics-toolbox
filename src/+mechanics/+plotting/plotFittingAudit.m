@@ -24,6 +24,11 @@ axesHandle = axes(figureHandle);
 hold(axesHandle, "on");
 
 modelNames = unique(summary.Model, "stable");
+modelDisplayNames = strings(size(modelNames));
+for modelIndex = 1:numel(modelNames)
+    modelDisplayNames(modelIndex) = ...
+        mechanics.models.modelRegistry(modelNames(modelIndex)).displayName;
+end
 specimenIds = unique(summary.SpecimenId, "stable");
 modelColors = lines(numel(modelNames));
 lineStyles = ["-", "--", ":", "-."];
@@ -54,7 +59,7 @@ plot(axesHandle, NaN, NaN, "LineStyle", "none", "Marker", "none", ...
 for modelIndex = 1:numel(modelNames)
     plot(axesHandle, NaN, NaN, "-", ...
         "Color", modelColors(modelIndex, :), "LineWidth", 1.8, ...
-        "DisplayName", char(modelNames(modelIndex)));
+        "DisplayName", char(modelDisplayNames(modelIndex)));
 end
 plot(axesHandle, NaN, NaN, "LineStyle", "none", "Marker", "none", ...
     "Color", [0 0 0], "DisplayName", "Specimens");

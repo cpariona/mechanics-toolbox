@@ -53,6 +53,40 @@ selection = mechanics.workflow.selectJointModel(normalized, config);
 
 All configured registered models are fitted. Failed and completed candidates are retained. Eligible practically equivalent candidates are ranked by parameter count, exact joint objective, and deterministic configured order. Pooled physical SSE, AIC, and BIC remain diagnostics rather than replacements for the hierarchical objective.
 
+The library default candidate set remains:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-third-order
+```
+
+The maintained real joint-characterization driver explicitly compares:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh-third-order
+```
+
+Both Yeoh variants share:
+
+```text
+familyName = yeoh
+functionHandle = mechanics.models.yeoh
+mu0 = 2 * C10
+```
+
+Their registered contracts are:
+
+```text
+yeoh-second-order -> C10, C20       -> order 2
+yeoh-third-order  -> C10, C20, C30  -> order 3
+```
+
+The bare identifier `yeoh` is not a registered model identity and is not retained as a compatibility alias. Human-facing outputs use `Yeoh second order` and `Yeoh third order`; MAT/CSV results persist the canonical registered identifiers.
+
 ## Maintained driver and bundle
 
 ```text
@@ -85,6 +119,8 @@ joint_fit_compression.fig
 
 The bundle does not duplicate the complete tension and compression exports.
 
+Generated results that still contain the historical third-order identifier `yeoh` are pre-migration snapshots. Regenerate them with the current drivers when they must be consumed by current code; do not add a legacy registry alias.
+
 ## Robustness audit
 
 ```matlab
@@ -95,47 +131,47 @@ robustnessAudit = mechanics.workflow.auditJointMaterialCharacterization( ...
 
 The maintained driver stores the audit result as `robustnessAudit`. The audit is one-factor-at-a-time and evaluates mode weights, sampling density, retained deformation range, and specimens retained per mode. It does not form a Cartesian product of perturbations or add alternative normalization methods without evidence.
 
-## Real-data result
+## Final real-data evidence
 
-The first maintained real run used four tensile and four compression specimens, with 22,006 observations in total. Yeoh was selected with:
+The final four-candidate run after the explicit-order identifier migration used four tensile and four compression specimens and 22,006 observations. The candidate objectives were approximately:
 
 ```text
-C10 = 0.0524808 MPa
-C20 = 1.98662e-4 MPa
-C30 = 4.04826e-6 MPa
+Neo-Hookean       0.016832
+Mooney-Rivlin     0.016832
+Yeoh second order 0.00124659
+Yeoh third order  0.000936332
 ```
 
-The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`, so Yeoh was not selected by a marginal difference.
+Third-order Yeoh remained selected. The fitted shared parameters were approximately:
 
-Mean normalized RMSE was approximately:
+```text
+C10 = 0.052481 MPa
+C20 = 1.99e-4 MPa
+C30 = 4e-6 MPa
+```
+
+The corresponding pooled diagnostics for third-order Yeoh were approximately:
+
+```text
+Physical SSE = 81.8727
+AIC          = -123093
+BIC          = -123069
+```
+
+Mean normalized RMSE remained approximately:
 
 ```text
 tension:     3.94 %
 compression: 1.66 %
 ```
 
-The response was therefore represented more accurately in compression, while the common parameter set still captured the nonlinear tensile trend across independent specimens.
-
-## Real-data robustness result
-
-Yeoh remained selected in every configured scenario:
-
-| Scenario | Objective | Relative parameter change |
-|---|---:|---:|
-| Baseline | 0.00093633 | 0 |
-| Tension-weighted | 0.0012154 | 0.022449 |
-| Compression-weighted | 0.00061859 | 0.0079484 |
-| 50% sampling density | 0.00093796 | 0.00011288 |
-| 75% deformation range | 0.0016051 | 0.011781 |
-| One specimen per mode | 0.00067871 | 0.0086765 |
-
-The largest parameter-vector change was approximately `2.25 %`, under asymmetric mode weighting. Halving the sampling density changed parameters by approximately `0.011 %`, indicating that point density was not driving the fitted material response. Model identity was stable even when only one specimen per mode was retained.
-
-These results support the current equal-specimen, equal-mode, response-range-normalized contract for this dataset. They do not establish universal optimality for other materials or experiments.
+These values match the pre-rename four-candidate run to the inspected precision. The final migration therefore changed persisted model identity from the historical `yeoh` string to `yeoh-third-order` without changing the scientific conclusion or constitutive result.
 
 ## Validation
 
-Focused joint-characterization tests and the complete `run_all_tests()` suite passed after introducing the sign tolerance. Tests verify that small scale-relative opposite-sign stress noise is retained, while material sign violations are still rejected.
+The user reported successful local execution of all focused migration tests and the complete `run_all_tests()` suite after the explicit-order identity migration.
+
+The maintained joint driver was then regenerated successfully. The final bundle contains canonical `yeoh-second-order` and `yeoh-third-order` identities, human-facing `Yeoh second order` / `Yeoh third order` labels, finite registry-derived `mu0` values, and the same selected third-order Yeoh conclusion observed before the identifier rename.
 
 ## Extension policy
 

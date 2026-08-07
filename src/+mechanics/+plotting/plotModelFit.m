@@ -3,16 +3,17 @@ function fig = plotModelFit(fitResult)
 arguments
     fitResult (1,1) struct
 end
+model = mechanics.models.modelRegistry(string(fitResult.modelName));
 fig = figure('Color','w');
 plot(fitResult.deformation, fitResult.measuredStress, 'o', ...
     'DisplayName','Experimental data');
 hold on
 plot(fitResult.deformation, fitResult.predictedStress, '-', ...
-    'LineWidth',1.5, 'DisplayName',fitResult.modelName);
+    'LineWidth',1.5, 'DisplayName',model.displayName);
 grid on
 xlabel('Deformation')
 ylabel('Stress')
 title(sprintf('%s fit, R^2 = %.5f', ...
-    fitResult.modelName, fitResult.metrics.rSquared))
+    model.displayName, fitResult.metrics.rSquared))
 legend('Location','best')
 end

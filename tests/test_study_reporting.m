@@ -115,7 +115,7 @@ verifyTrue(testCase, contains(text, "Area evolution: `incompressible`"));
 verifyTrue(testCase, contains(text, ...
     "Tangent-modulus summary strain range: `[0.1, 0.3] mm/mm`"));
 verifyTrue(testCase, contains(text, ...
-    "Candidate models: `neo-hookean, yeoh`"));
+    "Candidate models: `Neo-Hookean, Yeoh third order`"));
 verifyTrue(testCase, contains(text, "Model-ranking metric: `BIC`"));
 verifyTrue(testCase, contains(text, "Fit starts: `8`"));
 verifyTrue(testCase, contains(text, "Fit random seed: `1`"));
@@ -141,7 +141,7 @@ verifyTrue(testCase, contains(text, "Retained specimen count: 3"));
 verifyTrue(testCase, contains(text, "Central statistic: `median`"));
 verifyTrue(testCase, contains(text, ...
     "### Individually selected-model parameter summary"));
-verifyTrue(testCase, contains(text, "neo-hookean"));
+verifyTrue(testCase, contains(text, "Neo-Hookean"));
 verifyTrue(testCase, contains(text, "mu"));
 verifyTrue(testCase, contains(text, "Unit"));
 verifyTrue(testCase, contains(text, "MPa"));
@@ -221,7 +221,7 @@ study.config.datasetAnalysis.processingConfig.mechanics.areaEvolution = ...
 study.config.datasetAnalysis.processingConfig.analysis.summaryStrainRange = ...
     [0.1, 0.3];
 study.config.datasetAnalysis.fitting.modelNames = ...
-    ["neo-hookean"; "yeoh"];
+    ["neo-hookean"; "yeoh-third-order"];
 study.config.datasetAnalysis.fitting.selectionConfig.rankingMetric = "BIC";
 study.config.datasetAnalysis.fitting.fitConfig.numberOfStarts = 8;
 study.config.datasetAnalysis.fitting.fitConfig.randomSeed = 1;
@@ -297,6 +297,6 @@ end
 
 function localDeleteFolder(folder)
 if isfolder(folder)
-    rmdir(folder, "s");
+    rmdir(folder,'s');
 end
 end

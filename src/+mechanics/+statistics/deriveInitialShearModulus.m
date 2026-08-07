@@ -29,8 +29,8 @@ for index = 1:numel(specimenIds)
             error("mechanics:statistics:MultipleSelectedModels", ...
                 "Each specimen must contain parameters from one selected model.");
         end
-        modelName = lower(string(models));
-        value = localInitialShearModulus(rows, modelName);
+        model = localModel(string(models));
+        value = localDerivedInitialShearModulus(rows, model);
         if config.requireFiniteParameters && ~isfinite(value)
             error("mechanics:statistics:NonfiniteInitialShearModulus", ...
                 "Derived initial shear modulus must be finite.");
@@ -38,7 +38,7 @@ for index = 1:numel(specimenIds)
 
         rowSpecimen(end+1,1) = specimenId; %#ok<AGROW>
         rowGroup(end+1,1) = rows.Group(1); %#ok<AGROW>
-        rowModel(end+1,1) = modelName; %#ok<AGROW>
+        rowModel(end+1,1) = model.name; %#ok<AGROW>
         rowValue(end+1,1) = value; %#ok<AGROW>
     catch ME
         errorSpecimen(end+1,1) = specimenId; %#ok<AGROW>
@@ -61,20 +61,40 @@ result.errors = errors;
 result.specimenCount = height(values);
 end
 
-function value = localInitialShearModulus(rows, modelName)
-switch modelName
-    case "neo-hookean"
-        value = localParameter(rows, "mu");
-    case "mooney-rivlin"
-        value = 2 .* (localParameter(rows, "C10") + ...
-            localParameter(rows, "C01"));
-    case "yeoh"
-        value = 2 .* localParameter(rows, "C10");
-    otherwise
+function model = localModel(modelName)
+try
+    model = mechanics.models.modelRegistry(modelName);
+catch ME
+    if string(ME.identifier) == "mechanics:models:UnknownModel"
         error("mechanics:statistics:UnsupportedInitialShearModel", ...
             "Initial shear modulus is not defined for selected model: %s", ...
             modelName);
+    end
+    rethrow(ME);
 end
+end
+
+function value = localDerivedInitialShearModulus(rows, model)
+names = string(model.derivedQuantityNames(:));
+if ~any(names == "mu0") || isempty(model.evaluateDerivedQuantities)
+    error("mechanics:statistics:UnsupportedInitialShearModel", ...
+        "Initial shear modulus is not defined for selected model: %s", ...
+        model.name);
+end
+
+parameterNames = string(model.parameterNames(:));
+parameters = zeros(numel(parameterNames), 1);
+for index = 1:numel(parameterNames)
+    parameters(index) = localParameter(rows, parameterNames(index));
+end
+
+values = reshape(double(model.evaluateDerivedQuantities(parameters)), [], 1);
+if numel(values) ~= numel(names)
+    error("mechanics:statistics:InvalidDerivedQuantities", ...
+        "Model %s returned an invalid derived-quantity vector.", model.name);
+end
+mu0Index = find(names == "mu0", 1, "first");
+value = values(mu0Index);
 end
 
 function value = localParameter(rows, parameterName)

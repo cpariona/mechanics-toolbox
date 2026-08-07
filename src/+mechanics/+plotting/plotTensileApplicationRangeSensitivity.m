@@ -23,6 +23,11 @@ end
 summary = summary(mask,:);
 maximums = summary.MaximumDeformation;
 modelNames = string(summary.SelectedModelName);
+modelDisplayNames = strings(size(modelNames));
+for index = 1:numel(modelNames)
+    modelDisplayNames(index) = ...
+        mechanics.models.modelRegistry(modelNames(index)).displayName;
+end
 specimens = result.selectedFit.specimens;
 stressUnit = mechanics.plotting.mechanicalDisplayUnit( ...
     "stress", string(specimens(1).StressUnit));
@@ -40,12 +45,12 @@ ylabel(muAxes, "\mu_0 [" + stressUnit + "]", ...
     "Interpreter", "tex");
 if numel(unique(modelNames)) == 1
     title(muAxes, "Reference shear-modulus sensitivity (" + ...
-        modelNames(1) + ")", "Interpreter", "none");
+        modelDisplayNames(1) + ")", "Interpreter", "none");
 else
     title(muAxes, "Reference shear-modulus sensitivity");
     for index = 1:height(summary)
         text(muAxes, maximums(index), summary.Mu0(index), ...
-            "  " + modelNames(index), "Interpreter", "none", ...
+            "  " + modelDisplayNames(index), "Interpreter", "none", ...
             "VerticalAlignment", "bottom", ...
             "HorizontalAlignment", "left");
     end

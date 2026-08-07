@@ -9,9 +9,9 @@ end
 function testNeoHookeanParametersAreRecoveredAcrossUnpairedModes(testCase)
 trueMu = 2.5;
 studies = {
-    localStudy("tension", ["shared"; "tension-only"], trueMu, [17; 31]), ...
+    localStudy("tension", ["shared"; "tension-only"], "neo-hookean", trueMu, [17; 31]), ...
     localStudy("compression", ["shared"; "compression-2"; "compression-3"], ...
-        trueMu, [13; 23; 37])};
+        "neo-hookean", trueMu, [13; 23; 37])};
 config = localConfig();
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, ["tension"; "compression"], config);
@@ -28,11 +28,31 @@ verifyTrue(testCase, all(arrayfun(@(x) ...
     isfield(x, "PredictedStress") && isfield(x, "Residuals"), fit.specimens)));
 end
 
+function testSecondOrderYeohParametersAreRecoveredAcrossModes(testCase)
+parameters = [0.6, 0.12];
+studies = {
+    localStudy("tension", ["t1"; "t2"], "yeoh-second-order", parameters, [29; 41]), ...
+    localStudy("compression", ["c1"; "c2"], "yeoh-second-order", parameters, [31; 43])};
+config = localConfig();
+config.fitting.initialGuess = [];
+config.fitting.numberOfStarts = 10;
+normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
+    studies, ["tension"; "compression"], config);
+fit = mechanics.fitting.fitJointModel( ...
+    normalized, "yeoh-second-order", config);
+
+verifyEqual(testCase, fit.modelName, "yeoh-second-order");
+verifyEqual(testCase, fit.parameterNames, ["C10", "C20"]);
+verifyEqual(testCase, fit.parameters, parameters, "RelTol", 2e-2, ...
+    "AbsTol", 2e-4);
+verifyLessThan(testCase, fit.objective, 1e-8);
+end
+
 function testConfiguredModeWeightsAreNormalized(testCase)
 trueMu = 1.8;
 studies = {
-    localStudy("tension", "a", trueMu, 21), ...
-    localStudy("compression", "b", trueMu, 21)};
+    localStudy("tension", "a", "neo-hookean", trueMu, 21), ...
+    localStudy("compression", "b", "neo-hookean", trueMu, 21)};
 config = localConfig();
 config.modeWeights = [3; 1];
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
@@ -47,11 +67,11 @@ end
 function testResponseRangeNormalizationIsIndependentOfSamplingDensity(testCase)
 trueMu = 3.2;
 coarseStudies = {
-    localStudy("tension", "t", trueMu, 9), ...
-    localStudy("compression", "c", trueMu, 11)};
+    localStudy("tension", "t", "neo-hookean", trueMu, 9), ...
+    localStudy("compression", "c", "neo-hookean", trueMu, 11)};
 denseStudies = {
-    localStudy("tension", "t", trueMu, 101), ...
-    localStudy("compression", "c", trueMu, 151)};
+    localStudy("tension", "t", "neo-hookean", trueMu, 101), ...
+    localStudy("compression", "c", "neo-hookean", trueMu, 151)};
 config = localConfig();
 coarse = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     coarseStudies, ["tension"; "compression"], config);
@@ -68,8 +88,8 @@ end
 function testUnknownNormalizationIsRejected(testCase)
 config = localConfig();
 studies = {
-    localStudy("tension", "t", 2, 11), ...
-    localStudy("compression", "c", 2, 11)};
+    localStudy("tension", "t", "neo-hookean", 2, 11), ...
+    localStudy("compression", "c", "neo-hookean", 2, 11)};
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, ["tension"; "compression"], config);
 config.normalization.method = "maximum-stress";
@@ -81,8 +101,8 @@ end
 function testInvalidModeWeightsAreRejected(testCase)
 config = localConfig();
 studies = {
-    localStudy("tension", "t", 2, 11), ...
-    localStudy("compression", "c", 2, 11)};
+    localStudy("tension", "t", "neo-hookean", 2, 11), ...
+    localStudy("compression", "c", "neo-hookean", 2, 11)};
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, ["tension"; "compression"], config);
 config.modeWeights = [1; 0];
@@ -100,16 +120,17 @@ config.fitting.maxIterations = 2000;
 config.fitting.maxFunctionEvaluations = 5000;
 end
 
-function study = localStudy(mode, specimenIds, mu, pointCounts)
+function study = localStudy(mode, specimenIds, modelName, parameters, pointCounts)
 specimenIds = string(specimenIds(:));
 pointCounts = pointCounts(:);
 if isscalar(pointCounts)
     pointCounts = repmat(pointCounts, numel(specimenIds), 1);
 end
-records = repmat(localRecord(mode, "", mu, pointCounts(1)), ...
+records = repmat(localRecord(mode, "", modelName, parameters, pointCounts(1)), ...
     numel(specimenIds), 1);
 for index = 1:numel(specimenIds)
-    records(index) = localRecord(mode, specimenIds(index), mu, pointCounts(index));
+    records(index) = localRecord( ...
+        mode, specimenIds(index), modelName, parameters, pointCounts(index));
 end
 study.analysis.records = records;
 study.analysis.summary = table(specimenIds, repmat("processed", numel(specimenIds), 1), ...
@@ -118,7 +139,7 @@ study.populationStatus = "completed";
 study.config = struct();
 end
 
-function record = localRecord(mode, specimenId, mu, pointCount)
+function record = localRecord(mode, specimenId, modelName, parameters, pointCount)
 context.deformationMeasure = "engineering-strain";
 context.stressMeasure = "nominal";
 if mode == "tension"
@@ -126,7 +147,7 @@ if mode == "tension"
 else
     deformation = linspace(0, -0.35, pointCount)';
 end
-stress = mechanics.models.evaluateModel("neo-hookean", deformation, mu, context);
+stress = mechanics.models.evaluateModel(modelName, deformation, parameters, context);
 processed.strain = deformation;
 processed.stress = stress;
 processed.units.strain = "1";
