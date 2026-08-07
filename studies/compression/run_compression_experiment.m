@@ -67,7 +67,7 @@ fitting.modelNames = [
     "neo-hookean"
     "mooney-rivlin"
     "yeoh-second-order"
-    "yeoh"
+    "yeoh-third-order"
 ];
 fitting.context.deformationMeasure = "engineering-strain";
 fitting.context.stressMeasure = "nominal";
@@ -216,7 +216,7 @@ if ~isempty(processedIndices)
                 string(modelDefinition.parameterNames(:)), ...
                 bestFit.parameters(:), ...
                 'VariableNames', {'Parameter', 'Estimate'});
-            disp("Selected model: " + bestModel)
+            disp("Selected model: " + modelDefinition.displayName)
             disp(parameterTable)
             disp(bestFit.metrics)
             mechanics.plotting.plotModelFit(bestFit);
@@ -248,7 +248,7 @@ end
 
 if runFitDiagnostics
     fitDiagnostics = mechanics.workflow.runFitDiagnostics( ...
-        "yeoh", optionalDeformation, optionalStress, optionalContext, ...
+        "yeoh-third-order", optionalDeformation, optionalStress, optionalContext, ...
         mechanics.config.fittingConfig(), ...
         mechanics.config.fitDiagnosticsWorkflowConfig());
     disp(fitDiagnostics.reliability.componentSummary)
@@ -302,7 +302,8 @@ if runConsensusModelPopulation || ...
         parameterBatch, ...
         mechanics.config.selectedParameterPopulationConfig());
     disp(parameterBatch.modelSummary)
-    disp("Consensus model: " + parameterBatch.consensusModelName)
+    disp("Consensus model: " + ...
+        mechanics.models.modelRegistry(parameterBatch.consensusModelName).displayName)
     disp(parameterPopulation.parameterTable)
     disp(parameterPopulation.overallSummary)
 
