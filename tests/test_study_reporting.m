@@ -115,7 +115,7 @@ verifyTrue(testCase, contains(text, "Area evolution: `incompressible`"));
 verifyTrue(testCase, contains(text, ...
     "Tangent-modulus summary strain range: `[0.1, 0.3] mm/mm`"));
 verifyTrue(testCase, contains(text, ...
-    "Candidate models: `neo-hookean, yeoh`"));
+    "Candidate models: `Neo-Hookean, Yeoh third order`"));
 verifyTrue(testCase, contains(text, "Model-ranking metric: `BIC`"));
 verifyTrue(testCase, contains(text, "Fit starts: `8`"));
 verifyTrue(testCase, contains(text, "Fit random seed: `1`"));
@@ -141,7 +141,7 @@ verifyTrue(testCase, contains(text, "Retained specimen count: 3"));
 verifyTrue(testCase, contains(text, "Central statistic: `median`"));
 verifyTrue(testCase, contains(text, ...
     "### Individually selected-model parameter summary"));
-verifyTrue(testCase, contains(text, "neo-hookean"));
+verifyTrue(testCase, contains(text, "Neo-Hookean"));
 verifyTrue(testCase, contains(text, "mu"));
 verifyTrue(testCase, contains(text, "Unit"));
 verifyTrue(testCase, contains(text, "MPa"));
@@ -289,7 +289,7 @@ tangent.medianModulus = [3; 4; 5];
 tangent.centralStatistic = "mean";
 tangent.centralModulus = [3; 4; 5];
 tangent.standardDeviation = [sqrt(2); sqrt(2); sqrt(2)];
-tangent.standardError = [1; 1; 1];
+tangent.standardError = [1; 1];
 tangent.confidenceLower = [2.5; 3.5; 4.5];
 tangent.confidenceUpper = [3.5; 4.5; 5.5];
 tangent.specimenCountByPoint = [2; 2; 2];
@@ -297,6 +297,6 @@ end
 
 function localDeleteFolder(folder)
 if isfolder(folder)
-    rmdir(folder, "s");
+    rmdir(folder,'s');
 end
 end
