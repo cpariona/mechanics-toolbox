@@ -14,6 +14,7 @@ Configuration functions under `mechanics.config` are organized by level:
 - fitting and diagnostics: fitting, uncertainty, identifiability, residuals, reliability, window stability, and model selection;
 - dataset and population analysis;
 - completed-study add-ons such as tensile application-range characterization;
+- completed-study comparisons between compatible tensile or compression campaigns;
 - joint material characterization across completed experimental modes;
 - end-to-end workflow orchestration;
 - report and export presentation.
@@ -22,7 +23,7 @@ A workflow configuration may contain lower-level configuration structs. It does 
 
 Retain a configuration function only when it is consumed by maintained implementation, a supported example, an executable study driver, or a behavioral test. A test that only instantiates a configuration is not sufficient evidence by itself.
 
-A completed-study add-on must consume the canonical study result rather than re-importing or reprocessing raw data. It may specialize an existing study to a new analysis contract, but it must not duplicate the study workflow. Tensile application-range characterization is subordinate to the completed tensile study and reuses maintained fitting, model-selection, registry, plotting, and export contracts when they are physically identical.
+A completed-study add-on or comparison must consume the canonical study result rather than re-importing or reprocessing raw data. It may specialize or compare existing studies under a new analysis contract, but it must not duplicate the study workflow. Tensile application-range characterization is subordinate to the completed tensile study and reuses maintained fitting, model-selection, registry, plotting, and export contracts when they are physically identical. Compression material comparison similarly consumes completed compression-study MAT results through `mechanics.workflow.compareCompressionStudies`.
 
 Joint material characterization must consume completed study results through one explicit workflow contract. Mode-specific extraction belongs in a small registered adapter or mode contract only when the physical data representation differs. Constitutive model evaluation and parameter metadata remain owned by the model registry. Do not scatter tension/compression conditionals across fitting, ranking, export, and plotting code.
 
@@ -119,6 +120,7 @@ Use terminology consistently:
 - `specimen-level mechanics` processes or evaluates one specimen;
 - `study-level workflow` orchestrates a complete campaign;
 - `completed-study add-on` consumes canonical completed-study results without re-importing raw data;
+- `completed-study comparison` compares canonical completed studies without re-importing raw data;
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
 
@@ -198,10 +200,24 @@ They are not library implementation and are not simplified demonstrations. Study
 studies/tension/run_tensile_experiment.m
 studies/tension/run_tensile_application_range_characterization.m
 studies/compression/run_compression_experiment.m
+studies/compression/run_compression_material_comparison.m
 studies/joint-characterization/run_joint_material_characterization.m
 ```
 
 The tensile application-range driver must consume a completed tensile study MAT file or in-memory study result. It must not re-import raw workbooks or reproduce the tensile experiment driver.
+
+The compression material-comparison driver consumes completed Ecoflex 00-20 and Ecoflex 00-50 compression-study MAT files and calls `mechanics.workflow.compareCompressionStudies`. It must not import either ASTM D575 workbook or duplicate compression preprocessing. The maintained local paths are:
+
+```text
+results/real-compression-study-ecoflex0020/compression_study.mat
+results/real-compression-study/compression_study.mat
+```
+
+with comparison output under:
+
+```text
+results/compression-ecoflex0020-vs-0050/
+```
 
 The joint-characterization driver consumes completed tensile and compression study MAT files or in-memory study results. It must not re-import raw workbooks or duplicate the individual study drivers. Future additional modes should be added only after a maintained mode contract exists.
 
