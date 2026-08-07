@@ -26,6 +26,13 @@ summaryFile = fullfile(outputFolder, "group_summary.csv");
 writetable(summary, summaryFile);
 outputFiles.groupSummary = string(summaryFile);
 
+if isfield(result, "modelInitialShearSummary") && ...
+        ~isempty(result.modelInitialShearSummary)
+    shearFile = fullfile(outputFolder, "group_model_initial_shear_modulus.csv");
+    writetable(result.modelInitialShearSummary, shearFile);
+    outputFiles.modelInitialShearSummary = string(shearFile);
+end
+
 if isfield(result, "curveComparison") && ...
         ~isempty(fieldnames(result.curveComparison))
     comparison = result.curveComparison;
@@ -42,16 +49,44 @@ if isfield(result, "curveComparison") && ...
     outputFiles.curveComparison = string(curveFile);
     outputFiles.metricComparison = string(metricFile);
 
-    figureHandle = mechanics.plotting.plotGroupComparison(result);
-    figureCleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
-    figureFile = mechanics.plotting.exportFigureFiles( ...
-        figureHandle, outputFolder, "group_comparison", "png", 200);
-    outputFiles.figure = string(figureFile);
-    outputFiles.figureFig = string( ...
-        fullfile(outputFolder, "group_comparison.fig"));
+    [outputFiles.figure, outputFiles.figureFig] = localExportFigure( ...
+        mechanics.plotting.plotGroupComparison(result), ...
+        outputFolder, "group_comparison");
+
+    [outputFiles.metricFigure, outputFiles.metricFigureFig] = ...
+        localExportFigure( ...
+        mechanics.plotting.plotGroupMetricComparison(result), ...
+        outputFolder, "group_metric_comparison");
+
+    if localHasTangentModulusComparison(result)
+        [outputFiles.tangentModulusFigure, ...
+            outputFiles.tangentModulusFigureFig] = localExportFigure( ...
+            mechanics.plotting.plotGroupTangentModulusComparison(result), ...
+            outputFolder, "group_tangent_modulus_comparison");
+    end
 end
 
 matFile = fullfile(outputFolder, "group_comparison.mat");
 save(matFile, "result");
 outputFiles.comparison = string(matFile);
+end
+
+function available = localHasTangentModulusComparison(result)
+available = numel(result.groups) == 2;
+if ~available
+    return;
+end
+for index = 1:2
+    population = result.groups(index).population;
+    available = available && ...
+        isfield(population, "tangentModulusStatus") && ...
+        population.tangentModulusStatus == "completed";
+end
+end
+
+function [pngFile, figFile] = localExportFigure(figureHandle, outputFolder, baseName)
+cleanup = onCleanup(@() delete(figureHandle)); %#ok<NASGU>
+pngFile = string(mechanics.plotting.exportFigureFiles( ...
+    figureHandle, outputFolder, baseName, "png", 200));
+figFile = string(fullfile(outputFolder, baseName + ".fig"));
 end
