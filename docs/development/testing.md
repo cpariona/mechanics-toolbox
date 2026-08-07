@@ -34,6 +34,39 @@ Test files are grouped by subsystem or workflow rather than by implementation ph
 
 `test_markdown_table_serialization.m` protects the shared scalar Markdown contract, including numeric precision, non-finite values, missing text, logicals, datetime values, scalar cells, escaped pipes, and the retained blank line after a table.
 
+Second-order Yeoh coverage is distributed by maintained behavior rather than by migration phase:
+
+```text
+test_constitutive_models.m
+    second- and third-order Yeoh equations, parameter counts, registry metadata,
+    output shape, reference configuration, and Neo-Hookean reduction
+
+test_tensile_application_range_fitting.m
+    shared second-order Yeoh parameter recovery and explicit four-model fitting
+
+test_tensile_application_range_selection.m
+    registry-derived parameter count, mu0, and parsimony against third-order Yeoh
+
+test_joint_fixed_model_fitting.m
+    second-order Yeoh recovery across independent tension and compression modes
+
+test_joint_model_selection.m
+    explicit second-order Yeoh joint selection
+
+test_selected_parameter_population.m
+    registry-derived mu0, consensus population, plotting, CSV, and MAT persistence
+
+test_tensile_application_range_workflow.m
+    second-order Yeoh end-to-end workflow, report, figures, and MAT export
+
+test_joint_material_characterization_workflow.m
+    second-order Yeoh end-to-end joint workflow, report, figures, and MAT export
+```
+
+The user reported that all focused tests and the complete `run_all_tests()` suite passed after the second-order Yeoh mathematical, registry, fitting/selection, and downstream-output phases. MATLAB was run locally by the user, not by the assistant.
+
+Real-study validation is separate from automated regression coverage. The maintained real tensile, compression, tensile application-range, and joint-characterization drivers explicitly include `yeoh-second-order` as an experiment-specific candidate on the feature branch. Their regenerated real-data results must be reviewed before changing any library default candidate set.
+
 Tests created only to verify a temporary migration or removed compatibility alias should be deleted once the canonical API is covered by functional tests. Test count alone is not a cleanup target; redundant behavior coverage, duplicated fixtures, and unnecessarily repeated expensive workflows are.
 
 ## Running focused tests
