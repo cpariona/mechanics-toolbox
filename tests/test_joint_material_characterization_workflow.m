@@ -47,7 +47,7 @@ parameters = readtable(fullfile(folder, "selected_joint_parameters.csv"), ...
 verifyEqual(testCase, string(parameters.Parameter), "mu");
 verifyEqual(testCase, parameters.Estimate, 2.4, "AbsTol", 1e-5);
 report = string(fileread(fullfile(folder, "joint_material_characterization.md")));
-verifyTrue(testCase, contains(report, "Selected model: `neo-hookean`"));
+verifyTrue(testCase, contains(report, "Selected model: `Neo-Hookean`"));
 verifyTrue(testCase, contains(report, "independent and unpaired"));
 
 saved = load(fullfile(folder, "joint_material_characterization.mat"));
@@ -84,7 +84,8 @@ verifyEqual(testCase, exportedParameters.Estimate, parameters(:), ...
     "RelTol", 2e-2, "AbsTol", 2e-5);
 report = string(fileread(fullfile(folder, "joint_material_characterization.md")));
 verifyTrue(testCase, contains(report, ...
-    "Selected model: `yeoh-second-order`"));
+    "Selected model: `Yeoh second order`"));
+verifyTrue(testCase, contains(report, "Yeoh second order"));
 saved = load(fullfile(folder, "joint_material_characterization.mat"));
 verifyEqual(testCase, saved.result.selectedModelName, "yeoh-second-order");
 verifyEqual(testCase, saved.result.selectedFit.parameterNames, ["C10", "C20"]);
