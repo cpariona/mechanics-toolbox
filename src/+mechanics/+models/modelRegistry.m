@@ -30,6 +30,17 @@ switch normalizedName
         model.evaluateDerivedQuantities = ...
             @(parameters) 2 * (parameters(1) + parameters(2));
 
+    case "yeoh-second-order"
+        model.name = "yeoh-second-order";
+        model.functionHandle = @mechanics.models.yeoh;
+        model.parameterNames = ["C10", "C20"];
+        model.defaultInitialGuess = [1, 0];
+        model.lowerBounds = [0, -Inf];
+        model.upperBounds = [Inf, Inf];
+        model.description = "Incompressible second-order Yeoh model.";
+        model.derivedQuantityNames = "mu0";
+        model.evaluateDerivedQuantities = @(parameters) 2 * parameters(1);
+
     case "yeoh"
         model.name = "yeoh";
         model.functionHandle = @mechanics.models.yeoh;
