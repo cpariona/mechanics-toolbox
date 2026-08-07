@@ -205,7 +205,6 @@ Future maintenance should preserve:
 - one shared constitutive parameter vector across retained tensile specimens;
 - compression as fixed-parameter external validation;
 - canonical registered model identities in persisted results;
-- compression as fixed-parameter external validation;
 - stored physical values and signs;
 - unit presentation as a display concern rather than numerical conversion;
 - distinct ownership between individual tensile, compression, joint-characterization, and application-range workflows.
