@@ -24,6 +24,21 @@ verifyTrue(testCase, all(isfield(fit.specimens, ...
     ["PredictedStress","Residuals","NormalizationScale"])));
 end
 
+function testSecondOrderYeohSharedParametersAreRecovered(testCase)
+parameters = [0.052, 0.08];
+normalized = localNormalized("yeoh-second-order", parameters, [51; 67]);
+config = localConfig("yeoh-second-order");
+config.fitting.numberOfStarts = 12;
+fit = mechanics.fitting.fitTensileApplicationRangeModel( ...
+    normalized, "yeoh-second-order", config);
+
+verifyEqual(testCase, fit.modelName, "yeoh-second-order");
+verifyEqual(testCase, fit.parameterNames, ["C10", "C20"]);
+verifyEqual(testCase, fit.parameters, parameters, "RelTol", 2e-2, ...
+    "AbsTol", 2e-6);
+verifyLessThan(testCase, fit.objective, 1e-8);
+end
+
 function testYeohSharedParametersAreRecovered(testCase)
 parameters = [0.052, 2e-4, 4e-6];
 normalized = localNormalized("yeoh", parameters, [51; 67]);
@@ -61,7 +76,8 @@ end
 function testCandidateWorkflowRetainsOneResultPerModel(testCase)
 normalized = localNormalized("neo-hookean", 0.16, [31; 43]);
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
-config.candidateModelNames = ["neo-hookean"; "mooney-rivlin"];
+config.candidateModelNames = [ ...
+    "neo-hookean"; "mooney-rivlin"; "yeoh-second-order"; "yeoh"];
 config.fitting.numberOfStarts = 4;
 candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
     normalized, config);
@@ -69,9 +85,9 @@ candidates = mechanics.workflow.fitTensileApplicationRangeModels( ...
 verifyEqual(testCase, string({candidates.modelName})', ...
     config.candidateModelNames);
 verifyEqual(testCase, string({candidates.status})', ...
-    ["completed"; "completed"]);
+    repmat("completed", 4, 1));
 verifyTrue(testCase, all(isfinite([candidates.objective])));
-verifyEqual(testCase, [candidates.parameterCount], [1, 2]);
+verifyEqual(testCase, [candidates.parameterCount], [1, 2, 2, 3]);
 end
 
 function testUnsupportedSpecimenWeightingIsRejected(testCase)
