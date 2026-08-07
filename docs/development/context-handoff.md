@@ -10,35 +10,37 @@ cpariona/mechanics-toolbox
 
 ## Current merged baseline
 
-The presentation-contract and Markdown-serialization maintenance phase was merged through PR #51.
+The explicit second- and third-order Yeoh model contracts were merged through PR #52.
 
-PR #51 merge commit:
+PR #52 merge commit:
+
+```text
+e8982c1fcfc6ca54f4d2ee457ac990bb4afc5b3d
+```
+
+The earlier presentation-contract and Markdown-serialization maintenance phase was merged through PR #51 with merge commit:
 
 ```text
 c021ea4f3d3d00f1d345e779aa3ca2efef411bf4
 ```
 
-`main` subsequently advanced with documentation-only handoff maintenance. Future sessions must resolve the live `main` and `origin/main` SHAs with Git rather than treating the merge commit above as the permanent branch head.
+Future sessions must resolve the live `main` and `origin/main` SHAs with Git rather than treating either historical merge commit above as the permanent branch head.
 
-## Active branch
+## Active development state
 
-The current feature branch is:
+There is no active Yeoh feature branch required for continued work. The Yeoh-family implementation, regression validation, real-driver regeneration, and documentation are complete and merged on `main`.
+
+The former feature branch was:
 
 ```text
 feature/yeoh-second-order
 ```
 
-It was created from the then-current `main` baseline:
+It may be deleted locally and remotely after the user's working copy is synchronized with `main`.
 
-```text
-a5dbe4ce27c0472becdb8e90b09c3a6a5690aa5c
-```
+## Yeoh family contract
 
-Do not merge this branch without explicit user authorization.
-
-## Yeoh family feature status
-
-### Final registered naming contract
+### Registered naming
 
 The registry exposes these constitutive model identities:
 
@@ -77,14 +79,14 @@ No wrapper, alias, bridge file, duplicate evaluator, or model-specific fitting p
 
 ### Constitutive evaluator
 
-`mechanics.models.yeoh` remains the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
+`mechanics.models.yeoh` is the single evaluator for the Yeoh family. It accepts exactly two or three parameters:
 
 ```text
 [C10, C20]       -> second-order Yeoh
 [C10, C20, C30]  -> third-order Yeoh
 ```
 
-The third-order constitutive expression is numerically unchanged from the pre-feature implementation.
+The third-order constitutive expression is numerically unchanged from the implementation that preceded PR #52.
 
 ### Registry metadata
 
@@ -135,13 +137,11 @@ mechanics.statistics.deriveInitialShearModulus
 mechanics.workflow.summarizeFittingAudit
 ```
 
-Both now obtain `mu0` from registered derived-quantity metadata. Yeoh second order therefore participates in population summaries and fitting-audit figures with finite `mu0` values.
+Both obtain `mu0` from registered derived-quantity metadata. Yeoh second order therefore participates in population summaries and fitting-audit figures with finite `mu0` values.
 
 Presentation consumers use `displayName`; persisted model identities remain canonical registry names.
 
 ### Library defaults
-
-Adding Yeoh second order does not add it to every default candidate set.
 
 The maintained library defaults remain three candidates:
 
@@ -151,13 +151,9 @@ mooney-rivlin
 yeoh-third-order
 ```
 
-This preserves the previous default scientific policy while making the historical third-order identity explicit.
+`yeoh-second-order` is registered and available but is not included automatically in the library default candidate sets.
 
-Changing defaults to include Yeoh second order remains a separate evidence-driven reproducibility decision.
-
-### Real-study drivers
-
-The maintained real drivers explicitly compare all four candidates:
+The maintained real-study drivers explicitly compare all four candidates:
 
 ```text
 neo-hookean
@@ -166,16 +162,9 @@ yeoh-second-order
 yeoh-third-order
 ```
 
-Affected drivers:
+This preserves the previous default scientific policy while allowing explicit evidence-driven comparison of both Yeoh orders in maintained experiments.
 
-```text
-studies/tension/run_tensile_experiment.m
-studies/compression/run_compression_experiment.m
-studies/tension/run_tensile_application_range_characterization.m
-studies/joint-characterization/run_joint_material_characterization.m
-```
-
-This is an experiment-specific comparison decision and does not alter library defaults.
+Changing library defaults to include Yeoh second order remains a separate reproducibility and model-selection policy decision.
 
 ## Persistence and historical generated results
 
@@ -192,7 +181,7 @@ When current workflows need those results, regenerate them with current drivers.
 
 ## MATLAB validation status
 
-The final explicit-order migration is locally validated.
+The merged Yeoh-family implementation is locally validated.
 
 The user reported successful execution of the focused migration tests and the complete:
 
@@ -212,20 +201,11 @@ MATLAB was run by the user, not by the assistant.
 
 After the final identity migration, the user regenerated all maintained real drivers and supplied the complete generated bundle for review.
 
-The final bundle contains:
-
-```text
-real tensile study
-real compression study
-tensile application-range characterization
-joint material characterization
-```
-
 The inspected CSV and Markdown outputs persist canonical registered identities `yeoh-second-order` and `yeoh-third-order`; human-facing output uses `Yeoh second order` and `Yeoh third order`.
 
-Individual tensile and compression model selection continued to select `yeoh-third-order` for every retained specimen, and both consensus-model population exports selected `yeoh-third-order` with selection fraction `1.0`.
+Individual tensile and compression model selection selected `yeoh-third-order` for every retained specimen, and both consensus-model population exports selected `yeoh-third-order` with selection fraction `1.0`.
 
-The final joint characterization retained the previous four-candidate scientific result:
+The final joint characterization produced approximately:
 
 ```text
 Neo-Hookean objective       ~= 0.016832
@@ -254,13 +234,21 @@ mu0 = 0.057058 MPa
 
 Range-sensitivity scenarios at `0.30`, `0.40`, and `0.50 mm/mm` all retained Mooney-Rivlin.
 
-These results match the inspected pre-rename four-candidate results to the reported precision. The explicit-order migration therefore changed model identity and presentation contracts without changing the scientific conclusions or constitutive fits.
+These results matched the inspected pre-rename four-candidate results to the reported precision. The explicit-order migration therefore changed model identity and presentation contracts without changing the scientific conclusions or constitutive fits.
 
-## Feature closure state
+## Current policy conclusion
 
-Implementation, regression validation, real-driver regeneration, and documentation are complete on `feature/yeoh-second-order`.
+The Yeoh second-order variant is a maintained registered model and should remain available for explicit comparisons.
 
-The branch is ready for pull-request review. Do not merge the pull request without explicit user authorization.
+The current real-data evidence does not require changing the conservative library defaults. Third-order Yeoh remains materially better than second-order Yeoh in the joint characterization, while tensile application-range characterization selects Mooney-Rivlin. Therefore the default candidate sets remain:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-third-order
+```
+
+A future default-policy change should require evidence from additional datasets, repeated experiments, or a clearly stated methodological preference for routinely testing nested Yeoh orders.
 
 ## Completed presentation and serialization contracts
 
@@ -305,7 +293,7 @@ normalized quantities -> [-]
 - Extract shared code only when at least two maintained callers use the same physical and data contract.
 - Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
 - Do not reorganize packages merely because a folder has many files.
-- Preserve public APIs unless a demonstrated structural defect justifies migration.
+- Preserve public APIs unless a demonstrated ambiguity or ownership defect justifies migration.
 - Use the model registry rather than scattering model-name conditionals when the contracts are identical.
 - Keep model evaluation in `mechanics.models`, optimization in `mechanics.fitting`, population inference in `mechanics.statistics`, deterministic mechanical calculations in `mechanics.analysis`, and orchestration in `mechanics.workflow`.
 - Keep individual tensile, compression, joint-characterization, and tensile application-range workflows distinct.
