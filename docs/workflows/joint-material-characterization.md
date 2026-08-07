@@ -53,6 +53,25 @@ selection = mechanics.workflow.selectJointModel(normalized, config);
 
 All configured registered models are fitted. Failed and completed candidates are retained. Eligible practically equivalent candidates are ranked by parameter count, exact joint objective, and deterministic configured order. Pooled physical SSE, AIC, and BIC remain diagnostics rather than replacements for the hierarchical objective.
 
+The library default candidate set remains:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh
+```
+
+The maintained real joint-characterization driver on the second-order Yeoh feature branch explicitly compares:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-second-order
+yeoh
+```
+
+`yeoh-second-order` has parameters `C10, C20`; `yeoh` retains the historical third-order contract `C10, C20, C30`. Both expose `mu0 = 2*C10` through registry metadata. Adding the model to the real driver does not alter the library default.
+
 ## Maintained driver and bundle
 
 ```text
@@ -95,9 +114,9 @@ robustnessAudit = mechanics.workflow.auditJointMaterialCharacterization( ...
 
 The maintained driver stores the audit result as `robustnessAudit`. The audit is one-factor-at-a-time and evaluates mode weights, sampling density, retained deformation range, and specimens retained per mode. It does not form a Cartesian product of perturbations or add alternative normalization methods without evidence.
 
-## Real-data result
+## Historical real-data baseline
 
-The first maintained real run used four tensile and four compression specimens, with 22,006 observations in total. Yeoh was selected with:
+Before `yeoh-second-order` was added to the real-driver candidate set, the first maintained real run used four tensile and four compression specimens, with 22,006 observations in total. Third-order `yeoh` was selected with:
 
 ```text
 C10 = 0.0524808 MPa
@@ -105,7 +124,7 @@ C20 = 1.98662e-4 MPa
 C30 = 4.04826e-6 MPa
 ```
 
-The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`, so Yeoh was not selected by a marginal difference.
+The joint objective was approximately `9.3633e-4`. Neo-Hookean and Mooney-Rivlin had objectives of approximately `1.6832e-2`, so third-order Yeoh was not selected by a marginal difference within that three-model candidate set.
 
 Mean normalized RMSE was approximately:
 
@@ -114,11 +133,11 @@ tension:     3.94 %
 compression: 1.66 %
 ```
 
-The response was therefore represented more accurately in compression, while the common parameter set still captured the nonlinear tensile trend across independent specimens.
+This result remains useful historical evidence but does not determine whether the two-parameter Yeoh form is practically equivalent under the current parsimonious selection contract. The real driver must be rerun with all four candidates before updating the scientific interpretation.
 
-## Real-data robustness result
+## Historical robustness result
 
-Yeoh remained selected in every configured scenario:
+Under the previous three-model candidate set, third-order Yeoh remained selected in every configured scenario:
 
 | Scenario | Objective | Relative parameter change |
 |---|---:|---:|
@@ -129,13 +148,15 @@ Yeoh remained selected in every configured scenario:
 | 75% deformation range | 0.0016051 | 0.011781 |
 | One specimen per mode | 0.00067871 | 0.0086765 |
 
-The largest parameter-vector change was approximately `2.25 %`, under asymmetric mode weighting. Halving the sampling density changed parameters by approximately `0.011 %`, indicating that point density was not driving the fitted material response. Model identity was stable even when only one specimen per mode was retained.
-
-These results support the current equal-specimen, equal-mode, response-range-normalized contract for this dataset. They do not establish universal optimality for other materials or experiments.
+Those robustness values are tied to the previous candidate set. Once `yeoh-second-order` is included, model identity and parameter stability must be reassessed because the parsimonious selector may legitimately prefer the two-parameter model when objectives are practically equivalent.
 
 ## Validation
 
-Focused joint-characterization tests and the complete `run_all_tests()` suite passed after introducing the sign tolerance. Tests verify that small scale-relative opposite-sign stress noise is retained, while material sign violations are still rejected.
+The user reported successful local execution of all focused second-order Yeoh tests and the complete `run_all_tests()` suite after the mathematical, registry, fitting/selection, and downstream-output phases.
+
+Synthetic joint coverage verifies second-order Yeoh parameter recovery, parameter count, selection, export, figures, Markdown output, and MAT persistence without changing default candidates.
+
+Real joint execution with the four-model candidate set remains pending. The required review should include candidate objective, parameter count, AIC/BIC diagnostics, selected model, mode/specimen RMSE, fitted parameters, `mu0`, and robustness scenarios.
 
 ## Extension policy
 
