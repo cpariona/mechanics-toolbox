@@ -45,7 +45,7 @@ text = string(fileread(files.report));
 verifyTrue(testCase, contains(text, "Processed | 2"));
 verifyTrue(testCase, contains(text, "Excluded | 1"));
 verifyTrue(testCase, contains(text, "Initial thickness outside tolerance"));
-verifyTrue(testCase, contains(text, "yeoh"));
+verifyTrue(testCase, contains(text, "Yeoh third order"));
 verifyTrue(testCase, contains(text, "population_curve.png"));
 verifyFalse(testCase, contains(text, ".fig)"));
 end
@@ -148,6 +148,6 @@ end
 
 function localDeleteFolder(folder)
 if isfolder(folder)
-    rmdir(folder, "s");
+    rmdir(folder,'s');
 end
 end
