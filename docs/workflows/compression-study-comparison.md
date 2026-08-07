@@ -74,6 +74,8 @@ Each dashed reference line is annotated directly on the figure with a LaTeX-form
 mu_0 = 0.113 MPa
 ```
 
+The legend keeps the model-reference labels compact; the exact numerical values remain attached to the dashed lines themselves.
+
 The reference uses the same population central statistic (`mean` or `median`) configured for the group population.
 
 $\mu_0$ and tangent modulus have the same stress units but are not the same mechanical quantity:
@@ -108,7 +110,15 @@ MaximumStress
 MedianTangentModulus
 ```
 
-Each panel reports the mean A-minus-B difference and its bootstrap 95% confidence interval when available. Individual points remain visible because small experimental groups should not be represented only by aggregate bars or intervals.
+Presentation uses concise human-readable panel titles:
+
+```text
+Maximum strain
+Maximum stress
+Median tangent modulus
+```
+
+The A-minus-B mean difference and bootstrap 95% interval are shown as a compact in-panel annotation rather than being concatenated into the title. Individual points remain visible because small experimental groups should not be represented only by aggregate bars or intervals.
 
 ## Maintained Markdown report
 
@@ -126,8 +136,13 @@ The report follows the maintained repository presentation style and includes:
 - model-derived initial shear summary;
 - an explicit note distinguishing $\mu_0$ from tangent modulus;
 - the compression magnitude-difference convention;
+- an adaptive `Interpretation boundaries` section;
 - embedded maintained PNG figures;
 - reproducibility notes pointing to the stored configuration and MAT result.
+
+The interpretation section follows the same boundary-oriented reporting pattern used by other maintained reports. It is generic rather than Ecoflex-specific: for each scalar metric it states whether the bootstrap interval for the A-minus-B mean difference includes zero and, when it does not, records the observed direction of the group difference. It does not label interval exclusion of zero as a formal hypothesis-test significance result.
+
+When two finite positive model-derived $\mu_0$ summaries are available, the report also records their ratio as a constitutive stiffness reference while explicitly warning that the ratio is not a pointwise tangent-modulus ratio.
 
 The report consumes the already computed comparison result and exported figures. It does not re-run statistics or reprocess source studies.
 
@@ -174,4 +189,4 @@ The comparison-visualization and reporting enhancement is implemented on:
 feature/compression-study-comparison-visuals
 ```
 
-MATLAB validation is pending. Run the focused group-comparison tests and the complete repository suite before merging or documenting the regenerated Ecoflex outputs as validated results.
+MATLAB validation is pending after the latest presentation/report refinements. Run the focused group-comparison tests and the complete repository suite before merging or documenting the regenerated Ecoflex outputs as validated results.
