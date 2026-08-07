@@ -14,6 +14,7 @@ for index = 1:2
     end
 end
 
+commonRange = localCommonStrainRange(result.groups);
 stressUnit = localStressUnit(result);
 figureHandle = figure("Color", "w");
 axesHandle = axes(figureHandle);
@@ -23,11 +24,14 @@ groupColors = nan(2, 3);
 for index = 1:2
     group = result.groups(index);
     tangent = group.population.tangentModulus;
-    lineHandle = plot(axesHandle, tangent.strain, tangent.centralModulus, ...
+    mask = tangent.strain >= commonRange(1) & ...
+        tangent.strain <= commonRange(2);
+    lineHandle = plot(axesHandle, tangent.strain(mask), ...
+        tangent.centralModulus(mask), ...
         "LineWidth", 2, ...
         "DisplayName", char(group.name));
     groupColors(index, :) = lineHandle.Color;
-    localConfidenceBand(axesHandle, tangent, lineHandle.Color);
+    localConfidenceBand(axesHandle, tangent, mask, lineHandle.Color);
     uistack(lineHandle, "top")
 end
 
@@ -48,6 +52,7 @@ if isfield(result, "modelInitialShearSummary") && ...
     end
 end
 
+xlim(axesHandle, commonRange)
 xlabel(axesHandle, localStrainLabel(result))
 ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
     "Tangent modulus", mechanics.plotting.mechanicalDisplayUnit( ...
@@ -59,19 +64,38 @@ box(axesHandle, "on")
 legend(axesHandle, "Location", "best", "Interpreter", "none")
 
 figureHandle.UserData = struct( ...
-    "initialShearSummary", localInitialShearUserData(result));
+    "initialShearSummary", localInitialShearUserData(result), ...
+    "commonStrainRange", commonRange);
 end
 
-function localConfidenceBand(axesHandle, tangent, faceColor)
+function range = localCommonStrainRange(groups)
+minimum = -inf;
+maximum = inf;
+for index = 1:2
+    tangent = groups(index).population.tangentModulus;
+    minimum = max(minimum, tangent.strainRange(1));
+    maximum = min(maximum, tangent.strainRange(2));
+end
+if ~isfinite(minimum) || ~isfinite(maximum) || maximum <= minimum
+    error("mechanics:plotting:NoCommonTangentModulusRange", ...
+        "Group tangent-modulus populations do not share a strain range.");
+end
+range = [minimum, maximum];
+end
+
+function localConfidenceBand(axesHandle, tangent, mask, faceColor)
 if ~isfield(tangent, "confidenceLower") || ...
         ~isfield(tangent, "confidenceUpper") || ...
-        ~all(isfinite(tangent.confidenceLower)) || ...
-        ~all(isfinite(tangent.confidenceUpper))
+        ~all(isfinite(tangent.confidenceLower(mask))) || ...
+        ~all(isfinite(tangent.confidenceUpper(mask)))
     return;
 end
+strain = tangent.strain(mask);
+lower = tangent.confidenceLower(mask);
+upper = tangent.confidenceUpper(mask);
 fill(axesHandle, ...
-    [tangent.strain; flipud(tangent.strain)], ...
-    [tangent.confidenceLower; flipud(tangent.confidenceUpper)], ...
+    [strain; flipud(strain)], ...
+    [lower; flipud(upper)], ...
     faceColor, ...
     "EdgeColor", "none", ...
     "FaceAlpha", 0.15, ...
