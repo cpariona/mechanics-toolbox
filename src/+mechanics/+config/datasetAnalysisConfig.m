@@ -13,7 +13,7 @@ config.quality.maximumNonfiniteFraction = 0;
 config.quality.rejectFailedQuality = true;
 
 config.fitting.enabled = false;
-config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
+config.fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh-third-order"];
 config.fitting.context.deformationMeasure = "engineering-strain";
 config.fitting.context.stressMeasure = "nominal";
 config.fitting.fitConfig = mechanics.config.fittingConfig();
