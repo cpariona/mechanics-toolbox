@@ -51,6 +51,9 @@ end
 function testConfigUsesOneRangeVector(testCase)
 config = mechanics.config.tensileApplicationRangeCharacterizationConfig();
 verifyEqual(testCase, config.fitRange, [0, 0.30]);
+verifyEqual(testCase, config.candidateModelNames, ...
+    ["neo-hookean"; "mooney-rivlin"; "yeoh-third-order"]);
+verifyFalse(testCase, any(config.candidateModelNames == "yeoh"));
 verifyFalse(testCase, isfield(config, "minimum"));
 verifyFalse(testCase, isfield(config, "maximum"));
 verifyTrue(testCase, isfield(config, "fitting"));
@@ -160,6 +163,12 @@ verifyError(testCase, @() mechanics.workflow.normalizeTensileApplicationRangeStu
 
 config = localConfig([0, 0.05]);
 config.candidateModelNames = "not-a-model";
+verifyError(testCase, @() mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
+    localStudy(["s1"; "s2"], 31), config), ...
+    "mechanics:models:UnknownModel");
+
+config = localConfig([0, 0.05]);
+config.candidateModelNames = "yeoh";
 verifyError(testCase, @() mechanics.workflow.normalizeTensileApplicationRangeStudy( ...
     localStudy(["s1"; "s2"], 31), config), ...
     "mechanics:models:UnknownModel");
