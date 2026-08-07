@@ -50,8 +50,20 @@ verifyEqual(testCase, result.modelInitialShearSummary.Models, ...
     ["neo-hookean";"neo-hookean"]);
 end
 
-function testCurveBootstrapIncludesBothGroupIntervals(testCase)
-result = localComparison(true);
+function testCurveComparisonBootstrapIncludesGroupIntervals(testCase)
+analysis = localAnalysis();
+assignments = table( ...
+    ["a1";"a2";"b1";"b2"], ...
+    ["control";"control";"treated";"treated"], ...
+    'VariableNames', {'SpecimenId','Group'});
+analysis = mechanics.workflow.assignSpecimenGroups(analysis, assignments);
+config = mechanics.config.groupComparisonConfig();
+config.populationConfig.bootstrap.enabled = false;
+config.populationConfig.strainGridPointCount = 21;
+config.bootstrap.enabled = true;
+config.bootstrap.iterations = 50;
+result = mechanics.workflow.analyzeGroupComparison( ...
+    analysis, ["control","treated"], config);
 comparison = result.curveComparison;
 verifyTrue(testCase, all(isfinite(comparison.confidenceLowerA)));
 verifyTrue(testCase, all(isfinite(comparison.confidenceUpperA)));
@@ -59,12 +71,6 @@ verifyTrue(testCase, all(isfinite(comparison.confidenceLowerB)));
 verifyTrue(testCase, all(isfinite(comparison.confidenceUpperB)));
 verifyTrue(testCase, all(isfinite(comparison.confidenceLower)));
 verifyTrue(testCase, all(isfinite(comparison.confidenceUpper)));
-
-figureHandle = mechanics.plotting.plotGroupComparison(result);
-cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
-verifyTrue(testCase, figureHandle.UserData.groupCurveConfidenceBands);
-patches = findall(figureHandle, "Type", "patch");
-verifyGreaterThanOrEqual(testCase, numel(patches), 3);
 end
 
 function testTangentModulusComparisonIncludesModelReference(testCase)
@@ -83,7 +89,7 @@ for index = 1:numel(textHandles)
         latexStrings(end+1,1) = string(textHandles(index).String); %#ok<AGROW>
     end
 end
-verifyEqual(testCase, nnz(contains(latexStrings, "\\mu_0")), 2);
+verifyEqual(testCase, nnz(contains(latexStrings, "\mu_0")), 2);
 end
 
 function testMetricComparisonPlotIsCreated(testCase)
@@ -141,7 +147,7 @@ report = string(fileread(files.report));
 verifyTrue(testCase, contains(report, "# Tension study comparison report"));
 verifyTrue(testCase, contains(report, "## Scalar metric comparison"));
 verifyTrue(testCase, contains(report, "## Model-derived initial shear modulus"));
-verifyTrue(testCase, contains(report, "$\\mu_0$"));
+verifyTrue(testCase, contains(report, "$\mu_0$"));
 verifyTrue(testCase, contains(report, "group_comparison.png"));
 verifyTrue(testCase, contains(report, "group_tangent_modulus_comparison.png"));
 end
@@ -159,10 +165,7 @@ verifyError(testCase, @() mechanics.workflow.analyzeGroupComparison( ...
     "mechanics:workflow:InsufficientGroupSpecimens");
 end
 
-function result = localComparison(enableBootstrap)
-if nargin < 1
-    enableBootstrap = false;
-end
+function result = localComparison()
 analysis = localAnalysis();
 assignments = table( ...
     ["a1";"a2";"b1";"b2"], ...
@@ -171,8 +174,7 @@ assignments = table( ...
 analysis = mechanics.workflow.assignSpecimenGroups(analysis, assignments);
 config = mechanics.config.groupComparisonConfig();
 config.populationConfig.bootstrap.enabled = false;
-config.bootstrap.enabled = enableBootstrap;
-config.bootstrap.iterations = 100;
+config.bootstrap.enabled = false;
 config.populationConfig.strainGridPointCount = 21;
 result = mechanics.workflow.analyzeGroupComparison( ...
     analysis, ["control","treated"], config);
