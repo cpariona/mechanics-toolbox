@@ -8,33 +8,37 @@ end
 
 metrics = string(result.metricComparison.Metric);
 figureHandle = figure("Color", "w");
-tiledlayout(figureHandle, numel(metrics), 1);
+layout = tiledlayout(figureHandle, numel(metrics), 1, ...
+    "TileSpacing", "compact", "Padding", "compact");
 
 for metricIndex = 1:numel(metrics)
     metric = metrics(metricIndex);
-    nexttile
-    hold on
+    axesHandle = nexttile(layout);
+    hold(axesHandle, "on")
 
     valuesA = localMetricValues(result.groups(1), metric);
     valuesB = localMetricValues(result.groups(2), metric);
-    scatter(ones(size(valuesA)), valuesA, 36, "filled", ...
+    scatter(axesHandle, ones(size(valuesA)), valuesA, 36, "filled", ...
         "DisplayName", char(result.groups(1).name));
-    scatter(2 .* ones(size(valuesB)), valuesB, 36, "filled", ...
+    scatter(axesHandle, 2 .* ones(size(valuesB)), valuesB, 36, "filled", ...
         "DisplayName", char(result.groups(2).name));
 
     row = result.metricComparison(metricIndex, :);
-    plot(1, row.MeanA, "d", "MarkerSize", 8, "LineWidth", 1.5, ...
+    plot(axesHandle, 1, row.MeanA, "d", ...
+        "MarkerSize", 8, "LineWidth", 1.5, ...
         "DisplayName", "Group mean");
-    plot(2, row.MeanB, "d", "MarkerSize", 8, "LineWidth", 1.5, ...
+    plot(axesHandle, 2, row.MeanB, "d", ...
+        "MarkerSize", 8, "LineWidth", 1.5, ...
         "HandleVisibility", "off");
 
-    xlim([0.5 2.5])
-    xticks([1 2])
-    xticklabels(result.groupNames)
-    ylabel(localMetricLabel(result, metric))
-    title(localDifferenceTitle(row, metric), "Interpreter", "none")
-    grid on
-    box on
+    xlim(axesHandle, [0.5 2.5])
+    xticks(axesHandle, [1 2])
+    xticklabels(axesHandle, result.groupNames)
+    ylabel(axesHandle, localMetricLabel(result, metric))
+    title(axesHandle, localMetricTitle(metric), "Interpreter", "none")
+    localDifferenceAnnotation(axesHandle, row, result, metric)
+    grid(axesHandle, "on")
+    box(axesHandle, "on")
 end
 end
 
@@ -77,14 +81,65 @@ switch metric
 end
 end
 
-function titleText = localDifferenceTitle(row, metric)
+function titleText = localMetricTitle(metric)
+switch metric
+    case "MaximumStrain"
+        titleText = "Maximum strain";
+    case "MaximumStress"
+        titleText = "Maximum stress";
+    case "MedianTangentModulus"
+        titleText = "Median tangent modulus";
+    otherwise
+        titleText = metric;
+end
+end
+
+function localDifferenceAnnotation(axesHandle, row, result, metric)
+unit = localMetricUnit(result, metric);
+unitText = "";
+if strlength(unit) > 0
+    unitText = " " + unit;
+end
+
 if all(isfinite([row.MeanDifference, row.ConfidenceLower, row.ConfidenceUpper]))
-    titleText = sprintf( ...
-        "%s: mean A - B = %.4g, bootstrap 95%% CI [%.4g, %.4g]", ...
-        metric, row.MeanDifference, row.ConfidenceLower, row.ConfidenceUpper);
+    annotation = sprintf( ...
+        "Delta mean (A - B) = %.4g%s\n95%% CI [%.4g, %.4g]%s", ...
+        row.MeanDifference, unitText, ...
+        row.ConfidenceLower, row.ConfidenceUpper, unitText);
 elseif isfinite(row.MeanDifference)
-    titleText = sprintf("%s: mean A - B = %.4g", metric, row.MeanDifference);
+    annotation = sprintf("Delta mean (A - B) = %.4g%s", ...
+        row.MeanDifference, unitText);
 else
-    titleText = metric;
+    return;
+end
+
+text(axesHandle, 0.98, 0.95, annotation, ...
+    "Units", "normalized", ...
+    "HorizontalAlignment", "right", ...
+    "VerticalAlignment", "top", ...
+    "BackgroundColor", "w", ...
+    "Margin", 3, ...
+    "Interpreter", "none");
+end
+
+function unit = localMetricUnit(result, metric)
+strainUnit = "";
+stressUnit = "";
+if isfield(result, "mechanics")
+    if isfield(result.mechanics, "strainUnit")
+        strainUnit = string(result.mechanics.strainUnit);
+    end
+    if isfield(result.mechanics, "stressUnit")
+        stressUnit = string(result.mechanics.stressUnit);
+    end
+end
+
+switch metric
+    case "MaximumStrain"
+        unit = mechanics.plotting.mechanicalDisplayUnit("deformation", strainUnit);
+    case {"MaximumStress", "MedianTangentModulus"}
+        unit = mechanics.plotting.mechanicalDisplayUnit("stress", stressUnit);
+    otherwise
+        unit = "";
 end
 end
