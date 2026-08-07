@@ -22,17 +22,17 @@ verifyTrue(testCase, result.candidateSummary.PracticallyEquivalent(1));
 verifyEqual(testCase, result.selectedFit.parameters, 2.4, "AbsTol", 1e-4);
 end
 
-function testYeohIsSelectedForNonlinearYeohData(testCase)
+function testThirdOrderYeohIsSelectedForNonlinearYeohData(testCase)
 config = localConfig();
 parameters = [0.7, 1.8, 0.9];
 studies = {
-    localStudy("tension", ["t1"; "t2"], "yeoh", parameters), ...
-    localStudy("compression", ["c1"; "c2"], "yeoh", parameters)};
+    localStudy("tension", ["t1"; "t2"], "yeoh-third-order", parameters), ...
+    localStudy("compression", ["c1"; "c2"], "yeoh-third-order", parameters)};
 normalized = mechanics.workflow.normalizeJointCharacterizationStudies( ...
     studies, ["tension"; "compression"], config);
 result = mechanics.workflow.selectJointModel(normalized, config);
 
-verifyEqual(testCase, result.selectedModelName, "yeoh");
+verifyEqual(testCase, result.selectedModelName, "yeoh-third-order");
 verifyEqual(testCase, result.selectedFit.parameters, parameters, "AbsTol", 2e-3);
 verifyLessThan(testCase, result.selectedFit.objective, 1e-8);
 verifyTrue(testCase, all(isfinite(result.candidateSummary.AIC)));
@@ -41,7 +41,7 @@ end
 
 function testSecondOrderYeohCanBeSelectedExplicitly(testCase)
 config = localConfig();
-config.candidateModelNames = ["yeoh-second-order"; "yeoh"];
+config.candidateModelNames = ["yeoh-second-order"; "yeoh-third-order"];
 config.selection.tieBreakOrder = config.candidateModelNames;
 parameters = [0.7, 0.18];
 studies = {
