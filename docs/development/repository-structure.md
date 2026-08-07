@@ -50,6 +50,37 @@ mechanics.workflow       orchestration across maintained lower-level contracts
 
 Do not move a function solely to make folders visually balanced. Move it only when ownership is incorrect and callers, tests, and documentation support the change.
 
+## Constitutive-model registry boundary
+
+Registered constitutive-model identity, parameter names, bounds, default initial guesses, function handles, descriptions, and derived quantities belong to `mechanics.models.modelRegistry`.
+
+The maintained Yeoh family uses one constitutive evaluator:
+
+```text
+mechanics.models.yeoh
+```
+
+with two registered contracts:
+
+```text
+yeoh-second-order -> C10, C20
+yeoh              -> C10, C20, C30
+```
+
+The unqualified registered name `yeoh` retains the historical third-order contract. This is intentional repository naming; documentation and registry descriptions must state the order explicitly. Do not create wrappers, aliases, bridge files, or duplicate Yeoh evaluators solely to distinguish the polynomial order.
+
+`mechanics.models.evaluateModel` validates parameter count from registry metadata before calling the evaluator. Fitting, model selection, exporters, plotting, and population workflows should therefore consume registry metadata rather than add model-name conditionals.
+
+For both maintained Yeoh orders, the initial shear modulus is registry-derived as:
+
+```text
+mu0 = 2 * C10
+```
+
+Population/statistical code must consume the registered derived-quantity contract rather than reimplement this formula by model name.
+
+Library workflow defaults remain independent of the complete list returned by `mechanics.models.listModels`. Registering a model makes it available; it does not automatically add that model to every default candidate set. Experiment-specific drivers may explicitly request additional registered candidates when a scientific comparison is intended.
+
 ## Naming boundaries
 
 Use terminology consistently:
