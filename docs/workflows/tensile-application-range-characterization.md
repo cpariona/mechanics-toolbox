@@ -6,7 +6,7 @@ The capability is implemented, merged on `main`, validated locally in MATLAB, an
 
 The maintained workflow includes normalization, shared candidate fitting, parsimonious model selection, registry-derived reference properties, fit-range sensitivity, optional fixed-parameter compression validation, unit-aware figures, and export.
 
-The active Yeoh feature branch adds the second-order Yeoh variant and makes both Yeoh registered identities order-explicit. The constitutive equations remain shared through one Yeoh evaluator.
+The Yeoh-family extension is also merged on `main`: second- and third-order Yeoh are registered as explicit variants while both constitutive equations remain shared through one Yeoh evaluator.
 
 ## Public workflow
 
@@ -207,6 +207,20 @@ mu0 = 0.057058 MPa
 Range-sensitivity runs at maximum engineering strains `0.30`, `0.40`, and `0.50 mm/mm` all selected Mooney-Rivlin, with `mu0` approximately `0.057946`, `0.057503`, and `0.057058 MPa`, respectively.
 
 These values match the pre-rename four-candidate run to the inspected precision. The identifier migration therefore changed only the persisted third-order Yeoh name from the historical `yeoh` string to `yeoh-third-order`.
+
+## Default-policy interpretation
+
+The current application-range evidence does not support adding second-order Yeoh to the library default candidate set. Yeoh second order is useful as an explicit comparison model, but it did not become the selected model in this workflow and did not provide a clearer practical advantage over the existing default candidates.
+
+The maintained default therefore remains:
+
+```text
+neo-hookean
+mooney-rivlin
+yeoh-third-order
+```
+
+A future change should be justified by additional datasets or by an explicit methodological policy to test nested Yeoh orders routinely, rather than by registration alone.
 
 ## Validation status
 
