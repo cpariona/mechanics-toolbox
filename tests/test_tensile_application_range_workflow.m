@@ -52,6 +52,42 @@ verifyTrue(testCase, contains(reportText, "Selected model: `neo-hookean`"));
 verifyTrue(testCase, contains(reportText, "Refitting performed: `false`"));
 end
 
+function testSecondOrderYeohExportAndPersistence(testCase)
+folder = string(tempname);
+mkdir(folder);
+cleanup = onCleanup(@() localRemoveFolder(folder)); %#ok<NASGU>
+parameters = [0.05, 0.012];
+config = localConfig();
+config.candidateModelNames = "yeoh-second-order";
+config.selection.tieBreakOrder = "yeoh-second-order";
+config.export.enabled = true;
+config.export.outputFolder = folder;
+config.fitting.numberOfStarts = 8;
+tensileStudy = localModelStudy( ...
+    "tension", ["y1"; "y2"], "yeoh-second-order", parameters, 71);
+
+result = mechanics.workflow.runTensileApplicationRangeCharacterization( ...
+    tensileStudy, config);
+
+verifyEqual(testCase, result.selectedModelName, "yeoh-second-order");
+verifyEqual(testCase, result.selectedFit.parameterNames, ["C10", "C20"]);
+verifyEqual(testCase, result.referenceProperties.names, "mu0");
+verifyEqual(testCase, result.referenceProperties.values, 2 * parameters(1), ...
+    "RelTol", 2e-3);
+
+selectedParameters = readtable(result.outputFiles.selectedParameters, ...
+    'TextType', 'string');
+verifyEqual(testCase, selectedParameters.Parameter, ["C10"; "C20"]);
+verifyEqual(testCase, selectedParameters.Estimate, parameters(:), ...
+    "RelTol", 2e-2, "AbsTol", 2e-5);
+reportText = string(fileread(result.outputFiles.report));
+verifyTrue(testCase, contains(reportText, ...
+    "Selected model: `yeoh-second-order`"));
+saved = load(result.outputFiles.result);
+verifyEqual(testCase, saved.result.selectedModelName, "yeoh-second-order");
+verifyEqual(testCase, saved.result.selectedFit.parameterNames, ["C10", "C20"]);
+end
+
 function testEnabledExportRequiresOutputFolder(testCase)
 config = localConfig();
 config.export.enabled = true;
@@ -75,10 +111,16 @@ config.export.enabled = false;
 end
 
 function study = localStudy(mode, specimenIds, mu, pointCount)
+study = localModelStudy(mode, specimenIds, "neo-hookean", mu, pointCount);
+end
+
+function study = localModelStudy(mode, specimenIds, modelName, parameters, pointCount)
 specimenIds = string(specimenIds(:));
-records = repmat(localRecord(mode, "", mu, pointCount), numel(specimenIds), 1);
+records = repmat(localModelRecord( ...
+    mode, "", modelName, parameters, pointCount), numel(specimenIds), 1);
 for index = 1:numel(specimenIds)
-    records(index) = localRecord(mode, specimenIds(index), mu, pointCount);
+    records(index) = localModelRecord( ...
+        mode, specimenIds(index), modelName, parameters, pointCount);
     records(index).index = index;
 end
 study.sourceFile = "synthetic.xlsx";
@@ -90,7 +132,7 @@ study.provenance.inputType = "synthetic";
 study.createdAt = datetime(2026, 8, 2);
 end
 
-function record = localRecord(mode, specimenId, mu, pointCount)
+function record = localModelRecord(mode, specimenId, modelName, parameters, pointCount)
 if mode == "tension"
     deformation = linspace(0, 0.30, pointCount)';
 else
@@ -98,7 +140,7 @@ else
 end
 context.deformationMeasure = "engineering-strain";
 context.stressMeasure = "nominal";
-stress = mechanics.models.evaluateModel("neo-hookean", deformation, mu, context);
+stress = mechanics.models.evaluateModel(modelName, deformation, parameters, context);
 specimen.id = string(specimenId);
 specimen.processed.strain = deformation;
 specimen.processed.stress = stress;
