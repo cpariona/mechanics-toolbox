@@ -48,7 +48,7 @@ for index = 1:numel(requiredFiles)
     verifyTrue(testCase, isfile(result.outputFiles.(requiredFiles(index))));
 end
 reportText = string(fileread(result.outputFiles.report));
-verifyTrue(testCase, contains(reportText, "Selected model: `neo-hookean`"));
+verifyTrue(testCase, contains(reportText, "Selected model: `Neo-Hookean`"));
 verifyTrue(testCase, contains(reportText, "Refitting performed: `false`"));
 end
 
@@ -82,7 +82,8 @@ verifyEqual(testCase, selectedParameters.Estimate, parameters(:), ...
     "RelTol", 2e-2, "AbsTol", 2e-5);
 reportText = string(fileread(result.outputFiles.report));
 verifyTrue(testCase, contains(reportText, ...
-    "Selected model: `yeoh-second-order`"));
+    "Selected model: `Yeoh second order`"));
+verifyTrue(testCase, contains(reportText, "Yeoh second order"));
 saved = load(result.outputFiles.result);
 verifyEqual(testCase, saved.result.selectedModelName, "yeoh-second-order");
 verifyEqual(testCase, saved.result.selectedFit.parameterNames, ["C10", "C20"]);
