@@ -9,6 +9,7 @@ normalizedName = lower(strrep(strrep(strtrim(modelName), "_", "-"), " ", "-"));
 switch normalizedName
     case {"neo-hookean", "neohookean"}
         model.name = "neo-hookean";
+        model.displayName = "Neo-Hookean";
         model.functionHandle = @mechanics.models.neoHookean;
         model.parameterNames = "mu";
         model.defaultInitialGuess = 1;
@@ -20,6 +21,7 @@ switch normalizedName
 
     case {"mooney-rivlin", "mooneyrivlin"}
         model.name = "mooney-rivlin";
+        model.displayName = "Mooney-Rivlin";
         model.functionHandle = @mechanics.models.mooneyRivlin;
         model.parameterNames = ["C10", "C01"];
         model.defaultInitialGuess = [0.5, 0.5];
@@ -32,6 +34,7 @@ switch normalizedName
 
     case "yeoh-second-order"
         model.name = "yeoh-second-order";
+        model.displayName = "Yeoh second order";
         model.functionHandle = @mechanics.models.yeoh;
         model.parameterNames = ["C10", "C20"];
         model.defaultInitialGuess = [1, 0];
@@ -43,6 +46,7 @@ switch normalizedName
 
     case "yeoh"
         model.name = "yeoh";
+        model.displayName = "Yeoh third order";
         model.functionHandle = @mechanics.models.yeoh;
         model.parameterNames = ["C10", "C20", "C30"];
         model.defaultInitialGuess = [1, 0, 0];
