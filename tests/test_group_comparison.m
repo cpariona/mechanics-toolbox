@@ -92,13 +92,26 @@ end
 verifyEqual(testCase, nnz(contains(latexStrings, "\mu_0")), 2);
 end
 
-function testMetricComparisonPlotIsCreated(testCase)
+function testMetricComparisonPlotUsesCompactTitlesAndAnnotations(testCase)
 result = localComparison();
 figureHandle = mechanics.plotting.plotGroupMetricComparison(result);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 verifyTrue(testCase, isgraphics(figureHandle));
 axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
 verifyEqual(testCase, numel(axesHandles), 3);
+titles = strings(numel(axesHandles), 1);
+annotationCount = 0;
+for index = 1:numel(axesHandles)
+    titles(index) = string(axesHandles(index).Title.String);
+    textHandles = findall(axesHandles(index), "Type", "text");
+    for textIndex = 1:numel(textHandles)
+        annotationCount = annotationCount + ...
+            contains(string(textHandles(textIndex).String), "Delta mean (A - B)");
+    end
+end
+verifyTrue(testCase, all(ismember( ...
+    ["Maximum strain";"Maximum stress";"Median tangent modulus"], titles)));
+verifyEqual(testCase, annotationCount, 3);
 end
 
 function testCompressionPlotUsesMagnitudeDifferenceConvention(testCase)
@@ -147,6 +160,8 @@ report = string(fileread(files.report));
 verifyTrue(testCase, contains(report, "# Tension study comparison report"));
 verifyTrue(testCase, contains(report, "## Scalar metric comparison"));
 verifyTrue(testCase, contains(report, "## Model-derived initial shear modulus"));
+verifyTrue(testCase, contains(report, "## Interpretation boundaries"));
+verifyTrue(testCase, contains(report, "descriptive uncertainty summaries"));
 verifyTrue(testCase, contains(report, "$\mu_0$"));
 verifyTrue(testCase, contains(report, "group_comparison.png"));
 verifyTrue(testCase, contains(report, "group_tangent_modulus_comparison.png"));
