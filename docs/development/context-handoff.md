@@ -12,12 +12,13 @@ cpariona/mechanics-toolbox
 
 The presentation-contract and Markdown-serialization maintenance phase was merged through PR #51.
 
-Observed merged state:
+PR #51 merge commit:
 
 ```text
-main == origin/main
 c021ea4f3d3d00f1d345e779aa3ca2efef411bf4
 ```
+
+`main` subsequently advanced with documentation-only handoff maintenance. Future sessions must resolve the live `main` and `origin/main` SHAs with Git rather than treating the merge commit above as the permanent branch head.
 
 The maintenance branch `maintenance/consolidate-presentation-contracts` is no longer active. Future implementation should start from updated `main` unless the user explicitly requests otherwise.
 
