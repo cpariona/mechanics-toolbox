@@ -9,12 +9,13 @@ context = specimens(1).Context;
 strainUnit = string(specimens(1).StrainUnit);
 stressUnit = string(specimens(1).StressUnit);
 localValidateMetadata(specimens);
+model = mechanics.models.modelRegistry(string(result.selectedModelName));
 
 minimumDeformation = min(arrayfun(@(item) min(item.Deformation), specimens));
 maximumDeformation = max(arrayfun(@(item) max(item.Deformation), specimens));
 referenceDeformation = linspace(minimumDeformation, maximumDeformation, 600)';
 referencePrediction = mechanics.models.evaluateModel( ...
-    string(result.selectedModelName), referenceDeformation, ...
+    model.name, referenceDeformation, ...
     result.selectedFit.parameters, context);
 
 figureHandle = figure("Color", "w");
@@ -31,11 +32,11 @@ for index = 1:numel(specimens)
 end
 plot(fitAxes, referenceDeformation, referencePrediction, "k--", ...
     "LineWidth", 1.8, ...
-    "DisplayName", "Shared prediction (" + string(result.selectedModelName) + ")");
+    "DisplayName", "Shared prediction (" + model.displayName + ")");
 ylabel(fitAxes, mechanics.plotting.mechanicalAxisLabel( ...
     "stress", context.stressMeasure, stressUnit));
 title(fitAxes, "Tensile application-range fit (" + ...
-    string(result.selectedModelName) + ")");
+    model.displayName + ")");
 legend(fitAxes, "Location", "northwest", "Interpreter", "none");
 grid(fitAxes, "on"); box(fitAxes, "on"); hold(fitAxes, "off")
 
@@ -45,7 +46,7 @@ yline(residualAxes, 0, "k:", "HandleVisibility", "off");
 for index = 1:numel(specimens)
     specimen = specimens(index);
     prediction = mechanics.models.evaluateModel( ...
-        string(result.selectedModelName), specimen.Deformation, ...
+        model.name, specimen.Deformation, ...
         result.selectedFit.parameters, specimen.Context);
     residual = specimen.MeasuredStress - prediction;
     plot(residualAxes, specimen.Deformation, residual, "-", ...
