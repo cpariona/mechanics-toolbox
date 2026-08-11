@@ -10,6 +10,9 @@ config.includePopulationCurve = true;
 config.includePeakMetrics = true;
 config.includeTangentModulus = true;
 config.includePopulationTangentModulus = true;
+config.includeSelectedModelParameters = true;
+config.includeInitialShearModulus = true;
 config.includeZeroReferenceDiagnostics = true;
+config.zeroReferenceDiagnosticHalfWindowPoints = 30;
 config.closeFiguresAfterExport = true;
 end
