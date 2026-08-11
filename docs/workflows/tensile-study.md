@@ -42,6 +42,8 @@ config.datasetAnalysis.processingConfig.preprocessing.zeroReference = ...
 
 Specimen-specific preload values can be supplied in workbook order through `config.specimens.preloadForceOverrides`.
 
+The maintained zero-reference diagnostic is intentionally local. `tensileStudyReportConfig.zeroReferenceDiagnosticHalfWindowPoints` controls how many acquisition samples on each side of the selected mechanical-zero index are shown. The diagnostic should make the selected zero visible rather than reproduce the full test curve.
+
 ## Mechanics and tangent modulus
 
 ```matlab
@@ -59,6 +61,8 @@ config.datasetAnalysis.processingConfig.analysis = analysis;
 ```
 
 The stored tensile state uses positive displacement, strain, and stress, with stretch greater than one. Plot trimming affects only `tangentModulusForPlot`; the complete derivative remains available for numerical summaries.
+
+The individual tangent-modulus figure marks the configured summary interval and overlays the stored median tangent-modulus summary for each specimen across that interval. The legend reports the corresponding summary value so the plotted local derivative and the scalar value used by the study remain explicitly connected.
 
 ## Constitutive fitting
 
@@ -93,6 +97,8 @@ When completed, the shared population result contains stress-strain curves, tang
 The maintained model-selection contract is descriptive and does not refit the population. `study.population.modelSelection` stores the individual selections, candidate selection counts and fractions, and a unique selection-frequency consensus when one exists. If all eligible specimens selected the same model, the existing individually selected-model parameter population already represents that consensus and no second consensus-model parameter population is generated.
 
 If selections are mixed, parameter summaries remain grouped by each specimen's individually selected model. A consensus-model refit is reserved for explicit advanced workflows that require one common-model parameterization; it is not part of the standard tensile study or report.
+
+The same standard parameter population also stores registry-derived initial shear modulus values when available. These values are derived from the selected specimen fits through `mechanics.statistics.deriveInitialShearModulus`; plotting does not duplicate constitutive formulas.
 
 ## Study bundle
 
@@ -133,7 +139,9 @@ reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
 
 The population section reports the distribution of individual model selections, the selection-frequency consensus when unique, whether that consensus is unanimous, and the individually selected-model parameter summary. Reporting only consumes `study.population`; it does not perform fitting, model selection, or a consensus refit.
 
-Standard figures include individual curves, population response, peak metrics, specimen tangent modulus, population tangent modulus when available, and zero-reference diagnostics. Every maintained figure is exported as the configured image format and an editable MATLAB `.fig`.
+Standard figures include individual curves, population response, peak metrics, specimen tangent modulus, population tangent modulus when available, selected-model parameters across specimens, registry-derived initial shear modulus across specimens, and local zero-reference diagnostics. The parameter and initial-shear figures visualize the same standard population already reported in the study; they do not represent a second consensus-model population.
+
+Every maintained figure is exported as the configured image format and an editable MATLAB `.fig`. Figure inclusion remains configurable through `tensileStudyReportConfig`.
 
 ## Downstream constitutive workflows
 
