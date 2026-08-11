@@ -48,11 +48,31 @@ switch method
             "Unknown tangent-modulus method: %s", method);
 end
 
-summaryRange = config.summaryStrainRange;
-if numel(summaryRange) ~= 2 || any(~isfinite(summaryRange)) || ...
-        summaryRange(2) < summaryRange(1)
+configuredSummaryRange = double(config.summaryStrainRange(:)');
+summaryRangeMode = "explicit";
+if isfield(config, "summaryStrainRangeMode")
+    summaryRangeMode = lower(string(config.summaryStrainRangeMode));
+end
+if numel(configuredSummaryRange) ~= 2 || ...
+        any(~isfinite(configuredSummaryRange)) || ...
+        configuredSummaryRange(2) < configuredSummaryRange(1)
     error("mechanics:analysis:InvalidModulusStrainRange", ...
         "summaryStrainRange must contain two increasing finite values.");
+end
+switch summaryRangeMode
+    case "explicit"
+        summaryRange = configuredSummaryRange;
+    case "proportional"
+        if configuredSummaryRange(1) < 0 || configuredSummaryRange(2) > 1
+            error("mechanics:analysis:InvalidProportionalModulusStrainRange", ...
+                "A proportional summaryStrainRange must lie within [0, 1].");
+        end
+        retainedRange = [min(strain), max(strain)];
+        summaryRange = retainedRange(1) + configuredSummaryRange .* ...
+            (retainedRange(2) - retainedRange(1));
+    otherwise
+        error("mechanics:analysis:UnknownModulusStrainRangeMode", ...
+            "summaryStrainRangeMode must be 'explicit' or 'proportional'.");
 end
 summaryMask = strain >= summaryRange(1) & strain <= summaryRange(2);
 if ~any(summaryMask)
@@ -73,6 +93,8 @@ result.modulusPlotStartStrain = plotStartStrain;
 result.medianModulus = median(tangentModulus(summaryMask), "omitnan");
 result.meanModulus = mean(tangentModulus(summaryMask), "omitnan");
 result.summaryStrainRange = summaryRange;
+result.summaryStrainRangeMode = summaryRangeMode;
+result.configuredSummaryStrainRange = configuredSummaryRange;
 result.summaryMask = summaryMask;
 result.windowIndices = [find(summaryMask, 1, "first"), ...
     find(summaryMask, 1, "last")];

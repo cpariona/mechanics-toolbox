@@ -50,7 +50,10 @@ config.specimen.processing.mechanics = mechanicsConfig;
 analysisConfig = config.specimen.processing.analysis;
 analysisConfig.modulusMethod = "local-linear";
 analysisConfig.derivativeWindowStrain = 0.02;
-analysisConfig.summaryStrainRange = [-0.40, 0.00];
+% Summarize over the complete retained strain span for each specimen. The
+% stored resolved range remains signed; [0, 1] denotes the retained span.
+analysisConfig.summaryStrainRangeMode = "proportional";
+analysisConfig.summaryStrainRange = [0.00, 1.00];
 analysisConfig.modulusPlotStartStrain = NaN;
 analysisConfig.modulusPlotAutomaticStartFraction = 0.01;
 config.specimen.processing.analysis = analysisConfig;

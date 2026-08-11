@@ -131,4 +131,24 @@ derivedConfig = mechanics.config.selectedParameterPopulationConfig();
 derivedConfig.minimumSpecimensPerSummary = populationConfig.minimumSpecimens;
 result = mechanics.statistics.deriveInitialShearModulus( ...
     derivedTable, derivedConfig);
+result.centralStatistic = lower(string(populationConfig.centralStatistic));
+result.centralValue = NaN;
+result.dispersionStatistic = "none";
+result.dispersionValue = NaN;
+if isempty(result.summary) || result.summary.SpecimenCount(1) == 0
+    return;
+end
+switch result.centralStatistic
+    case "mean"
+        result.centralValue = result.summary.Mean(1);
+        if isfinite(result.summary.StandardDeviation(1))
+            result.dispersionStatistic = "standard-deviation";
+            result.dispersionValue = result.summary.StandardDeviation(1);
+        end
+    case "median"
+        result.centralValue = result.summary.Median(1);
+    otherwise
+        error("mechanics:statistics:UnknownCentralStatistic", ...
+            "centralStatistic must be 'mean' or 'median'.");
+end
 end

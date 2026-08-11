@@ -62,6 +62,10 @@ verifyEqual(testCase, aggregate.modulusMatrix, ...
     [2 .* ones(6, 1), 4 .* ones(6, 1)]);
 verifyEqual(testCase, aggregate.centralModulus, 3 .* ones(6, 1));
 verifyEqual(testCase, aggregate.specimenCountByPoint, 2 .* ones(6, 1));
+verifyEqual(testCase, aggregate.summary.centralStatistic, "mean");
+verifyEqual(testCase, aggregate.summary.value, 3);
+verifyEqual(testCase, aggregate.summary.rangeMode, "explicit");
+verifyEqual(testCase, aggregate.summary.displayRange, [0, 1]);
 end
 
 function testTangentModulusUsesPlotCurveAndMinimumSupport(testCase)
@@ -181,6 +185,10 @@ result = mechanics.statistics.summarizePopulationMetrics( ...
 maximumStress = result(result.Metric == "MaximumStress", :);
 verifyEqual(testCase, maximumStress.SampleCount, 2);
 verifyEqual(testCase, maximumStress.Mean, 15);
+verifyEqual(testCase, maximumStress.Median, 15);
+verifyEqual(testCase, maximumStress.CentralStatistic, "mean");
+verifyEqual(testCase, maximumStress.CentralValue, 15);
+verifyEqual(testCase, maximumStress.ConfidenceStatistic, "mean");
 verifyEqual(testCase, maximumStress.StandardDeviation, ...
     sqrt(50), "AbsTol", 1e-12);
 end
@@ -246,6 +254,10 @@ population.tangentModulus.standardError = [0; 0.05];
 population.tangentModulus.confidenceLower = [0.8; 1.8];
 population.tangentModulus.confidenceUpper = [1.2; 2.2];
 population.tangentModulus.specimenCountByPoint = [2; 2];
+population.tangentModulus.summary.centralStatistic = "mean";
+population.tangentModulus.summary.value = 1.5;
+population.tangentModulus.summary.rangeMode = "explicit";
+population.tangentModulus.summary.configuredRange = [0, 1];
 population.metrics = table("MaximumStress", 2, ...
     'VariableNames', {'Metric', 'SampleCount'});
 population.modelParameters.values = table();
@@ -258,6 +270,12 @@ verifyTrue(testCase, isfile(files.curve));
 verifyTrue(testCase, isfile(files.tangentModulus));
 verifyTrue(testCase, isfile(files.metrics));
 verifyTrue(testCase, isfile(files.population));
+tangentTable = readtable(files.tangentModulus, "TextType", "string");
+verifyEqual(testCase, tangentTable.SummaryCentralStatistic, ...
+    repmat("mean", 2, 1));
+verifyEqual(testCase, tangentTable.SummaryValue, [1.5; 1.5]);
+verifyEqual(testCase, tangentTable.SummaryRangeMode, ...
+    repmat("explicit", 2, 1));
 end
 
 function specimen = localProcessedSpecimen(id, slope)
@@ -278,6 +296,9 @@ tangent.strain = strain;
 tangent.tangentModulus = values;
 tangent.tangentModulusForPlot = values;
 tangent.summaryStrainRange = [min(strain), max(strain)];
+tangent.summaryStrainRangeMode = "explicit";
+tangent.configuredSummaryStrainRange = tangent.summaryStrainRange;
+tangent.medianModulus = median(values, "omitnan");
 end
 
 function record = localRecord(id, slope)

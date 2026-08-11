@@ -24,6 +24,7 @@ config.mechanics.poissonRatio = 0.5;
 
 config.analysis.modulusMethod = "local-linear";
 config.analysis.derivativeWindowStrain = 0.02;
+config.analysis.summaryStrainRangeMode = "explicit";
 config.analysis.summaryStrainRange = [0.00, 0.05];
 config.analysis.minimumWindowPoints = 3;
 config.analysis.derivativeSmoothing.enabled = true;

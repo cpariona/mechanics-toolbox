@@ -48,6 +48,10 @@ verifyTrue(testCase, contains(text, "Initial thickness outside tolerance"));
 verifyTrue(testCase, contains(text, "Yeoh third order"));
 verifyTrue(testCase, contains(text, "population_curve.png"));
 verifyFalse(testCase, contains(text, ".fig)"));
+verifyTrue(testCase, contains(text, ...
+    "median of specimen median tangent modulus: `10.5 MPa`"));
+verifyTrue(testCase, contains(text, ...
+    "proportional `[0, 1]` of each retained specimen strain range"));
 end
 
 function study = localPopulationStudy()
@@ -100,6 +104,17 @@ study.population.tangentModulus.centralModulus = [10.5; 10.5; 10.5; 10.5];
 study.population.tangentModulus.centralStatistic = "median";
 study.population.tangentModulus.confidenceLower = [10; 10; 10; 10];
 study.population.tangentModulus.confidenceUpper = [11; 11; 11; 11];
+study.population.tangentModulus.summary.metric = "MedianTangentModulus";
+study.population.tangentModulus.summary.specimenStatistic = "median";
+study.population.tangentModulus.summary.centralStatistic = "median";
+study.population.tangentModulus.summary.specimenIds = ["sample-01"; "sample-02"];
+study.population.tangentModulus.summary.specimenValues = [10; 11];
+study.population.tangentModulus.summary.specimenCount = 2;
+study.population.tangentModulus.summary.value = 10.5;
+study.population.tangentModulus.summary.rangeMode = "proportional";
+study.population.tangentModulus.summary.configuredRange = [0, 1];
+study.population.tangentModulus.summary.displayRange = [-0.3, 0];
+study.population.tangentModulus.summary.resolvedSpecimenRanges = [-0.3, 0; -0.3, 0];
 study.population.modelParameters.values = table();
 study.population.modelParameters.summary = table( ...
     "yeoh-third-order", "C10", 2, 0.05, 0.01, 0.05, 0.04, 0.06, 0.2, true, ...

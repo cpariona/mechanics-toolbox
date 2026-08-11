@@ -25,6 +25,8 @@ metricNames = [ ...
 metricCount = numel(metricNames);
 sampleCount = zeros(metricCount, 1);
 meanValue = nan(metricCount, 1);
+medianValue = nan(metricCount, 1);
+centralValue = nan(metricCount, 1);
 standardDeviation = nan(metricCount, 1);
 coefficientOfVariation = nan(metricCount, 1);
 confidenceLower = nan(metricCount, 1);
@@ -41,6 +43,15 @@ for index = 1:metricCount
     end
 
     meanValue(index) = mean(values);
+    medianValue(index) = median(values);
+    if lower(string(config.centralStatistic)) == "mean"
+        centralValue(index) = meanValue(index);
+    elseif lower(string(config.centralStatistic)) == "median"
+        centralValue(index) = medianValue(index);
+    else
+        error("mechanics:statistics:UnknownCentralStatistic", ...
+            "centralStatistic must be 'mean' or 'median'.");
+    end
     standardDeviation(index) = std(values);
 
     if abs(meanValue(index)) > eps
@@ -61,11 +72,16 @@ for index = 1:metricCount
     end
 end
 
+centralStatistic = repmat(lower(string(config.centralStatistic)), metricCount, 1);
+confidenceStatistic = repmat("mean", metricCount, 1);
 summary = table( ...
-    metricNames, sampleCount, meanValue, standardDeviation, ...
+    metricNames, sampleCount, meanValue, medianValue, ...
+    centralStatistic, centralValue, standardDeviation, ...
     coefficientOfVariation, confidenceLower, confidenceUpper, ...
+    confidenceStatistic, ...
     'VariableNames', { ...
-        'Metric', 'SampleCount', 'Mean', 'StandardDeviation', ...
+        'Metric', 'SampleCount', 'Mean', 'Median', ...
+        'CentralStatistic', 'CentralValue', 'StandardDeviation', ...
         'CoefficientOfVariation', ...
-        'ConfidenceLower', 'ConfidenceUpper'});
+        'ConfidenceLower', 'ConfidenceUpper', 'ConfidenceStatistic'});
 end

@@ -41,6 +41,13 @@ verifyTrue(testCase, isfield(files, "populationTangentModulus"));
 verifyTrue(testCase, isfile(files.populationTangentModulus));
 verifyTrue(testCase, isfile(fullfile(folder, "population_tangent_modulus.fig")));
 verifyFalse(testCase, isfield(files, "tangentModulus"));
+figureHandle = openfig(fullfile(folder, "population_tangent_modulus.fig"), ...
+    "invisible");
+figureCleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
+verifyEqual(testCase, figureHandle.UserData.centralStatistic, "mean");
+verifyEqual(testCase, figureHandle.UserData.summaryValue, 4);
+verifyEqual(testCase, figureHandle.UserData.summaryRange, [0.1, 0.3]);
+verifyEqual(testCase, figureHandle.UserData.annotationCount, 1);
 end
 
 function testIndividualAndPopulationTangentModulusControlsAreIndependent(testCase)
@@ -293,6 +300,17 @@ tangent.standardError = [1; 1; 1];
 tangent.confidenceLower = [2.5; 3.5; 4.5];
 tangent.confidenceUpper = [3.5; 4.5; 5.5];
 tangent.specimenCountByPoint = [2; 2; 2];
+tangent.summary.metric = "MedianTangentModulus";
+tangent.summary.specimenStatistic = "median";
+tangent.summary.centralStatistic = "mean";
+tangent.summary.specimenIds = ["sample-01"; "sample-02"];
+tangent.summary.specimenValues = [3; 5];
+tangent.summary.specimenCount = 2;
+tangent.summary.value = 4;
+tangent.summary.rangeMode = "explicit";
+tangent.summary.configuredRange = [0.1, 0.3];
+tangent.summary.displayRange = [0.1, 0.3];
+tangent.summary.resolvedSpecimenRanges = [0.1, 0.3; 0.1, 0.3];
 end
 
 function localDeleteFolder(folder)

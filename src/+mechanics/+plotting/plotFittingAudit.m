@@ -2,7 +2,7 @@ function figureHandle = plotFittingAudit(audit, titleText, stressUnit)
 %PLOTFITTINGAUDIT Plot initial shear modulus across fitting windows.
 arguments
     audit (1,1) struct
-    titleText (1,1) string = "Mechanical study"
+    titleText (1,1) string = "Constitutive fitting audit"
     stressUnit (1,1) string = "-"
 end
 
@@ -77,8 +77,7 @@ displayStressUnit = mechanics.plotting.mechanicalDisplayUnit( ...
     "stress", stressUnit);
 ylabel(axesHandle, mechanics.plotting.formatUnitLabel( ...
     "Equivalent initial shear modulus", displayStressUnit));
-title(axesHandle, titleText + " — fitting-window audit", ...
-    "Interpreter", "none");
+title(axesHandle, titleText, "Interpreter", "none");
 windowMinimum = min(summary.WindowFraction);
 windowMaximum = max(summary.WindowFraction);
 windowPadding = max(0.02, 0.05 .* (windowMaximum - windowMinimum));

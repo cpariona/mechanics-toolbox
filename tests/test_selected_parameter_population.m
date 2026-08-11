@@ -119,11 +119,23 @@ end
 
 function testInitialShearModulusPlot(testCase)
 population = localMixedPopulation();
+population.initialShearModulus.centralStatistic = "mean";
+population.initialShearModulus.centralValue = ...
+    population.initialShearModulus.summary.Mean;
+population.initialShearModulus.dispersionStatistic = "standard-deviation";
+population.initialShearModulus.dispersionValue = ...
+    population.initialShearModulus.summary.StandardDeviation;
 figureHandle = mechanics.plotting.plotInitialShearModulusPopulation(population);
 cleanup = onCleanup(@() close(figureHandle)); %#ok<NASGU>
 verifyTrue(testCase, isgraphics(figureHandle));
 axesHandles = findall(figureHandle, 'Type', 'axes', '-not', 'Tag', 'legend');
 verifyEqual(testCase, numel(axesHandles), 1);
+verifyEqual(testCase, figureHandle.UserData.centralStatistic, "mean");
+verifyEqual(testCase, figureHandle.UserData.referenceValue, ...
+    population.initialShearModulus.summary.Mean);
+verifyEqual(testCase, figureHandle.UserData.dispersionStatistic, ...
+    "standard-deviation");
+verifyEqual(testCase, figureHandle.UserData.annotationCount, 1);
 end
 
 function testBatchComparisonDefaultsAreLightweight(testCase)

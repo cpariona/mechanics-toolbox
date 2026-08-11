@@ -16,8 +16,7 @@ end
 bar(categorical(summary.ModelName), summary.SelectionFraction);
 ylim([0, 1]);
 ylabel('Selection fraction');
-title(sprintf('Selected constitutive models across %d specimens', ...
-    batch.selectedSpecimenCount));
+title('Selected constitutive models');
 grid on;
 box on;
 end

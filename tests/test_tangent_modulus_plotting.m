@@ -53,3 +53,19 @@ verifyError(testCase, ...
     @() mechanics.analysis.computeTangentModulus(curve, config), ...
     "mechanics:analysis:InvalidModulusPlotStartFraction");
 end
+
+function testProportionalSummaryRangeResolvesAgainstRetainedStrain(testCase)
+curve.strain = linspace(-0.36, 0, 37)';
+curve.stress = 2 .* curve.strain;
+config = mechanics.config.compressionConfig().analysis;
+config.summaryStrainRangeMode = "proportional";
+config.summaryStrainRange = [0.25, 0.75];
+
+result = mechanics.analysis.computeTangentModulus(curve, config);
+
+verifyEqual(testCase, result.summaryStrainRange, [-0.27, -0.09], ...
+    "AbsTol", 1e-12);
+verifyEqual(testCase, result.summaryStrainRangeMode, "proportional");
+verifyEqual(testCase, result.configuredSummaryStrainRange, [0.25, 0.75]);
+verifyEqual(testCase, result.medianModulus, 2, "AbsTol", 1e-10);
+end

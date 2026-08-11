@@ -4,7 +4,7 @@ arguments
     population (1,1) struct
 end
 
-[data, summary, specimenCount] = localNormalizePopulation(population);
+[data, summary, ~] = localNormalizePopulation(population);
 figureHandle = figure('Color','w','Position',[100 100 1300 760]);
 if isempty(data)
     figureHandle.UserData.parameterKeys = strings(0,1);
@@ -62,9 +62,8 @@ for index = 1:numel(keys)
     box(axesHandle,'on');
 end
 
-sgtitle(figureHandle, sprintf( ...
-    'Selected-model parameters across %d specimens', ...
-    specimenCount), 'Interpreter','none','FontSize',18);
+sgtitle(figureHandle, 'Selected-model parameters', ...
+    'Interpreter','none','FontSize',18);
 end
 
 function [data, summary, specimenCount] = localNormalizePopulation(population)

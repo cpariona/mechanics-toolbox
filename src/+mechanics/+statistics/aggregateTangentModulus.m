@@ -18,6 +18,10 @@ preparedModulus = cell(curveCount, 1);
 minimumStrain = nan(curveCount, 1);
 maximumStrain = nan(curveCount, 1);
 specimenIds = strings(curveCount, 1);
+summaryValues = nan(curveCount, 1);
+summaryRangeModes = strings(curveCount, 1);
+configuredSummaryRanges = nan(curveCount, 2);
+resolvedSummaryRanges = nan(curveCount, 2);
 
 for index = 1:curveCount
     specimen = specimens(index);
@@ -45,6 +49,26 @@ for index = 1:curveCount
         specimenIds(index) = string(specimen.id);
     else
         specimenIds(index) = "specimen-" + index;
+    end
+
+    if isfield(tangent, "medianModulus")
+        summaryValues(index) = double(tangent.medianModulus);
+    end
+    if isfield(tangent, "summaryStrainRangeMode")
+        summaryRangeModes(index) = string(tangent.summaryStrainRangeMode);
+    else
+        summaryRangeModes(index) = "explicit";
+    end
+    if isfield(tangent, "configuredSummaryStrainRange")
+        configuredSummaryRanges(index, :) = ...
+            double(tangent.configuredSummaryStrainRange(:)');
+    elseif isfield(tangent, "summaryStrainRange")
+        configuredSummaryRanges(index, :) = ...
+            double(tangent.summaryStrainRange(:)');
+    end
+    if isfield(tangent, "summaryStrainRange")
+        resolvedSummaryRanges(index, :) = ...
+            double(tangent.summaryStrainRange(:)');
     end
 end
 
@@ -125,7 +149,61 @@ aggregate.standardDeviation = standardDeviation;
 aggregate.standardError = standardError;
 aggregate.confidenceLower = confidenceLower;
 aggregate.confidenceUpper = confidenceUpper;
+aggregate.summary = localSummary( ...
+    specimenIds, summaryValues, summaryRangeModes, ...
+    configuredSummaryRanges, resolvedSummaryRanges, ...
+    strainLimits, centralStatistic);
 aggregate.config = config;
+end
+
+function summary = localSummary(specimenIds, values, rangeModes, ...
+        configuredRanges, resolvedRanges, populationRange, centralStatistic)
+valid = isfinite(values);
+values = values(valid);
+specimenIds = specimenIds(valid);
+rangeModes = rangeModes(valid);
+configuredRanges = configuredRanges(valid, :);
+resolvedRanges = resolvedRanges(valid, :);
+
+summary.metric = "MedianTangentModulus";
+summary.specimenStatistic = "median";
+summary.centralStatistic = centralStatistic;
+summary.specimenIds = specimenIds;
+summary.specimenValues = values;
+summary.specimenCount = numel(values);
+summary.value = NaN;
+summary.rangeMode = "unavailable";
+summary.configuredRange = [NaN, NaN];
+summary.displayRange = [NaN, NaN];
+summary.resolvedSpecimenRanges = resolvedRanges;
+if isempty(values)
+    return;
+end
+
+if centralStatistic == "mean"
+    summary.value = mean(values);
+else
+    summary.value = median(values);
+end
+
+uniqueModes = unique(rangeModes);
+if numel(uniqueModes) ~= 1
+    summary.rangeMode = "mixed";
+    return;
+end
+summary.rangeMode = uniqueModes(1);
+if any(~isfinite(configuredRanges), "all") || ...
+        any(configuredRanges ~= configuredRanges(1, :), "all")
+    summary.rangeMode = "mixed";
+    return;
+end
+summary.configuredRange = configuredRanges(1, :);
+if summary.rangeMode == "proportional"
+    summary.displayRange = populationRange(1) + summary.configuredRange .* ...
+        (populationRange(2) - populationRange(1));
+elseif summary.rangeMode == "explicit"
+    summary.displayRange = summary.configuredRange;
+end
 end
 
 function strainLimits = localSupportedStrainRange( ...

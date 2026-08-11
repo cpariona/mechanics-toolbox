@@ -18,7 +18,6 @@ format = lower(string(config.figureFormat));
 files = struct();
 records = study.analysis.records;
 processedIndices = find(string({records.status}) == "processed");
-titleText = localStudyTitle(study, config);
 units = mechanics.plotting.resolveStudyUnits(records);
 strainDisplayUnit = mechanics.plotting.mechanicalDisplayUnit( ...
     "deformation", units.strain);
@@ -44,7 +43,7 @@ if config.includeIndividualCurves
     end
     xlabel(ax, strainLabel);
     ylabel(ax, stressLabel);
-    title(ax, titleText + " - processed specimen curves", "Interpreter", "none");
+    title(ax, "Individual responses");
     grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "best", "Interpreter", "none");
     files.individualCurves = localExport(fig, folder, "individual_curves", format, config);
 end
@@ -74,7 +73,7 @@ if config.includePopulationCurve && study.populationStatus == "completed"
         "DisplayName", char(string(curves.centralStatistic) + " stress"));
     xlabel(ax, strainLabel);
     ylabel(ax, stressLabel);
-    title(ax, titleText + " - population response", "Interpreter", "none");
+    title(ax, "Population response");
     grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "northwest");
     files.populationCurve = localExport(fig, folder, "population_curve", format, config);
 end
@@ -116,7 +115,7 @@ if config.includeTangentModulus
         end
         xlabel(ax, strainLabel);
         ylabel(ax, modulusLabel);
-        title(ax, titleText + " - tangent modulus", "Interpreter", "none");
+        title(ax, "Individual tangent modulus");
         grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "best", "Interpreter", "none");
         files.tangentModulus = localExport(fig, folder, "tangent_modulus", format, config);
     else
@@ -132,8 +131,15 @@ if config.includePopulationTangentModulus && study.populationStatus == "complete
     x = -tangent.strain(order);
     fig = localFigure(); ax = axes(fig); hold(ax, "on");
     for index = 1:size(tangent.modulusMatrix, 2)
+        visibility = "off";
+        displayName = "";
+        if index == 1
+            visibility = "on";
+            displayName = "Individual specimens";
+        end
         plot(ax, x, tangent.modulusMatrix(order, index), ...
-            "LineWidth", 0.65, "HandleVisibility", "off");
+            "LineWidth", 0.65, "Color", [0.65 0.65 0.65], ...
+            "HandleVisibility", visibility, "DisplayName", displayName);
     end
     if all(isfinite(tangent.confidenceLower)) && all(isfinite(tangent.confidenceUpper))
         fill(ax, [x; flipud(x)], ...
@@ -143,14 +149,22 @@ if config.includePopulationTangentModulus && study.populationStatus == "complete
     end
     plot(ax, x, tangent.centralModulus(order), "LineWidth", 2.1, ...
         "DisplayName", char(string(tangent.centralStatistic) + " tangent modulus"));
+    [summaryRange, annotationCount] = localPopulationTangentSummary( ...
+        ax, tangent, stressDisplayUnit);
     if isfield(tangent, "specimenCountByPoint")
         mechanics.plotting.markPopulationSupportChanges( ...
             ax, x, tangent.specimenCountByPoint(order));
     end
     xlabel(ax, strainLabel);
     ylabel(ax, modulusLabel);
-    title(ax, titleText + " - population tangent modulus", "Interpreter", "none");
+    title(ax, "Population tangent modulus");
     grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "best");
+    fig.UserData.centralStatistic = string(tangent.centralStatistic);
+    fig.UserData.summaryRange = summaryRange;
+    fig.UserData.summaryRangeMode = localSummaryField( ...
+        tangent, "rangeMode", "unavailable");
+    fig.UserData.summaryValue = localSummaryField(tangent, "value", NaN);
+    fig.UserData.annotationCount = annotationCount;
     files.populationTangentModulus = localExport(fig, folder, ...
         "population_tangent_modulus", format, config);
 end
@@ -173,7 +187,7 @@ if localGetLogical(config, "includeInitialShearModulus", true) && ...
         isfield(study.population.modelParameters, "initialShearModulus") && ...
         ~isempty(study.population.modelParameters.initialShearModulus.values)
     fig = mechanics.plotting.plotInitialShearModulusPopulation( ...
-        study.population.modelParameters);
+        study.population.modelParameters, stressDisplayUnit);
     fig.Visible = "off";
     files.initialShearModulus = localExport( ...
         fig, folder, "initial_shear_modulus", format, config);
@@ -196,14 +210,14 @@ if config.includeCycleDiagnostics && ~isempty(processedIndices)
         ylabel(ax, forceLabel);
         title(ax, record.specimenId, "Interpreter", "none"); grid(ax, "on"); box(ax, "on");
     end
-    sgtitle(fig, titleText + " - cycle diagnostics", "Interpreter", "none");
+    sgtitle(fig, "Cycle diagnostics");
     files.cycleDiagnostics = localExport(fig, folder, "cycle_diagnostics", format, config);
 end
 end
 
 function files = localSpecimenFigures(study, config)
 folder = localFolder(config); format = lower(string(config.figureFormat)); files = struct();
-titleText = localStudyTitle(study, config); specimen = study.specimen;
+specimen = study.specimen;
 records = struct("status", "processed", "specimen", specimen);
 units = mechanics.plotting.resolveStudyUnits(records);
 strainDisplayUnit = mechanics.plotting.mechanicalDisplayUnit( ...
@@ -230,7 +244,7 @@ if config.includeCycleOverview
         "LineWidth", 1.8, "DisplayName", "Unloading branch");
     xlabel(ax, displacementLabel);
     ylabel(ax, forceLabel);
-    title(ax, titleText + " - selected compression cycle", "Interpreter", "none");
+    title(ax, "Selected compression cycle");
     grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "best");
     files.cycleOverview = localExport(fig, folder, "compression_cycle", format, config);
 end
@@ -239,7 +253,7 @@ if config.includeSelectedBranch
     plot(ax, specimen.processed.strain, specimen.processed.stress, "LineWidth", 1.5);
     xlabel(ax, strainLabel);
     ylabel(ax, stressLabel);
-    title(ax, titleText + " - selected loading response", "Interpreter", "none");
+    title(ax, "Selected loading response");
     grid(ax, "on"); box(ax, "on");
     files.selectedBranch = localExport(fig, folder, "compression_response", format, config);
 end
@@ -256,7 +270,7 @@ if config.includeTangentModulus
     end
     xlabel(ax, strainLabel);
     ylabel(ax, modulusLabel);
-    title(ax, titleText + " - tangent modulus", "Interpreter", "none");
+    title(ax, "Individual tangent modulus");
     grid(ax, "on"); box(ax, "on");
     files.tangentModulus = localExport(fig, folder, "compression_tangent_modulus", format, config);
 end
@@ -290,10 +304,61 @@ filename = mechanics.plotting.exportFigureFiles( ...
     fig, folder, string(name), string(format), config.figureResolution);
 localClose(fig, config);
 end
-function titleText = localStudyTitle(study, config)
-if string(config.studyTitle) ~= "auto", titleText = string(config.studyTitle); return; end
-[~, filename] = fileparts(string(study.sourceFile)); titleText = replace(filename, ["_", "-"], " ");
-if strlength(titleText) == 0, titleText = "Compression study"; end
+function [summaryRange, annotationCount] = localPopulationTangentSummary( ...
+        axesHandle, tangent, stressUnit)
+summaryRange = [NaN, NaN];
+annotationCount = 0;
+if ~isfield(tangent, "summary") || isempty(tangent.summary)
+    return;
+end
+summary = tangent.summary;
+summaryRange = sort(-double(summary.displayRange(:)'));
+if all(isfinite(summaryRange))
+    xline(axesHandle, summaryRange(1), "--", "Summary interval", ...
+        "DisplayName", "Summary interval", "LabelOrientation", "aligned", ...
+        "LabelVerticalAlignment", "middle");
+    xline(axesHandle, summaryRange(2), "--", "HandleVisibility", "off");
+end
+if ~isfinite(summary.value)
+    return;
+end
+label = sprintf('%s summary tangent modulus = %.4g %s', ...
+    localStatisticLabel(summary.centralStatistic), summary.value, stressUnit);
+xLimits = xlim(axesHandle);
+[xPosition, horizontalAlignment] = localSummaryAnnotationPosition( ...
+    summaryRange, xLimits);
+yLimits = ylim(axesHandle);
+yPosition = yLimits(1) + 0.92 .* diff(yLimits);
+text(axesHandle, xPosition, yPosition, label, ...
+    "HorizontalAlignment", horizontalAlignment, "VerticalAlignment", "top", ...
+    "Interpreter", "none", "BackgroundColor", "white", "Margin", 4);
+annotationCount = 1;
+end
+
+function [position, alignment] = localSummaryAnnotationPosition(range, limits)
+padding = 0.01 .* diff(limits);
+if all(isfinite(range)) && range(2) <= mean(limits)
+    position = range(1) + padding;
+    alignment = "left";
+elseif all(isfinite(range))
+    position = range(2) - padding;
+    alignment = "right";
+else
+    position = limits(2) - padding;
+    alignment = "right";
+end
+end
+
+function label = localStatisticLabel(value)
+value = lower(string(value));
+label = upper(extractBefore(value, 2)) + extractAfter(value, 1);
+end
+
+function value = localSummaryField(tangent, fieldName, defaultValue)
+value = defaultValue;
+if isfield(tangent, "summary") && isfield(tangent.summary, fieldName)
+    value = tangent.summary.(fieldName);
+end
 end
 function value = localGetLogical(config, fieldName, defaultValue)
 if isfield(config, fieldName), value = logical(config.(fieldName)); else, value = logical(defaultValue); end

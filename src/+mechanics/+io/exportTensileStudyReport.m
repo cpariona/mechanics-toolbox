@@ -21,7 +21,7 @@ if fileId < 0
     error("mechanics:io:ReportFileOpenFailed", ...
         "Could not open report file: %s", reportFile);
 end
-cleanup = onCleanup(@() fclose(fileId)); %#ok<NASGU>
+cleanup = onCleanup(@() fclose(fileId));
 
 studySummary = mechanics.workflow.summarizeTensileStudy(study);
 titleText = localStudyTitle(study, config);
@@ -102,6 +102,7 @@ if string(study.populationStatus) == "completed" && ...
         fprintf(fileId, "- Tangent-modulus population status: `%s`\n", ...
             char(string(study.population.tangentModulusStatus)));
     end
+    localWriteTangentSummary(fileId, study.population, stressUnit, strainUnit);
     mechanics.io.writePopulationSupportNote(fileId, study);
     fprintf(fileId, "\n");
 
@@ -124,7 +125,7 @@ mechanics.io.writeFittingAuditSection( ...
     fileId, audit, strainUnit, stressUnit);
 if string(audit.status) == "completed"
     auditFigure = mechanics.plotting.plotFittingAudit( ...
-        audit, titleText, stressUnit);
+        audit, "Constitutive fitting audit", stressUnit);
     if isgraphics(auditFigure)
         figureFiles.fittingAudit = mechanics.plotting.exportFigureFiles( ...
             auditFigure, folder, "fitting_audit", ...
@@ -199,6 +200,27 @@ for candidate = ["ModelName", "Model"]
     if ismember(candidate, variables)
         output.(candidate) = localModelDisplayNames(output.(candidate));
     end
+end
+end
+
+function localWriteTangentSummary(fileId, population, stressUnit, strainUnit)
+if ~isfield(population, "tangentModulus") || ...
+        ~isfield(population.tangentModulus, "summary")
+    return;
+end
+summary = population.tangentModulus.summary;
+if isfinite(summary.value)
+    fprintf(fileId, "- %s of specimen median tangent modulus: `%.6g %s`\n", ...
+        char(summary.centralStatistic), summary.value, char(stressUnit));
+end
+if summary.rangeMode == "proportional"
+    fprintf(fileId, ...
+        "- Tangent-modulus summary interval: proportional `[%.6g, %.6g]` of each retained specimen strain range\n", ...
+        summary.configuredRange(1), summary.configuredRange(2));
+elseif summary.rangeMode == "explicit"
+    fprintf(fileId, ...
+        "- Tangent-modulus summary interval: explicit `[%.6g, %.6g] %s`\n", ...
+        summary.configuredRange(1), summary.configuredRange(2), char(strainUnit));
 end
 end
 

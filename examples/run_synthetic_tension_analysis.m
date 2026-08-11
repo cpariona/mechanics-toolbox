@@ -11,4 +11,4 @@ curve = mechanics.preprocessing.prepareCurve(rawCurve, config.preprocessing);
 curve = mechanics.analysis.computeUniaxialMeasures(curve, specimen.geometry, config.mechanics);
 modulusResult = mechanics.analysis.computeTangentModulus(curve, config.analysis);
 fprintf('Median tangent modulus: %.6g %s\n', modulusResult.medianModulus, curve.units.stress);
-mechanics.plotting.plotStressStrain(curve, Title="Synthetic tension example");
+mechanics.plotting.plotStressStrain(curve, Title="Tensile response");
