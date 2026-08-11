@@ -74,6 +74,25 @@ verifyEqual(testCase, string(files.modelSelectionSummary), ...
     string(fullfile(folder, "individual_model_selection_summary.csv")));
 end
 
+function testStandardParameterPopulationSupportsDerivedFigures(testCase)
+analysis = localAnalysis(["yeoh-third-order";"yeoh-third-order";"yeoh-third-order"]);
+population = mechanics.workflow.analyzeSpecimenPopulation(analysis, localConfig());
+
+verifyEqual(testCase, ...
+    population.modelParameters.initialShearModulus.values.InitialShearModulus, ...
+    [1;2;3], "AbsTol", 1e-12);
+
+parameterFigure = mechanics.plotting.plotSelectedParameterPopulation( ...
+    population.modelParameters);
+parameterCleanup = onCleanup(@() close(parameterFigure)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(parameterFigure));
+
+shearFigure = mechanics.plotting.plotInitialShearModulusPopulation( ...
+    population.modelParameters);
+shearCleanup = onCleanup(@() close(shearFigure)); %#ok<NASGU>
+verifyTrue(testCase, isgraphics(shearFigure));
+end
+
 function config = localConfig()
 config = mechanics.config.populationAnalysisConfig();
 config.minimumSpecimens = 2;
