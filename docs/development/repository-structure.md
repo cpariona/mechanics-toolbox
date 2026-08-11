@@ -158,6 +158,12 @@ stress-like quantities -> stored stress unit
 
 A plotter must not invent physical units when its input contract does not retain unit metadata. Extend the producer and result contract first, then migrate the plotter with tests.
 
+Human-facing figure titles describe the scientific content being plotted.
+Material names, workbook names, experiment identifiers, and filenames belong in
+report headings, captions, or metadata unless they carry necessary scientific
+meaning in a specialized comparison. Plotters should prefer short explicit
+titles over a shared title-building layer.
+
 ## Serialization boundary
 
 `mechanics.io` owns maintained report serialization.

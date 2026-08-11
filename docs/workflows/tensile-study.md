@@ -64,6 +64,12 @@ The stored tensile state uses positive displacement, strain, and stress, with st
 
 The individual tangent-modulus figure marks the configured summary interval and overlays the stored median tangent-modulus summary for each specimen across that interval. The legend reports the corresponding summary value so the plotted local derivative and the scalar value used by the study remain explicitly connected.
 
+The population tangent-modulus figure keeps individual curves visible but uses
+the legend only for graphical and statistical elements. Its in-axes annotation
+reports the configured population central statistic applied to the specimen
+`MedianTangentModulus` values. The stored population result and
+`population_tangent_modulus.csv` retain the same scalar and interval contract.
+
 ## Constitutive fitting
 
 ```matlab
@@ -99,6 +105,11 @@ The maintained model-selection contract is descriptive and does not refit the po
 If selections are mixed, parameter summaries remain grouped by each specimen's individually selected model. A consensus-model refit is reserved for explicit advanced workflows that require one common-model parameterization; it is not part of the standard tensile study or report.
 
 The same standard parameter population also stores registry-derived initial shear modulus values when available. These values are derived from the selected specimen fits through `mechanics.statistics.deriveInitialShearModulus`; plotting does not duplicate constitutive formulas.
+
+The initial-shear reference follows the configured population
+`centralStatistic`. A mean reference is annotated with descriptive standard
+deviation when available; a median reference is shown without an incompatible
+mean-based uncertainty or `median ± SD` construction.
 
 ## Study bundle
 
@@ -140,6 +151,10 @@ reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
 The population section reports the distribution of individual model selections, the selection-frequency consensus when unique, whether that consensus is unanimous, and the individually selected-model parameter summary. Reporting only consumes `study.population`; it does not perform fitting, model selection, or a consensus refit.
 
 Standard figures include individual curves, population response, peak metrics, specimen tangent modulus, population tangent modulus when available, selected-model parameters across specimens, registry-derived initial shear modulus across specimens, and local zero-reference diagnostics. The parameter and initial-shear figures visualize the same standard population already reported in the study; they do not represent a second consensus-model population.
+
+Figure titles describe the reported scientific content rather than repeating
+the study, material, workbook, or filename identity. That identity remains in
+the Markdown report heading and source metadata.
 
 Every maintained figure is exported as the configured image format and an editable MATLAB `.fig`. Figure inclusion remains configurable through `tensileStudyReportConfig`.
 

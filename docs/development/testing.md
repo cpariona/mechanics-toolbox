@@ -34,6 +34,21 @@ Test files are grouped by subsystem or workflow rather than by implementation ph
 
 `test_markdown_table_serialization.m` protects the shared scalar Markdown contract, including numeric precision, non-finite values, missing text, logicals, datetime values, scalar cells, escaped pipes, and the retained blank line after a table.
 
+`test_tangent_modulus_plotting.m` protects explicit and proportional specimen
+summary-range resolution without changing stored compression signs.
+
+`test_population_analysis.m`, `test_study_reporting.m`, and
+`test_compression_reporting.m` protect the canonical population tangent-modulus
+summary across MAT state, CSV columns, report text, and semantic figure
+`UserData`. `test_selected_parameter_population.m` protects the configured
+central statistic and compatible dispersion metadata for the initial-shear
+reference.
+
+`test_population_model_selection.m` is the behavior-focused coverage for the
+new descriptive individual-selection consensus family. It covers unanimous,
+majority, and tied selections together with the shared report section and CSV
+export; it does not preserve a migration alias or exercise a consensus refit.
+
 Yeoh-family coverage is distributed by maintained behavior rather than by migration phase:
 
 ```text
@@ -68,6 +83,13 @@ test_joint_material_characterization_workflow.m
 ```
 
 The user reported successful local MATLAB execution of all focused migration tests and the complete `run_all_tests()` suite after the final explicit-order identity migration. MATLAB was run locally by the user, not by the assistant.
+
+For `feature/unify-study-consensus-population`, MATLAB R2024b was available in
+the workspace on 2026-08-11. The presentation/population focused set passed
+`41/41`; the complete `run_all_tests()` gate passed `293/293` with no failures
+or incomplete tests. Both maintained real tensile and compression drivers then
+completed and regenerated their bundles. A final tensile legend-placement change
+passed `test_study_reporting.m` `7/7`.
 
 Final real-study regeneration was also completed after the test gate. The maintained tensile, compression, tensile application-range, and joint-characterization drivers all ran successfully with explicit registered identities `yeoh-second-order` and `yeoh-third-order`. Review of the generated bundle confirmed canonical model identities in CSV outputs and unchanged scientific conclusions relative to the pre-rename four-candidate run.
 
