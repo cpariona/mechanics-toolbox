@@ -56,6 +56,7 @@ longTable = table( ...
 if isempty(longTable)
     result.values = longTable;
     result.summary = table();
+    result.initialShearModulus = localInitialShearModulus(longTable, config);
     return;
 end
 
@@ -113,4 +114,21 @@ summary = table( ...
 
 result.values = longTable;
 result.summary = summary;
+result.initialShearModulus = localInitialShearModulus(longTable, config);
+end
+
+function result = localInitialShearModulus(parameterTable, populationConfig)
+rowCount = height(parameterTable);
+derivedTable = table( ...
+    parameterTable.SpecimenId, ...
+    repmat("Unassigned", rowCount, 1), ...
+    parameterTable.Model, ...
+    parameterTable.Parameter, ...
+    parameterTable.Value, ...
+    'VariableNames', {'SpecimenId','Group','ModelName','Parameter','Value'});
+
+derivedConfig = mechanics.config.selectedParameterPopulationConfig();
+derivedConfig.minimumSpecimensPerSummary = populationConfig.minimumSpecimens;
+result = mechanics.statistics.deriveInitialShearModulus( ...
+    derivedTable, derivedConfig);
 end
