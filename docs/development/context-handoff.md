@@ -25,13 +25,52 @@ PR #53  completed compression-study comparison reporting
          merge commit 8f70dedad8d1420595f9d1c1a6be9f0992d8dd60
 ```
 
-There is no active feature branch required to continue the repository. The former comparison branch was:
+The current `main` baseline after the PR #53 documentation closeout is:
 
 ```text
-feature/compression-study-comparison-visuals
+cd039dcc797271e675147630e535f72304e0b30b
 ```
 
-It may be removed after local `main` is synchronized.
+Always verify the live remote branch before continuing.
+
+## Active development state
+
+Active branch:
+
+```text
+feature/unify-study-consensus-population
+```
+
+This phase removes a redundancy in the standard tensile and compression study drivers without removing the advanced common-model refit API.
+
+The standard study population now owns a descriptive summary of the individual constitutive model selections under:
+
+```text
+study.population.modelSelection
+```
+
+It records individual selections, candidate selection counts/fractions, a unique selection-frequency consensus when one exists, and unanimity. This standard consensus is descriptive only and performs no second fit.
+
+The normal tensile and compression drivers no longer generate a separate `consensus-model-population` folder merely to repeat the same parameter population when all retained specimens selected the same model. `fitConsensusModelAcrossSpecimens`, `summarizeSelectedParameters`, and `exportSelectedParameterPopulation` remain available for explicit advanced workflows that truly require every specimen to be refit with one common model.
+
+The standard selected-model parameter population remains the canonical source of per-specimen fitted parameters. It now also retains registry-derived initial shear modulus values so standard reports can visualize parameter and `mu0` variation across specimens without invoking a consensus refit.
+
+Standard report presentation in this active branch includes:
+
+```text
+selected_model_parameters.png/.fig
+initial_shear_modulus.png/.fig
+```
+
+for both tensile and compression population reports when selected-model parameter data are available.
+
+The individual tangent-modulus figures now mark the configured summary interval, overlay the stored median tangent-modulus summary for each specimen across that interval, and include each summary value in the legend.
+
+The tensile `zero_reference_diagnostics` figure is now a local diagnostic centered on the selected zero-reference sample. The default half-window is 30 acquisition points on either side and is configurable through `tensileStudyReportConfig.zeroReferenceDiagnosticHalfWindowPoints`.
+
+The user regenerated early versions of the tensile and compression bundles during this phase and confirmed that the redundant consensus population output disappeared. That review also identified the missing parameter/`mu0` figures, implicit tangent-modulus summary presentation, and overly global zero-reference diagnostic; those presentation issues are now addressed in the branch but require another MATLAB validation/regeneration pass.
+
+Do not merge this branch until the focused tests, complete suite, and regenerated real tensile/compression reports have been reviewed.
 
 ## Current maintained capabilities
 
@@ -232,7 +271,9 @@ For the PR #53 comparison phase:
 
 Therefore do not state that the final PR #53 code has a documented full-suite pass unless the user supplies that result in a later session. The merged implementation and real-data output review are established; the exact final full-suite validation status is not documented here.
 
-MATLAB execution was performed by the user, not by the assistant.
+For the active `feature/unify-study-consensus-population` phase, no final validation claim should be made yet. The early regenerated real bundles were reviewed, but the latest restored parameter figures, tangent-summary presentation, local zero-reference diagnostic, and registry-derived `mu0` integration still require user-side MATLAB execution.
+
+MATLAB execution is performed by the user, not by the assistant.
 
 ## Previous real-data Yeoh validation
 
