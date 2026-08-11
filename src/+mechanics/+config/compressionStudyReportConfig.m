@@ -15,6 +15,8 @@ config.includeIndividualCurves = true;
 config.includePopulationCurve = true;
 config.includePopulationTangentModulus = true;
 config.includeCycleDiagnostics = true;
+config.includeSelectedModelParameters = true;
+config.includeInitialShearModulus = true;
 
 % Shared content.
 config.includeTangentModulus = true;
