@@ -154,6 +154,7 @@ if ~isempty(study.analysis.peakSummary)
 end
 if study.populationStatus == "completed"
     disp(study.population.metrics)
+    disp(study.population.modelSelection.summary)
 end
 
 disp(study.outputFiles)
@@ -214,10 +215,10 @@ end
 
 %% 5. OPTIONAL TENSILE WORKFLOWS
 % Optional workflows remain available for compatible datasets.
-% Consensus-model population fitting is enabled for this experiment.
+% The standard study population already reports individual model-selection
+% consensus without performing a redundant population refit.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
-runConsensusModelPopulation = true;
 runGroupComparison = false;
 runGroupParameterInference = false;
 runConstitutiveStudyReport = false;
@@ -257,8 +258,10 @@ if runReliabilityAwareModelComparison
     disp(modelComparisonFiles)
 end
 
-if runConsensusModelPopulation || ...
-        runGroupParameterInference || runConstitutiveStudyReport
+% Group-parameter inference and the constitutive study report require a
+% common-model parameterization. Only those explicitly enabled advanced
+% workflows perform a consensus-model refit.
+if runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
     individualSelectedModels = strings(numel(processedIndices), 1);
     for outputIndex = 1:numel(processedIndices)
@@ -285,18 +288,6 @@ if runConsensusModelPopulation || ...
         mechanics.config.batchModelComparisonConfig());
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
         parameterBatch, mechanics.config.selectedParameterPopulationConfig());
-    disp(parameterBatch.modelSummary)
-    disp("Consensus model: " + ...
-        mechanics.models.modelRegistry(parameterBatch.consensusModelName).displayName)
-    disp(parameterPopulation.parameterTable)
-    disp(parameterPopulation.overallSummary)
-    if runConsensusModelPopulation
-        consensusModelFiles = ...
-            mechanics.io.exportSelectedParameterPopulation( ...
-            parameterPopulation, ...
-            fullfile(outputFolder, "consensus-model-population"));
-        disp(consensusModelFiles)
-    end
 end
 
 if runGroupComparison
