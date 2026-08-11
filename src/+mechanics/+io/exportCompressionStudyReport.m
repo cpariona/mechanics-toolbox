@@ -88,6 +88,9 @@ if study.populationStatus == "completed"
     mechanics.io.writePopulationSupportNote(fileId, study);
     fprintf(fileId, "\n");
 
+    mechanics.io.writePopulationModelSelectionSection( ...
+        fileId, study.population);
+
     modelParameters = study.population.modelParameters;
     if isfield(modelParameters, "summary") && ~isempty(modelParameters.summary)
         fprintf(fileId, "### Individually selected-model parameter summary\n\n");
