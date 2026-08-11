@@ -105,10 +105,9 @@ Tension and compression share stress-strain processing, tangent-modulus estimati
 
 Compression retains cycle selection, loading/unloading interpretation, contact-oriented preprocessing, hysteresis, and cycle diagnostics. Instrument force and displacement may be recorded with either polarity. Compression processing detects their loading orientation and stores displacement, strain, force, and stress with physical negative compression signs. Import scale factors remain available for unit conversion or explicit instrument-polarity correction. Reports may display positive magnitudes without modifying the stored state.
 
-The individual tangent-modulus figure presents compression strain as a positive magnitude, marks the configured summary interval, and overlays each specimen's stored median tangent-modulus summary across that interval. The legend reports each scalar summary value so the plotted derivative and the study metric remain directly connected.
+The individual tangent-modulus figure presents compression strain as a positive magnitude and marks the configured summary interval. It does not draw horizontal per-specimen summary lines; the plotted derivative curves remain the primary visual content.
 
-The specimen analysis accepts two maintained tangent-modulus summary-range
-modes:
+The specimen analysis accepts two maintained tangent-modulus summary-range modes:
 
 ```matlab
 analysis.summaryStrainRangeMode = "explicit";
@@ -118,21 +117,18 @@ analysis.summaryStrainRangeMode = "proportional";
 analysis.summaryStrainRange = [0.00, 1.00];
 ```
 
-In proportional mode, the configured values are fractions of each specimen's
-retained signed strain span. The resolved physical range is stored in the
-tangent-modulus result; stored compression signs remain negative. The maintained
-real driver explicitly uses `[0, 1]`, so its summary covers each complete
-retained strain span rather than the historical fixed `[-0.40, 0.00]` interval.
-This can change numerical `MedianTangentModulus` values when a retained specimen
-extends beyond `-0.40` or terminates before it; historical and regenerated
-results are therefore not assumed numerically equivalent.
+In proportional mode, the configured values are fractions of each specimen's retained signed strain span. The resolved physical range is stored in the tangent-modulus result; stored compression signs remain negative.
 
-The population tangent-modulus result stores the configured interval mode, the
-specimen median-modulus values, and their configured population central
-statistic. The CSV, Markdown report, and figure consume that same scalar. The
-figure displays positive compression-strain magnitudes, keeps specimen curves
-visible, marks the summary interval, and puts the scalar annotation inside the
-axes without specimen values in the legend.
+The maintained real compression driver now uses an explicit signed interval equivalent to compression-strain magnitudes from `0.01` to `0.10`:
+
+```matlab
+analysisConfig.summaryStrainRangeMode = "explicit";
+analysisConfig.summaryStrainRange = [-0.10, -0.01];
+```
+
+This change intentionally makes the reported `MedianTangentModulus` refer to that fixed physical strain window rather than to the complete retained strain span. Regenerated results should therefore be treated as a new configured analysis result rather than assumed numerically equivalent to outputs generated with the previous proportional `[0, 1]` setting.
+
+The population tangent-modulus result stores the configured interval mode, the specimen median-modulus values, and their configured population central statistic. The CSV, Markdown report, and figure consume that same scalar. The figure displays positive compression-strain magnitudes, keeps specimen curves visible, marks the summary interval, and puts the scalar annotation inside the axes without specimen values in the legend.
 
 ## Integrated report
 
@@ -147,10 +143,7 @@ The population section reports the distribution of individual model selections, 
 
 Standard multi-specimen figures include individual and population stress-strain responses, individual and population tangent modulus, selected-model parameters across specimens, registry-derived initial shear modulus across specimens, and cycle diagnostics. The parameter and initial-shear figures visualize the same standard parameter population and are not evidence of a second consensus pipeline.
 
-The initial-shear reference follows the population `centralStatistic`: mean
-uses descriptive standard deviation when available, while median is shown
-without an incompatible `±` quantity. Maintained figure titles describe their
-scientific content; material and workbook identity remain in report metadata.
+The initial-shear reference follows the population `centralStatistic`: mean uses descriptive standard deviation when available, while median is shown without an incompatible `±` quantity. Maintained figure titles describe their scientific content; material and workbook identity remain in report metadata.
 
 Each maintained report figure is written as both the configured image format and an editable MATLAB `.fig`. Figure inclusion remains configurable through `compressionStudyReportConfig`.
 
