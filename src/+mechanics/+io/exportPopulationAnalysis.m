@@ -37,6 +37,8 @@ curveFile = fullfile(outputFolder, "population_curve.csv");
 tangentModulusFile = fullfile( ...
     outputFolder, "population_tangent_modulus.csv");
 metricFile = fullfile(outputFolder, "population_metrics.csv");
+modelSelectionSummaryFile = fullfile( ...
+    outputFolder, "individual_model_selection_summary.csv");
 parameterValueFile = fullfile( ...
     outputFolder, "individual_selected_model_parameter_values.csv");
 parameterSummaryFile = fullfile( ...
@@ -64,6 +66,11 @@ if isfield(population, "tangentModulus") && ...
 end
 
 writetable(population.metrics, metricFile);
+if isfield(population, "modelSelection") && ...
+        isfield(population.modelSelection, "summary")
+    writetable(population.modelSelection.summary, modelSelectionSummaryFile);
+    outputFiles.modelSelectionSummary = string(modelSelectionSummaryFile);
+end
 if ~isempty(population.modelParameters.values)
     writetable(population.modelParameters.values, parameterValueFile);
 else
