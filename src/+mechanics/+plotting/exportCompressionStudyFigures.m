@@ -81,13 +81,39 @@ end
 
 if config.includeTangentModulus
     fig = localFigure(); ax = axes(fig); hold(ax, "on"); plotted = false;
+    summaryRangeForDisplay = [];
     for index = processedIndices(:)'
         tangent = records(index).specimen.analysis.tangentModulus;
-        plot(ax, -tangent.strain, tangent.tangentModulusForPlot, ...
-            "LineWidth", 1.0, "DisplayName", char(records(index).specimenId));
+        summaryValue = localTangentSummaryValue( ...
+            study.analysis.summary, records(index).specimenId, tangent);
+        displayName = string(records(index).specimenId);
+        if isfinite(summaryValue)
+            displayName = displayName + sprintf( ...
+                " — summary %.4g %s", summaryValue, stressDisplayUnit);
+        end
+        curveHandle = plot(ax, -tangent.strain, tangent.tangentModulusForPlot, ...
+            "LineWidth", 1.0, "DisplayName", char(displayName));
+        if isfield(tangent, "summaryStrainRange") && ...
+                numel(tangent.summaryStrainRange) == 2
+            displayRange = sort(-double(tangent.summaryStrainRange(:)'));
+            if isempty(summaryRangeForDisplay)
+                summaryRangeForDisplay = displayRange;
+            end
+            if isfinite(summaryValue)
+                plot(ax, displayRange, [summaryValue, summaryValue], "--", ...
+                    "Color", curveHandle.Color, "LineWidth", 1.4, ...
+                    "HandleVisibility", "off");
+            end
+        end
         plotted = true;
     end
     if plotted
+        if numel(summaryRangeForDisplay) == 2
+            xline(ax, summaryRangeForDisplay(1), "--", "Summary interval", ...
+                "HandleVisibility", "off", "LabelOrientation", "aligned", ...
+                "LabelVerticalAlignment", "middle");
+            xline(ax, summaryRangeForDisplay(2), "--", "HandleVisibility", "off");
+        end
         xlabel(ax, strainLabel);
         ylabel(ax, modulusLabel);
         title(ax, titleText + " - tangent modulus", "Interpreter", "none");
@@ -127,6 +153,30 @@ if config.includePopulationTangentModulus && study.populationStatus == "complete
     grid(ax, "on"); box(ax, "on"); legend(ax, "Location", "best");
     files.populationTangentModulus = localExport(fig, folder, ...
         "population_tangent_modulus", format, config);
+end
+
+if localGetLogical(config, "includeSelectedModelParameters", true) && ...
+        study.populationStatus == "completed" && ...
+        isfield(study.population, "modelParameters") && ...
+        isfield(study.population.modelParameters, "values") && ...
+        ~isempty(study.population.modelParameters.values)
+    fig = mechanics.plotting.plotSelectedParameterPopulation( ...
+        study.population.modelParameters);
+    fig.Visible = "off";
+    files.selectedModelParameters = localExport( ...
+        fig, folder, "selected_model_parameters", format, config);
+end
+
+if localGetLogical(config, "includeInitialShearModulus", true) && ...
+        study.populationStatus == "completed" && ...
+        isfield(study.population, "modelParameters") && ...
+        isfield(study.population.modelParameters, "initialShearModulus") && ...
+        ~isempty(study.population.modelParameters.initialShearModulus.values)
+    fig = mechanics.plotting.plotInitialShearModulusPopulation( ...
+        study.population.modelParameters);
+    fig.Visible = "off";
+    files.initialShearModulus = localExport( ...
+        fig, folder, "initial_shear_modulus", format, config);
 end
 
 if config.includeCycleDiagnostics && ~isempty(processedIndices)
@@ -194,15 +244,38 @@ if config.includeSelectedBranch
     files.selectedBranch = localExport(fig, folder, "compression_response", format, config);
 end
 if config.includeTangentModulus
-    modulus = specimen.analysis.tangentModulus; fig = localFigure(); ax = axes(fig);
-    plot(ax, modulus.strain, modulus.tangentModulusForPlot, "LineWidth", 1.4); hold(ax, "on");
-    xline(ax, modulus.summaryStrainRange(1), "--", "Summary range");
+    modulus = specimen.analysis.tangentModulus; fig = localFigure(); ax = axes(fig); hold(ax, "on");
+    summaryValue = localTangentSummaryValue(table(), "", modulus);
+    curveHandle = plot(ax, modulus.strain, modulus.tangentModulusForPlot, "LineWidth", 1.4);
+    xline(ax, modulus.summaryStrainRange(1), "--", "Summary interval");
     xline(ax, modulus.summaryStrainRange(2), "--", "HandleVisibility", "off");
+    if isfinite(summaryValue)
+        plot(ax, sort(double(modulus.summaryStrainRange(:)')), ...
+            [summaryValue, summaryValue], "--", "Color", curveHandle.Color, ...
+            "LineWidth", 1.4, "HandleVisibility", "off");
+    end
     xlabel(ax, strainLabel);
     ylabel(ax, modulusLabel);
     title(ax, titleText + " - tangent modulus", "Interpreter", "none");
     grid(ax, "on"); box(ax, "on");
     files.tangentModulus = localExport(fig, folder, "compression_tangent_modulus", format, config);
+end
+end
+
+function value = localTangentSummaryValue(summary, specimenId, tangent)
+value = NaN;
+if isfield(tangent, "medianModulus") && isfinite(tangent.medianModulus)
+    value = double(tangent.medianModulus);
+    return;
+end
+if isempty(summary) || ...
+        ~all(ismember(["SpecimenId", "MedianTangentModulus"], ...
+        string(summary.Properties.VariableNames)))
+    return;
+end
+row = find(string(summary.SpecimenId) == string(specimenId), 1, "first");
+if ~isempty(row) && isfinite(summary.MedianTangentModulus(row))
+    value = double(summary.MedianTangentModulus(row));
 end
 end
 
@@ -221,6 +294,9 @@ function titleText = localStudyTitle(study, config)
 if string(config.studyTitle) ~= "auto", titleText = string(config.studyTitle); return; end
 [~, filename] = fileparts(string(study.sourceFile)); titleText = replace(filename, ["_", "-"], " ");
 if strlength(titleText) == 0, titleText = "Compression study"; end
+end
+function value = localGetLogical(config, fieldName, defaultValue)
+if isfield(config, fieldName), value = logical(config.(fieldName)); else, value = logical(defaultValue); end
 end
 function localClose(fig, config)
 if config.closeFiguresAfterExport && isgraphics(fig), close(fig); end
