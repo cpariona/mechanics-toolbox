@@ -1,6 +1,6 @@
 # Compression study
 
-Compression uses the shared uniaxial mechanics pipeline after test-specific selection of the maintained cycle and loading branch. Conditioning cycles are excluded from the analyzed response.
+Compression uses the shared uniaial mechanics pipeline after test-specific selection of the maintained cycle and loading branch. Conditioning cycles are excluded from the analyzed response.
 
 ## Workflow hierarchy
 
@@ -62,6 +62,8 @@ The consensus is descriptive only and does not trigger another fit. If every eli
 
 If individual selections differ, parameter summaries remain grouped by each specimen's selected model. Explicit consensus-model refitting remains available only for advanced downstream workflows that require a common-model parameterization, such as selected group-parameter inference or constitutive reporting.
 
+The standard selected-model parameter population also stores registry-derived initial shear modulus values when available. These values come from the selected specimen fits and do not require a second consensus refit.
+
 ## Study bundle
 
 `runCompressionStudy` delegates study-level persistence to `mechanics.io.exportCompressionStudy` and records paths under `study.outputFiles`.
@@ -103,6 +105,8 @@ Tension and compression share stress-strain processing, tangent-modulus estimati
 
 Compression retains cycle selection, loading/unloading interpretation, contact-oriented preprocessing, hysteresis, and cycle diagnostics. Instrument force and displacement may be recorded with either polarity. Compression processing detects their loading orientation and stores displacement, strain, force, and stress with physical negative compression signs. Import scale factors remain available for unit conversion or explicit instrument-polarity correction. Reports may display positive magnitudes without modifying the stored state.
 
+The individual tangent-modulus figure presents compression strain as a positive magnitude, marks the configured summary interval, and overlays each specimen's stored median tangent-modulus summary across that interval. The legend reports each scalar summary value so the plotted derivative and the study metric remain directly connected.
+
 ## Integrated report
 
 ```matlab
@@ -114,7 +118,9 @@ reportFiles = mechanics.io.exportCompressionStudyReport( ...
 
 The population section reports the distribution of individual model selections, the selection-frequency consensus when unique, whether the consensus is unanimous, and the individually selected-model parameter summary. The report consumes stored population results only; it does not perform constitutive fitting or consensus refitting.
 
-Each maintained report figure is written as both the configured image format and an editable MATLAB `.fig`.
+Standard multi-specimen figures include individual and population stress-strain responses, individual and population tangent modulus, selected-model parameters across specimens, registry-derived initial shear modulus across specimens, and cycle diagnostics. The parameter and initial-shear figures visualize the same standard parameter population and are not evidence of a second consensus pipeline.
+
+Each maintained report figure is written as both the configured image format and an editable MATLAB `.fig`. Figure inclusion remains configurable through `compressionStudyReportConfig`.
 
 ## Comparing completed studies
 
