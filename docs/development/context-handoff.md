@@ -66,7 +66,7 @@ initial_shear_modulus.png/.fig
 
 for both tensile and compression population reports when selected-model parameter data are available.
 
-The individual tangent-modulus figures mark the configured summary interval and overlay the stored specimen tangent-modulus summary. Population tangent-modulus figures keep individual curves visible, restrict legends to graphical/statistical elements, mark the summary interval, and annotate the canonical population scalar inside the axes.
+The individual tangent-modulus figures mark the configured summary interval. The maintained compression multi-specimen figure no longer overlays horizontal per-specimen summary lines; the derivative curves remain the primary visual content. Population tangent-modulus figures keep individual curves visible, restrict legends to graphical/statistical elements, mark the summary interval, and annotate the canonical population scalar inside the axes.
 
 The tensile `zero_reference_diagnostics` figure is now a local diagnostic centered on the selected zero-reference sample. The default half-window is 30 acquisition points on either side and is configurable through `tensileStudyReportConfig.zeroReferenceDiagnosticHalfWindowPoints`.
 
@@ -83,15 +83,17 @@ The presentation-consistency implementation is now complete in code:
   values, the configured population central statistic and scalar, and summary
   interval metadata used by MAT, CSV, Markdown, and figure output;
 - compression analysis supports `explicit` and `proportional`
-  `summaryStrainRangeMode` values. The real compression driver explicitly uses
-  proportional `[0, 1]` of each retained signed strain span;
+  `summaryStrainRangeMode` values. The real compression driver now explicitly
+  uses the signed interval `[-0.10, -0.01]`, corresponding to compression-strain
+  magnitudes from `0.01` to `0.10`;
 - stored compression values retain negative physical signs, while report figures
   continue to use the maintained positive-magnitude display convention.
 
-Changing the real compression driver from fixed `[-0.40, 0.00]` to proportional
-`[0, 1]` can change regenerated `MedianTangentModulus` values when retained
-specimen ranges differ from the former bounds. Historical and regenerated
-results must not be described as numerically equivalent without comparison.
+The current real compression driver therefore reports `MedianTangentModulus` for
+a fixed physical window rather than for the complete retained strain span. This
+is an intentional analysis-setting change from the earlier proportional `[0, 1]`
+configuration. Results regenerated before and after this final window change
+must not be described as numerically equivalent without comparison.
 
 The report writers remain serializers of stored results. They do not run fitting,
 bootstrap, model selection, or tangent-modulus analysis.
@@ -107,9 +109,11 @@ Do not merge this branch until all of the following are satisfied:
 5. the branch diff is audited for unnecessary files, helpers, duplicated contracts, and stale documentation;
 6. canonical documentation reflects the final implementation rather than intermediate plans.
 
-MATLAB R2024b was available for this implementation. The focused and complete
-suite results recorded below were executed in this workspace; user visual review
-of the regenerated bundle remains a separate release gate.
+MATLAB R2024b was available for the main implementation. The focused and complete
+suite results recorded below were executed before the final compression-only
+presentation/window adjustment. The latest removal of compression per-specimen
+summary lines and the change to the explicit `[-0.10, -0.01]` summary interval
+still require a final user-side compression regeneration and focused validation.
 
 ## Current maintained capabilities
 
@@ -311,7 +315,7 @@ For the PR #53 comparison phase:
 Therefore do not state that the final PR #53 code has a documented full-suite pass unless the user supplies that result in a later session. The merged implementation and real-data output review are established; the exact final full-suite validation status is not documented here.
 
 For the active `feature/unify-study-consensus-population` phase, MATLAB R2024b
-validation completed on 2026-08-11:
+validation completed on 2026-08-11 before the final compression-only adjustment:
 
 - the focused plotting, population, reporting, and model-selection set passed
   `41/41` before final layout refinement;
@@ -323,16 +327,20 @@ validation completed on 2026-08-11:
 - key regenerated tangent-modulus and initial-shear figures were inspected for
   clipping, annotation placement, units, titles, and legend semantics.
 
-The regenerated tensile population scalar was approximately `0.089545 MPa`
-(median of specimen median tangent moduli). The regenerated compression scalar
-was approximately `0.47113 MPa`; the mean remained approximately `0.47282 MPa`,
-matching the previously documented real-study mean to the shown precision. This
-dataset therefore did not show a material numerical shift from the proportional
-range migration, but the contract can change values for specimens whose retained
-ranges differ from the former fixed bounds.
+Under the preceding configuration, the regenerated tensile population scalar was
+approximately `0.089545 MPa` and the regenerated compression scalar was
+approximately `0.47113 MPa`; the compression mean was approximately `0.47282 MPa`.
+Those compression values correspond to the prior proportional `[0, 1]` summary
+window and must not be treated as the expected result of the new explicit
+`[-0.10, -0.01]` configuration.
 
-User review of all requested PNG/FIG/Markdown outputs remains required before
-merge or PR creation. No merge or PR has been performed.
+The user subsequently confirmed the regenerated outputs were functioning and
+requested the final compression-only adjustments now present in the branch:
+removal of horizontal per-specimen summary lines from `tangent_modulus` and the
+explicit `0.01` to `0.10` compression-strain-magnitude summary window. These
+latest changes require one final compression regeneration before merge or PR.
+
+No merge or PR has been performed.
 
 ## Previous real-data Yeoh validation
 
