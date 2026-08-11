@@ -4,7 +4,7 @@ arguments
     population (1,1) struct
 end
 
-data = population.parameterTable;
+[data, summary, specimenCount] = localNormalizePopulation(population);
 figureHandle = figure('Color','w','Position',[100 100 1300 760]);
 if isempty(data)
     figureHandle.UserData.parameterKeys = strings(0,1);
@@ -37,13 +37,16 @@ for index = 1:numel(keys)
         'filled', 'DisplayName','Specimens');
     scatterHandle.Tag = 'parameter-data-series';
 
-    summaryRows = population.overallSummary( ...
-        population.overallSummary.ModelName == modelName & ...
-        population.overallSummary.Parameter == parameterName, :);
+    summaryRows = summary( ...
+        summary.ModelName == modelName & ...
+        summary.Parameter == parameterName, :);
     if ~isempty(summaryRows)
-        yline(axesHandle, summaryRows.Median(1), '--', ...
-            'Median', 'LabelHorizontalAlignment','left', ...
-            'HandleVisibility','off');
+        [centralValue, centralLabel] = localCentralValue(summaryRows(1,:));
+        if isfinite(centralValue)
+            yline(axesHandle, centralValue, '--', centralLabel, ...
+                'LabelHorizontalAlignment','left', ...
+                'HandleVisibility','off');
+        end
     end
 
     axesHandle.XTick = specimenPosition;
@@ -61,5 +64,47 @@ end
 
 sgtitle(figureHandle, sprintf( ...
     'Selected-model parameters across %d specimens', ...
-    population.specimenCount), 'Interpreter','none','FontSize',18);
+    specimenCount), 'Interpreter','none','FontSize',18);
+end
+
+function [data, summary, specimenCount] = localNormalizePopulation(population)
+if isfield(population, 'parameterTable')
+    data = population.parameterTable;
+    summary = population.overallSummary;
+    if isfield(population, 'specimenCount')
+        specimenCount = population.specimenCount;
+    else
+        specimenCount = numel(unique(data.SpecimenId));
+    end
+    return;
+end
+
+if ~isfield(population, 'values') || ~isfield(population, 'summary')
+    error('mechanics:plotting:InvalidSelectedParameterPopulation', ...
+        'Population requires parameterTable/overallSummary or values/summary.');
+end
+
+data = population.values;
+if ismember('Model', string(data.Properties.VariableNames))
+    data.Properties.VariableNames{'Model'} = 'ModelName';
+end
+summary = population.summary;
+if ismember('Model', string(summary.Properties.VariableNames))
+    summary.Properties.VariableNames{'Model'} = 'ModelName';
+end
+specimenCount = numel(unique(data.SpecimenId));
+end
+
+function [value, label] = localCentralValue(summaryRow)
+names = string(summaryRow.Properties.VariableNames);
+if ismember('Median', names)
+    value = summaryRow.Median;
+    label = 'Median';
+elseif ismember('Mean', names)
+    value = summaryRow.Mean;
+    label = 'Mean';
+else
+    value = NaN;
+    label = '';
+end
 end
