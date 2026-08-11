@@ -65,7 +65,11 @@ The stored tensile state uses positive displacement, strain, and stress, with st
 ```matlab
 fitting = config.datasetAnalysis.fitting;
 fitting.enabled = true;
-fitting.modelNames = ["neo-hookean", "mooney-rivlin", "yeoh"];
+fitting.modelNames = [ ...
+    "neo-hookean"; ...
+    "mooney-rivlin"; ...
+    "yeoh-second-order"; ...
+    "yeoh-third-order"];
 fitting.context.deformationMeasure = "engineering-strain";
 fitting.context.stressMeasure = "nominal";
 config.datasetAnalysis.fitting = fitting;
@@ -84,7 +88,11 @@ population.config.minimumSpecimens = 2;
 config.population = population;
 ```
 
-When completed, the shared population result contains stress-strain curves, tangent-modulus aggregation, scalar metrics, and selected-model parameter summaries.
+When completed, the shared population result contains stress-strain curves, tangent-modulus aggregation, scalar metrics, individual model-selection consensus, and individually selected-model parameter summaries.
+
+The maintained model-selection contract is descriptive and does not refit the population. `study.population.modelSelection` stores the individual selections, candidate selection counts and fractions, and a unique selection-frequency consensus when one exists. If all eligible specimens selected the same model, the existing individually selected-model parameter population already represents that consensus and no second consensus-model parameter population is generated.
+
+If selections are mixed, parameter summaries remain grouped by each specimen's individually selected model. A consensus-model refit is reserved for explicit advanced workflows that require one common-model parameterization; it is not part of the standard tensile study or report.
 
 ## Study bundle
 
@@ -98,20 +106,18 @@ config.export.saveTables = true;
 config.export.savePopulation = true;
 ```
 
-The default bundle contains:
+The population portion of the standard bundle contains:
 
 ```text
-tensile_study.mat
-study_summary.csv
-dataset_summary.csv
-peak_summary.csv
-provenance.csv
 population_curve.csv
 population_metrics.csv
 population_tangent_modulus.csv
-selected_model_parameter_values.csv
-selected_model_parameter_summary.csv
+individual_model_selection_summary.csv
+individual_selected_model_parameter_values.csv
+individual_selected_model_parameter_summary.csv
 ```
+
+The full study bundle also contains `tensile_study.mat`, study/dataset summaries, peak summary when available, and provenance.
 
 `tensile_study.mat` contains the complete `study`, including `study.config` and `study.population`. No separate configuration MAT or population MAT is generated inside the study bundle.
 
@@ -125,29 +131,23 @@ reportConfig.outputFolder = "results/my-study/report";
 reportFiles = mechanics.io.exportTensileStudyReport(study, reportConfig);
 ```
 
+The population section reports the distribution of individual model selections, the selection-frequency consensus when unique, whether that consensus is unanimous, and the individually selected-model parameter summary. Reporting only consumes `study.population`; it does not perform fitting, model selection, or a consensus refit.
+
 Standard figures include individual curves, population response, peak metrics, specimen tangent modulus, population tangent modulus when available, and zero-reference diagnostics. Every maintained figure is exported as the configured image format and an editable MATLAB `.fig`.
 
 ## Downstream constitutive workflows
 
-Selected-parameter population analysis, group comparison, parameter inference, consensus-model selection, constitutive reporting, and future application-range characterization consume completed results. They remain optional and should not re-import or reprocess specimens.
+Group comparison, parameter inference, explicit consensus-model refitting, constitutive reporting, and application-range characterization consume completed results. They remain optional and should not re-import or reprocess specimens.
+
+A consensus-model refit is appropriate only when a downstream workflow requires every specimen to share one constitutive model. It must not be run merely to reproduce the same parameter summary already present in the standard study population.
 
 ## Tensile application-range characterization
 
-The planned maintained add-on is documented in [`tensile-application-range-characterization.md`](tensile-application-range-characterization.md).
+The maintained add-on is documented in [`tensile-application-range-characterization.md`](tensile-application-range-characterization.md).
 
 Its purpose is to estimate one shared hyperelastic parameter set from the already processed tensile loading curves inside a configured interval, such as engineering strain from `0` to `0.30`.
 
-It will:
-
-- consume one completed tensile study;
-- reuse maintained fitting, model-registry, ranking, plotting, and export contracts where physically identical;
-- preserve equal influence per specimen;
-- select parsimoniously when candidate models are practically equivalent;
-- expose registry-derived reference properties such as `mu0`;
-- audit sensitivity to the fit-range boundary;
-- optionally evaluate a fixed tensile-calibrated model on compression data without refitting.
-
-It will not re-import raw files, duplicate the tensile workflow, perform wave or incremental analysis, or replace joint material characterization.
+It consumes one completed tensile study, preserves equal influence per specimen, selects parsimoniously when candidate models are practically equivalent, and does not replace the standard tensile study.
 
 ## Study comparison
 
@@ -156,14 +156,9 @@ comparison = mechanics.workflow.compareTensileStudies( ...
     [studyA, studyB], ...
     ["Condition A", "Condition B"], ...
     mechanics.config.tensileStudyComparisonConfig());
-
-files = mechanics.io.exportTensileStudyComparison( ...
-    comparison, "results/tensile-study-comparison");
 ```
 
-The comparison reuses maintained population and group-comparison logic. The dedicated exporter writes study and compatibility summaries, pairwise scalar metrics, mean curves and curve differences with available confidence intervals, a maintained PNG/FIG figure pair, the complete MAT result, and a concise Markdown report.
-
-The exporter does not recalculate statistics and does not duplicate individual study bundles or constitutive-parameter reporting. Automated tests use synthetic completed studies. Real two-study validation remains pending because no representative pair of tensile study datasets is currently available.
+The comparison reuses maintained population and group-comparison logic without recalculating the standard study fitting pipeline.
 
 ## Relationship to joint material characterization
 
