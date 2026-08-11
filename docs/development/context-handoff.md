@@ -41,6 +41,8 @@ Active branch:
 feature/unify-study-consensus-population
 ```
 
+**Continue all work for this phase on this existing branch. Do not switch back to `main` and do not create another feature branch.** The generic session-bootstrap instruction to create a dedicated branch is already satisfied by this branch.
+
 This phase removes a redundancy in the standard tensile and compression study drivers without removing the advanced common-model refit API.
 
 The standard study population now owns a descriptive summary of the individual constitutive model selections under:
@@ -64,13 +66,70 @@ initial_shear_modulus.png/.fig
 
 for both tensile and compression population reports when selected-model parameter data are available.
 
-The individual tangent-modulus figures now mark the configured summary interval, overlay the stored median tangent-modulus summary for each specimen across that interval, and include each summary value in the legend.
+The individual tangent-modulus figures currently mark the configured summary interval, overlay the stored specimen tangent-modulus summary across that interval, and include summary values in the legend. This presentation is still under review because the population tangent-modulus figures should carry the population summary more cleanly without cluttering legends.
 
 The tensile `zero_reference_diagnostics` figure is now a local diagnostic centered on the selected zero-reference sample. The default half-window is 30 acquisition points on either side and is configurable through `tensileStudyReportConfig.zeroReferenceDiagnosticHalfWindowPoints`.
 
-The user regenerated early versions of the tensile and compression bundles during this phase and confirmed that the redundant consensus population output disappeared. That review also identified the missing parameter/`mu0` figures, implicit tangent-modulus summary presentation, and overly global zero-reference diagnostic; those presentation issues are now addressed in the branch but require another MATLAB validation/regeneration pass.
+The user regenerated early versions of the tensile and compression bundles during this phase and confirmed that the redundant consensus population output disappeared. That review also identified missing parameter/`mu0` figures, implicit tangent-modulus summary presentation, and overly global zero-reference diagnostics; those issues were addressed in the branch and improved the output. A final presentation-consistency phase remains active as described below.
 
-Do not merge this branch until the focused tests, complete suite, and regenerated real tensile/compression reports have been reviewed.
+### Active presentation-consistency objectives
+
+The next implementation work must address the following without introducing unnecessary scripts, wrappers, helpers, test files, or parallel reporting contracts.
+
+1. **Repository-wide figure-title contract**
+   - Audit maintained plotting code across the repository, not only tensile/compression study exporters.
+   - Human-facing figure titles should describe what the figure reports and should not embed experiment/material/file metadata by default.
+   - Prefer concise scientific titles such as `Population response`, `Population tangent modulus`, `Initial shear modulus by specimen`, `Selected-model parameters`, or `Zero-reference diagnostics` where appropriate.
+   - Do not mechanically replace every title with one hard-coded string. Preserve specialized titles where they carry scientific meaning.
+   - Before creating a shared title helper, demonstrate at least two maintained callers with an identical formatting contract. Do not add a helper solely for superficial consistency.
+   - Report headings/captions and filenames may retain the workflow context needed for navigation; figure titles themselves should remain content-focused.
+
+2. **Initial-shear-modulus population presentation**
+   - Improve `initial_shear_modulus` so the population reference line carries a clear LaTeX annotation with its numerical central value and an appropriate uncertainty/dispersion quantity when the existing statistical contract supports one.
+   - Do not write an ambiguous `median ± SD` or otherwise mix incompatible statistics merely to show `±`.
+   - Inspect the maintained population/statistical contracts first. If the displayed reference is a mean, `mean ± SD` is acceptable when SD is the intended descriptive dispersion. If the displayed reference is a median, prefer a compatible interval or display the median without a misleading `±` unless the existing contract already provides an appropriate uncertainty measure.
+   - Do not add a new inferential method solely for the label. Any new statistic must be justified as reusable analysis, not presentation-only computation.
+   - Use registry-derived `mu0`; do not duplicate constitutive formulas in plotting.
+
+3. **Tensile population tangent-modulus presentation**
+   - Keep individual population-member curves visually available when useful, but do not serialize specimen summary values into the legend.
+   - The legend should identify graphical/statistical elements only.
+   - Show the configured population tangent-modulus summary and its central statistic (`mean` or `median` according to the maintained population configuration) as an in-axes annotation, preferably adjacent to a summary-range boundary when that is visually clear.
+   - Keep the summary strain interval explicit and visually tied to the reported summary value.
+   - The report and figure must agree on the statistic and units.
+
+4. **Compression population tangent-modulus symmetry and configurable proportional interval**
+   - First align the compression population tangent-modulus figure with the tensile presentation contract: same conceptual elements, sign-safe presentation, summary annotation, and clear summary range.
+   - Then audit the underlying compression summary-range semantics. The desired end state is a configurable **proportional** summary interval, expressed relative to the retained compression deformation range, with explicit configuration in the maintained compression driver and the appropriate config contract.
+   - Do not implement this as plotting-only logic. If the summary interval changes the numerical tangent-modulus summary, the configuration must propagate through analysis so the stored result, CSV/report, and figure agree.
+   - Preserve physical negative compression signs in stored mechanics. Presentation may use positive compression magnitudes only under the existing explicit display convention.
+   - Implement this carefully and in stages if necessary; presentation alignment may be completed before the analysis-contract migration, but the final branch state must clearly document what is and is not complete.
+
+5. **Exhaustive utility/ownership audit of this active branch**
+   - Review the complete branch diff against `main` after implementation.
+   - Confirm every newly added maintained file has a real owner and at least one justified maintained caller.
+   - Reconsider `writePopulationModelSelectionSection.m` and any other new helper against the repository rule: shared helpers are justified only when at least two maintained callers genuinely share the same contract.
+   - Remove obsolete or redundant code created during the migration if canonical coverage exists.
+   - Do not preserve a file merely because tests reference it; tests should cover maintained behavior, not justify otherwise unnecessary architecture.
+   - Prefer extending existing behavior-oriented tests over adding new test files. Add a new test file only if it represents a genuinely new subsystem/behavior family that does not belong naturally in existing coverage.
+   - Do not add demonstration scripts, migration scripts, aliases, compatibility wrappers, or generated output.
+
+### Reporting consistency requirement
+
+Before finalizing this branch, inspect the maintained report writers for tensile, compression, joint characterization, tensile application-range characterization, and completed-study comparisons as relevant. Preserve the established report organization and boundary-oriented language. Do not make study reports run fitting/statistics during serialization. Reports consume already computed results.
+
+### Validation gate for the active branch
+
+Do not merge this branch until all of the following are satisfied:
+
+1. focused MATLAB tests covering the modified existing contracts pass;
+2. `run_all_tests()` passes on the user's local MATLAB installation;
+3. the real tensile and compression study drivers regenerate successfully;
+4. the user visually reviews the relevant PNG outputs and Markdown reports;
+5. the branch diff is audited for unnecessary files, helpers, duplicated contracts, and stale documentation;
+6. canonical documentation reflects the final implementation rather than intermediate plans.
+
+MATLAB execution is performed by the user unless an environment with MATLAB is explicitly available. Do not claim MATLAB validation that was not actually run.
 
 ## Current maintained capabilities
 
@@ -271,7 +330,7 @@ For the PR #53 comparison phase:
 
 Therefore do not state that the final PR #53 code has a documented full-suite pass unless the user supplies that result in a later session. The merged implementation and real-data output review are established; the exact final full-suite validation status is not documented here.
 
-For the active `feature/unify-study-consensus-population` phase, no final validation claim should be made yet. The early regenerated real bundles were reviewed, but the latest restored parameter figures, tangent-summary presentation, local zero-reference diagnostic, and registry-derived `mu0` integration still require user-side MATLAB execution.
+For the active `feature/unify-study-consensus-population` phase, no final validation claim should be made yet. The regenerated real bundles were reviewed during development, but the active presentation-consistency objectives above still require implementation and then user-side MATLAB validation/regeneration.
 
 MATLAB execution is performed by the user, not by the assistant.
 
@@ -363,22 +422,28 @@ Generated pre-migration results that contain the historical third-order model id
 
 ## Session bootstrap
 
-Before proposing or modifying code in a new session:
+For a **new unrelated phase**, the generic bootstrap is:
 
 1. read this file completely;
 2. read `docs/development/repository-structure.md`;
 3. read the relevant workflow and testing documents;
-4. verify Git state:
+4. verify Git state;
+5. create a dedicated branch unless the user explicitly requests direct work on `main`.
+
+For the **currently active phase**, do not apply step 5 again. Continue on:
+
+```text
+feature/unify-study-consensus-population
+```
+
+Before editing the active phase, verify:
 
 ```bash
 git fetch origin --prune
-git switch main
-git pull --ff-only origin main
+git switch feature/unify-study-consensus-population
+git pull --ff-only origin feature/unify-study-consensus-population
 git status -sb
-git rev-parse HEAD
-git rev-parse origin/main
+git diff --check origin/main...HEAD
 ```
 
-5. create a dedicated branch for code changes unless the user explicitly requests direct work on `main`;
-6. inspect maintained callers and tests before proposing moves or shared helpers;
-7. define the smallest coherent phase and its validation gate before implementation.
+Then inspect maintained callers and tests before extracting, moving, deleting, or generalizing functions. Define the smallest coherent implementation steps and preserve the validation gate above.
