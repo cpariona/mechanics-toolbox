@@ -149,6 +149,7 @@ fprintf("Population status: %s\n", char(study.populationStatus))
 
 if study.populationStatus == "completed"
     disp(study.population.metrics)
+    disp(study.population.modelSelection.summary)
     disp(study.population.modelParameters)
 elseif study.populationStatus == "failed"
     fprintf(2, "Population error: %s\n", ...
@@ -226,11 +227,10 @@ end
 
 %% 5. OPTIONAL COMPRESSION WORKFLOWS
 % Optional workflows remain available for compatible datasets.
-% Consensus-model population fitting is enabled for this experiment.
-% Their exporters own all persistent figures and tabular/MAT outputs.
+% The standard study population already reports individual model-selection
+% consensus without performing a redundant population refit.
 runFitDiagnostics = false;
 runReliabilityAwareModelComparison = false;
-runConsensusModelPopulation = true;
 runGroupComparison = false;
 runGroupParameterInference = false;
 runConstitutiveStudyReport = false;
@@ -271,8 +271,10 @@ if runReliabilityAwareModelComparison
     disp(modelComparisonFiles)
 end
 
-if runConsensusModelPopulation || ...
-        runGroupParameterInference || runConstitutiveStudyReport
+% Group-parameter inference and the constitutive study report require a
+% common-model parameterization. Only those explicitly enabled advanced
+% workflows perform a consensus-model refit.
+if runGroupParameterInference || runConstitutiveStudyReport
     comparisonSpecimens = struct([]);
     individualSelectedModels = strings(numel(processedIndices), 1);
     for outputIndex = 1:numel(processedIndices)
@@ -301,19 +303,6 @@ if runConsensusModelPopulation || ...
     parameterPopulation = mechanics.workflow.summarizeSelectedParameters( ...
         parameterBatch, ...
         mechanics.config.selectedParameterPopulationConfig());
-    disp(parameterBatch.modelSummary)
-    disp("Consensus model: " + ...
-        mechanics.models.modelRegistry(parameterBatch.consensusModelName).displayName)
-    disp(parameterPopulation.parameterTable)
-    disp(parameterPopulation.overallSummary)
-
-    if runConsensusModelPopulation
-        consensusModelFiles = ...
-            mechanics.io.exportSelectedParameterPopulation( ...
-            parameterPopulation, ...
-            fullfile(outputFolder, "consensus-model-population"));
-        disp(consensusModelFiles)
-    end
 end
 
 if runGroupComparison
