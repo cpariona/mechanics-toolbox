@@ -4,7 +4,7 @@ arguments
     population (1,1) struct
 end
 
-figureHandle = figure('Color','w');
+figureHandle = figure('Color','w','Position',[100 100 1050 760]);
 if ~isfield(population,'initialShearModulus') || ...
         isempty(population.initialShearModulus.values)
     axesHandle = axes(figureHandle); %#ok<LAXES>
@@ -23,8 +23,9 @@ scatter(axesHandle, position, data.InitialShearModulus, 42, 'filled', ...
     'DisplayName','Specimens');
 
 for index = 1:height(data)
+    model = mechanics.models.modelRegistry(data.ModelName(index));
     text(axesHandle, position(index), data.InitialShearModulus(index), ...
-        "  " + data.ModelName(index), 'Interpreter','none', ...
+        "  " + model.displayName, 'Interpreter','none', ...
         'VerticalAlignment','middle');
 end
 
@@ -37,7 +38,7 @@ axesHandle.XTick = position;
 axesHandle.XTickLabel = cellstr(data.SpecimenId);
 axesHandle.XTickLabelRotation = 45;
 xlabel(axesHandle,'Specimen');
-ylabel(axesHandle,'Initial shear modulus, \mu_0');
+ylabel(axesHandle,'Initial shear modulus, \mu_0','Interpreter','tex');
 title(axesHandle, sprintf( ...
     'Derived initial shear modulus across %d specimens', ...
     population.initialShearModulus.specimenCount));
