@@ -1,6 +1,6 @@
 # Compression study
 
-Compression uses the shared uniaial mechanics pipeline after test-specific selection of the maintained cycle and loading branch. Conditioning cycles are excluded from the analyzed response.
+Compression uses the shared uniaxial mechanics pipeline after test-specific selection of the maintained cycle and loading branch. Conditioning cycles are excluded from the analyzed response.
 
 ## Workflow hierarchy
 
