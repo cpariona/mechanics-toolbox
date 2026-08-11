@@ -90,18 +90,13 @@ if config.includeTangentModulus
             displayName = displayName + sprintf( ...
                 " — summary %.4g %s", summaryValue, stressDisplayUnit);
         end
-        curveHandle = plot(ax, -tangent.strain, tangent.tangentModulusForPlot, ...
+        plot(ax, -tangent.strain, tangent.tangentModulusForPlot, ...
             "LineWidth", 1.0, "DisplayName", char(displayName));
         if isfield(tangent, "summaryStrainRange") && ...
                 numel(tangent.summaryStrainRange) == 2
             displayRange = sort(-double(tangent.summaryStrainRange(:)'));
             if isempty(summaryRangeForDisplay)
                 summaryRangeForDisplay = displayRange;
-            end
-            if isfinite(summaryValue)
-                plot(ax, displayRange, [summaryValue, summaryValue], "--", ...
-                    "Color", curveHandle.Color, "LineWidth", 1.4, ...
-                    "HandleVisibility", "off");
             end
         end
         plotted = true;
