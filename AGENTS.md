@@ -13,4 +13,4 @@ Antes de modificar código, leer el estándar común fijado en `.research-automa
 - Para verificar, `startup; results = run_all_tests();` y el protocolo mantenido en [testing](docs/development/testing.md). No afirmar ejecución MATLAB cuando no se realizó.
 - Consultar [context-handoff](docs/development/context-handoff.md) cuando se necesite conocer un asunto abierto; Git/PRs mantienen la cronología.
 
-La política global es transversal, pero los contratos físicos y de modelos viven aquí. No integrar ni modificar `main` sin autorización.
+Los contratos físicos y de modelos enumerados aquí son responsabilidad exclusiva de mechanics-toolbox.

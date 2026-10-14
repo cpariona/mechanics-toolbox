@@ -301,43 +301,10 @@ Generated pre-migration results that contain the historical third-order model id
 - `joint characterization` combines completed experimental modes under one shared constitutive contract;
 - `tensile application-range characterization` is a completed-study add-on and does not replace the tensile study.
 
-## Required architecture contracts
+## Maintenance references
 
-- Favor simplicity, structure, order, and explicit ownership.
-- Keep reusable implementation under `src/+mechanics`.
-- Keep real experiment drivers under `studies`.
-- Keep runnable demonstrations under `examples` and regression coverage under `tests`.
-- Maintained root MATLAB entrypoints are only `startup.m` and `run_all_tests.m`.
-- Extract shared code only when at least two maintained callers use the same physical and data contract.
-- Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
-- Do not reorganize packages merely for visual balance.
-- Preserve public APIs unless a demonstrated ambiguity or ownership defect justifies migration.
-- Use the model registry rather than scattering model-name conditionals when contracts are identical.
-- Keep model evaluation in `mechanics.models`, optimization in `mechanics.fitting`, population inference in `mechanics.statistics`, deterministic calculations in `mechanics.analysis`, presentation in `mechanics.plotting`, serialization in `mechanics.io`, and orchestration in `mechanics.workflow`.
-- Keep tensile, compression, joint-characterization, tensile application-range, and completed-study comparison workflows distinct.
-- Completed-study add-ons and comparisons consume canonical completed study results; they do not re-import raw data.
-- Preserve stored physical values and signs. Presentation conventions must not silently alter numerical state.
-- Generated data and outputs remain under ignored `results/` paths.
-- Do not merge a pull request unless explicitly requested.
+- Shared implementation discipline, branching and delivery: pinned engineering standard referenced by root `AGENTS.md`.
+- Local package ownership and mechanical/data contracts: [repository-structure.md](repository-structure.md).
+- MATLAB test commands and release gate: [testing.md](testing.md).
 
-## Session bootstrap
-
-Before proposing or modifying code in a new session:
-
-1. read this file completely;
-2. read `docs/development/repository-structure.md`;
-3. read the relevant workflow and testing documents;
-4. verify Git state:
-
-```bash
-git fetch origin --prune
-git switch main
-git pull --ff-only origin main
-git status -sb
-git rev-parse HEAD
-git rev-parse origin/main
-```
-
-5. create a dedicated branch for code changes unless the user explicitly requests direct work on `main`;
-6. inspect maintained callers and tests before proposing moves or shared helpers;
-7. define the smallest coherent phase and its validation gate before implementation.
+Read only the contracts relevant to a requested change. This handoff owns current scientific context and unresolved decisions, not a second set of general engineering rules.

@@ -30,4 +30,3 @@ The documentation is organized by task. Persistent project state is maintained i
 - [`development/testing.md`](development/testing.md): focused tests and complete release validation.
 - [`development/final-cleanup-audit.md`](development/final-cleanup-audit.md): historical snapshot of the cleanup completed after the tensile-study comparison migration. Its former “remaining work” section is not the current roadmap.
 
-Development chronology belongs in Git history and merged pull requests. Superseded phase prompts and temporary handoff notes are not retained as parallel documentation.

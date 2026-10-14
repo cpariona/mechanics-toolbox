@@ -49,8 +49,6 @@ mechanics.statistics     population summaries and statistical inference
 mechanics.workflow       orchestration across maintained lower-level contracts
 ```
 
-Do not move a function solely to make folders visually balanced. Move it only when ownership is incorrect and callers, tests, and documentation support the change.
-
 ## Constitutive-model registry boundary
 
 Registered constitutive-model identity, presentation name, family identity, polynomial order when meaningful, parameter names, bounds, default initial guesses, function handles, descriptions, and derived quantities belong to `mechanics.models.modelRegistry`.
@@ -281,14 +279,3 @@ run_all_tests.m
 
 Implementation belongs under `src/+mechanics`; executable experiment configurations belong under `studies`; runnable demonstrations belong under `examples`; tests belong under `tests`. Experiment-specific scripts and unnamespaced processing helpers should not be added at repository root.
 
-## Organization maintenance rule
-
-A source-organization phase should prioritize contract consolidation over folder reshuffling:
-
-1. inspect all maintained callers;
-2. identify genuine duplicate physical or serialization contracts;
-3. define one owner;
-4. migrate callers with focused tests;
-5. remove obsolete helpers only after canonical coverage exists;
-6. update documentation in the same phase;
-7. run the complete validation gate.

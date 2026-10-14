@@ -132,32 +132,17 @@ results = run_all_tests();
 assert(all([results.Passed]), "Repository tests failed.")
 ```
 
-Also verify the Git state against the intended base branch:
+Shared Git review and delivery requirements follow the pinned engineering standard
+referenced by root `AGENTS.md`. The mechanics-specific output hygiene check is:
 
 ```bash
-git fetch origin --prune
-git diff --check origin/main...HEAD
-git diff --stat origin/main...HEAD
-git status -sb
-git ls-files --others --exclude-standard
 git ls-files results
 ```
 
-Review the complete branch diff:
+The mechanics release gate requires:
+- every discovered MATLAB test to pass from the candidate branch;
+- no incomplete MATLAB tests;
+- no generated outputs tracked under `results/`;
+- documentation consistent with any changed mechanics contracts.
 
-```bash
-git diff origin/main...HEAD
-git log --oneline origin/main..HEAD
-```
-
-The release gate is satisfied only when:
-
-- every discovered MATLAB test passes from the branch intended for merge;
-- no test remains incomplete;
-- `git diff --check` is clean;
-- no unintended generated or untracked files are present;
-- no generated files under `results/` are tracked;
-- documentation reflects the implemented contracts;
-- merge authorization has been given explicitly.
-
-Do not claim MATLAB validation unless the person who ran MATLAB reports the actual result.
+Report the exact MATLAB execution status and unrun checks under the shared engineering standard.
