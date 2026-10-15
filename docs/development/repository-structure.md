@@ -27,7 +27,7 @@ A completed-study add-on or comparison must consume the canonical study result r
 
 Joint material characterization must consume completed study results through one explicit workflow contract. Mode-specific extraction belongs in a small registered adapter or mode contract only when the physical data representation differs. Constitutive model evaluation and parameter metadata remain owned by the model registry. Do not scatter tension/compression conditionals across fitting, ranking, export, and plotting code.
 
-Extract a shared lower-level function only when at least two maintained callers use the same physical and data contract. Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
+Extract a shared lower-level function only when at least two maintained callers use the same physical and data contract.
 
 ## Package ownership
 
