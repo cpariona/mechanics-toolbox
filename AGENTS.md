@@ -10,7 +10,6 @@ Antes de modificar código, leer el estándar común fijado en `.research-automa
 - Mantener contratos separados para configuración de espécimen, fitting, estudio y reportes. No cambiar defaults del conjunto de candidatos por refactorizaciones no científicas.
 - Valores y unidades almacenados no se infieren de etiquetas de plots. `mechanics.io` es dueño de serialización de reportes, y `mechanics.plotting` de conversión de unidades de presentación.
 - Datos experimentales y resultados generados en `data/` y `results/` no se comiten.
-- Para verificar, `startup; results = run_all_tests();` y el protocolo mantenido en [testing](docs/development/testing.md). No afirmar ejecución MATLAB cuando no se realizó.
+- Para verificar, `startup; results = run_all_tests();` y el protocolo mantenido en [testing](docs/development/testing.md).
 - Consultar [context-handoff](docs/development/context-handoff.md) cuando se necesite conocer un asunto abierto; Git/PRs mantienen la cronología.
 
-La política global es transversal, pero los contratos físicos y de modelos viven aquí. No integrar ni modificar `main` sin autorización.

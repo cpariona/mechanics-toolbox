@@ -27,7 +27,7 @@ A completed-study add-on or comparison must consume the canonical study result r
 
 Joint material characterization must consume completed study results through one explicit workflow contract. Mode-specific extraction belongs in a small registered adapter or mode contract only when the physical data representation differs. Constitutive model evaluation and parameter metadata remain owned by the model registry. Do not scatter tension/compression conditionals across fitting, ranking, export, and plotting code.
 
-Extract a shared lower-level function only when at least two maintained callers use the same physical and data contract. Do not create wrappers, aliases, bridge files, or one-caller helpers for superficial symmetry.
+Extract a shared lower-level function only when at least two maintained callers use the same physical and data contract.
 
 ## Package ownership
 
@@ -48,8 +48,6 @@ mechanics.segmentation   loading-region and cycle selection
 mechanics.statistics     population summaries and statistical inference
 mechanics.workflow       orchestration across maintained lower-level contracts
 ```
-
-Do not move a function solely to make folders visually balanced. Move it only when ownership is incorrect and callers, tests, and documentation support the change.
 
 ## Constitutive-model registry boundary
 
@@ -281,14 +279,3 @@ run_all_tests.m
 
 Implementation belongs under `src/+mechanics`; executable experiment configurations belong under `studies`; runnable demonstrations belong under `examples`; tests belong under `tests`. Experiment-specific scripts and unnamespaced processing helpers should not be added at repository root.
 
-## Organization maintenance rule
-
-A source-organization phase should prioritize contract consolidation over folder reshuffling:
-
-1. inspect all maintained callers;
-2. identify genuine duplicate physical or serialization contracts;
-3. define one owner;
-4. migrate callers with focused tests;
-5. remove obsolete helpers only after canonical coverage exists;
-6. update documentation in the same phase;
-7. run the complete validation gate.
