@@ -68,13 +68,13 @@ stress = mechanics.models.evaluateModel("mooney-rivlin", ...
     strain, [0.08, 0.025], context);
 config = mechanics.config.fittingConfig();
 config.weights = zeros(size(strain));
-config.weights(1:2) = 1;
+config.weights([5, 13]) = 1;
 
 verifyError(testCase, @() mechanics.fitting.fitModel( ...
     "mooney-rivlin", strain, stress, context, config), ...
     "mechanics:fitting:InsufficientData");
 
-config.weights(3) = 1;
+config.weights(21) = 1;
 result = mechanics.fitting.fitModel( ...
     "mooney-rivlin", strain, stress, context, config);
 verifyEqual(testCase, result.parameters, [0.08, 0.025], "AbsTol", 1e-3);
