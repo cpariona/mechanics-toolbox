@@ -17,9 +17,14 @@ if numel(x) ~= numel(y)
         "Deformation and stress must have equal lengths.");
 end
 
-valid = isfinite(x) & isfinite(y);
-x = x(valid);
-y = y(valid);
+weights = [];
+if isfield(fitConfig, "weights") && ~isempty(fitConfig.weights)
+    [x, y, weights] = mechanics.fitting.prepareFitData(x, y, fitConfig);
+else
+    valid = isfinite(x) & isfinite(y);
+    x = x(valid);
+    y = y(valid);
+end
 if numel(x) < config.minimumObservations
     error("mechanics:fitting:InsufficientWindowStabilityData", ...
         "At least %d finite observations are required.", ...
@@ -28,6 +33,9 @@ end
 
 [x, order] = sort(x, "ascend");
 y = y(order);
+if ~isempty(weights)
+    weights = weights(order);
+end
 windowFractions = unique(config.windowFractions(:), "stable");
 if isempty(windowFractions) || any(~isfinite(windowFractions)) || ...
         any(windowFractions <= 0 | windowFractions > 1)
@@ -71,9 +79,13 @@ for index = 1:windowCount
         continue;
     end
 
+    windowFitConfig = fitConfig;
+    if ~isempty(weights)
+        windowFitConfig.weights = weights(mask);
+    end
     try
         result = mechanics.fitting.fitModel( ...
-            modelName, x(mask), y(mask), context, fitConfig);
+            modelName, x(mask), y(mask), context, windowFitConfig);
         fitResults{index} = result;
         parameterMatrix(index, :) = result.parameters;
         rmse(index) = result.metrics.rmse;
