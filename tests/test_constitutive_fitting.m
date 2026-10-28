@@ -60,6 +60,26 @@ result = mechanics.fitting.fitModel("neo-hookean", strain, stress, struct(), con
 verifyEqual(testCase, numel(result.measuredStress), 4);
 end
 
+function testInsufficientPositiveWeightObservationsRejected(testCase)
+strain = linspace(0, 0.5, 21)';
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
+stress = mechanics.models.evaluateModel("mooney-rivlin", ...
+    strain, [0.08, 0.025], context);
+config = mechanics.config.fittingConfig();
+config.weights = zeros(size(strain));
+config.weights([5, 13]) = 1;
+
+verifyError(testCase, @() mechanics.fitting.fitModel( ...
+    "mooney-rivlin", strain, stress, context, config), ...
+    "mechanics:fitting:InsufficientData");
+
+config.weights(21) = 1;
+result = mechanics.fitting.fitModel( ...
+    "mooney-rivlin", strain, stress, context, config);
+verifyEqual(testCase, result.parameters, [0.08, 0.025], "AbsTol", 1e-3);
+end
+
 function testMetricCalculation(testCase)
 y = [1;2;3];
 yhat = [1;2;3];

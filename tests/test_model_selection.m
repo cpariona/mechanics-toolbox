@@ -86,6 +86,48 @@ verifyEqual(testCase, maximumDeformation, [-0.2, -0.3, -0.4], ...
 verifyEqual(testCase, study.referenceDeformation, 0, "AbsTol", 1e-12);
 end
 
+function testWeightedWindowsMatchDirectFits(testCase)
+x = flipud(linspace(0, 0.6, 31)');
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
+y = mechanics.models.evaluateModel("neo-hookean", x, 0.15, context);
+y = y + 0.003 .* sin((1:numel(x))');
+weights = 1 + mod((1:numel(x))', 7);
+x(4) = NaN;
+weights(10) = NaN;
+weights(15) = 0;
+
+fitConfig = mechanics.config.fittingConfig();
+fitConfig.numberOfStarts = 2;
+fitConfig.weights = weights;
+selectionConfig = mechanics.config.modelSelectionConfig();
+selectionConfig.windowFractions = [0.5, 1.0];
+selectionConfig.minimumObservations = 8;
+
+study = mechanics.fitting.fitAcrossWindows( ...
+    "neo-hookean", x, y, context, fitConfig, selectionConfig);
+verifyEqual(testCase, numel(study.records), 2);
+verifyTrue(testCase, all([study.records.succeeded]));
+
+valid = isfinite(x) & isfinite(y) & isfinite(weights) & weights >= 0;
+[cleanX, order] = sort(x(valid), "ascend");
+cleanY = y(valid);
+cleanY = cleanY(order);
+cleanWeights = weights(valid);
+cleanWeights = cleanWeights(order);
+for index = 1:numel(study.records)
+    fraction = study.records(index).windowFraction;
+    mask = cleanX <= fraction * max(cleanX);
+    directConfig = fitConfig;
+    directConfig.weights = cleanWeights(mask);
+    direct = mechanics.fitting.fitModel( ...
+        "neo-hookean", cleanX(mask), cleanY(mask), context, directConfig);
+    actual = study.records(index).fitResult;
+    verifyEqual(testCase, actual.parameters, direct.parameters, "AbsTol", 1e-6);
+    verifyEqual(testCase, actual.objective, direct.objective, "AbsTol", 1e-8);
+end
+end
+
 function testMismatchedInputRejected(testCase)
 verifyError(testCase, @() mechanics.fitting.fitAcrossWindows( ...
     "neo-hookean", [0; 0.1], 0, struct(), ...

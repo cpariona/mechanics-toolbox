@@ -16,9 +16,9 @@ end
 model = mechanics.models.modelRegistry(modelName);
 config = mechanics.fitting.resolveFitConfig(config, model, numel(measuredStress));
 [x, y, weights] = mechanics.fitting.prepareFitData(deformation, measuredStress, config);
-if numel(y) <= numel(model.parameterNames)
+if nnz(weights > 0) <= numel(model.parameterNames)
     error("mechanics:fitting:InsufficientData", ...
-        "The number of valid observations must exceed the number of fitted parameters.");
+        "The number of positive-weight observations must exceed the number of fitted parameters.");
 end
 
 rng(config.randomSeed, "twister");

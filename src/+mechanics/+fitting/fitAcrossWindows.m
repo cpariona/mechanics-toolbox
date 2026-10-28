@@ -16,9 +16,14 @@ end
 
 x = deformation(:);
 y = measuredStress(:);
-valid = isfinite(x) & isfinite(y);
-x = x(valid);
-y = y(valid);
+weights = [];
+if isfield(fitConfig, "weights") && ~isempty(fitConfig.weights)
+    [x, y, weights] = mechanics.fitting.prepareFitData(x, y, fitConfig);
+else
+    valid = isfinite(x) & isfinite(y);
+    x = x(valid);
+    y = y(valid);
+end
 
 if numel(x) < selectionConfig.minimumObservations
     error("mechanics:fitting:InsufficientData", ...
@@ -32,6 +37,9 @@ excursion = abs(x - referenceDeformation);
 [excursion, order] = sort(excursion, "ascend");
 x = x(order);
 y = y(order);
+if ~isempty(weights)
+    weights = weights(order);
+end
 
 fractions = selectionConfig.windowFractions(:);
 if isempty(fractions) || any(~isfinite(fractions)) || ...
@@ -80,10 +88,14 @@ for iModel = 1:numel(modelNames)
             selectedDeformation(endpointIndex);
         records(recordIndex).observationCount = nnz(mask);
 
+        windowFitConfig = fitConfig;
+        if ~isempty(weights)
+            windowFitConfig.weights = weights(mask);
+        end
         try
             result = mechanics.fitting.fitModel( ...
                 modelNames(iModel), selectedDeformation, y(mask), ...
-                context, fitConfig);
+                context, windowFitConfig);
             records(recordIndex).fitResult = result;
             records(recordIndex).succeeded = true;
             records(recordIndex).errorIdentifier = "";
