@@ -1,15 +1,14 @@
-# mechanics-toolbox — instrucciones para agentes
+# mechanics-toolbox — agent instructions
 
-Antes de modificar código, leer el estándar común fijado en `.research-automation/standards/engineering.md`. Si falta el submódulo privado, detener la edición e inicializarlo; no sustituirlo por una copia informal o una URL de `main`.
+Before modifying code, read the shared standard pinned at `.research-automation/standards/engineering.md`. If the private submodule is missing, stop and initialize it; do not substitute an informal copy or a moving `main` URL.
 
-## Contratos locales
+## Local contracts
 
-- `src/+mechanics/` contiene implementación mantenida; `studies/` drivers experimentales, `examples/` ejemplos y `tests/` pruebas. El mapa de propietarios y APIs está en [estructura](docs/development/repository-structure.md).
-- Estudios completados tienen un resultado canónico. Comparaciones y caracterización conjunta lo consumen, sin repetir importación, segmentación ni fitting de datos crudos.
-- `mechanics.models.modelRegistry` posee identidades, parámetros y cantidades derivadas. `yeoh-second-order` y `yeoh-third-order` son modelos registrados distintos; `yeoh` es solo el nombre de la familia/evaluador, no un alias compatible.
-- Mantener contratos separados para configuración de espécimen, fitting, estudio y reportes. No cambiar defaults del conjunto de candidatos por refactorizaciones no científicas.
-- Valores y unidades almacenados no se infieren de etiquetas de plots. `mechanics.io` es dueño de serialización de reportes, y `mechanics.plotting` de conversión de unidades de presentación.
-- Datos experimentales y resultados generados en `data/` y `results/` no se comiten.
-- Para verificar, `startup; results = run_all_tests();` y el protocolo mantenido en [testing](docs/development/testing.md).
-- Consultar [context-handoff](docs/development/context-handoff.md) cuando se necesite conocer un asunto abierto; Git/PRs mantienen la cronología.
-
+- `src/+mechanics/` contains maintained implementation; `studies/` contains experimental drivers, `examples/` contains examples, and `tests/` contains tests. See [repository structure](docs/development/repository-structure.md) for ownership and APIs.
+- Completed studies have one canonical result. Comparisons and joint characterization consume it without repeating raw-data import, segmentation, or fitting.
+- `mechanics.models.modelRegistry` owns model identities, parameters, and derived quantities. `yeoh-second-order` and `yeoh-third-order` are distinct registered models; `yeoh` names only their family/evaluator and is not a compatible alias.
+- Keep specimen, fitting, study, and report configuration contracts separate. Do not change the candidate-model defaults during non-scientific refactoring.
+- Do not infer stored values or units from plot labels. `mechanics.io` owns report serialization and `mechanics.plotting` owns presentation-unit conversion.
+- Experimental data and generated results under `data/` and `results/` must not be committed.
+- Validate using `startup; results = run_all_tests();` and the maintained [testing protocol](docs/development/testing.md).
+- Read [context handoff](docs/development/context-handoff.md) for open issues; Git/PRs own chronology.
