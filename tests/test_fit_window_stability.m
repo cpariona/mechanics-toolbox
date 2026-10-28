@@ -39,6 +39,48 @@ verifyEqual(testCase, stability.windowSummary.WindowFraction, ...
 verifyTrue(testCase, all(stability.windowSummary.Success));
 end
 
+function testWeightedWindowStabilityMatchesDirectFits(testCase)
+x = flipud(linspace(0, 0.6, 31)');
+context.deformationMeasure = "engineering-strain";
+context.stressMeasure = "nominal";
+y = mechanics.models.evaluateModel("neo-hookean", x, 0.15, context);
+y = y + 0.003 .* cos((1:numel(x))');
+weights = 1 + mod((1:numel(x))', 5);
+x(4) = NaN;
+weights(10) = NaN;
+weights(15) = 0;
+
+fitConfig = mechanics.config.fittingConfig();
+fitConfig.numberOfStarts = 2;
+fitConfig.weights = weights;
+config = localConfig();
+config.windowFractions = [0.5, 1.0];
+config.minimumSuccessfulWindows = 2;
+
+stability = mechanics.fitting.analyzeFitWindowStability( ...
+    "neo-hookean", x, y, context, fitConfig, config);
+verifyEqual(testCase, stability.successfulWindowCount, 2);
+
+valid = isfinite(x) & isfinite(y) & isfinite(weights) & weights >= 0;
+[cleanX, order] = sort(x(valid), "ascend");
+cleanY = y(valid);
+cleanY = cleanY(order);
+cleanWeights = weights(valid);
+cleanWeights = cleanWeights(order);
+for index = 1:numel(stability.fitResults)
+    fraction = config.windowFractions(index);
+    threshold = min(cleanX) + fraction * (max(cleanX) - min(cleanX));
+    mask = cleanX <= threshold;
+    directConfig = fitConfig;
+    directConfig.weights = cleanWeights(mask);
+    direct = mechanics.fitting.fitModel( ...
+        "neo-hookean", cleanX(mask), cleanY(mask), context, directConfig);
+    actual = stability.fitResults{index};
+    verifyEqual(testCase, actual.parameters, direct.parameters, "AbsTol", 1e-6);
+    verifyEqual(testCase, actual.objective, direct.objective, "AbsTol", 1e-8);
+end
+end
+
 function testInvalidFractionsRejected(testCase)
 [x, y, context] = localNeoHookeanData();
 config = localConfig();
